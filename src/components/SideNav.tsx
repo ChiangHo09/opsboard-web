@@ -1,60 +1,112 @@
+// ------------------------------------------------------------
+// SideNav.tsx  — 蓝底·白字·浅蓝选中高亮版（按钮左右留边距）
+// ------------------------------------------------------------
+// 更新：按钮圆角矩形左右各留 8px 空隙，避免贴满侧栏。
+// ------------------------------------------------------------
+
 import React from 'react';
-import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import PeopleIcon from '@mui/icons-material/People';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import SettingsIcon from '@mui/icons-material/Settings';
+import {
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Box,
+} from '@mui/material';
 
-// 侧栏宽度
-const drawerWidth = 280;
+// MUI 图标示例
+import SearchIcon from '@mui/icons-material/Search';
+import HomeIcon from '@mui/icons-material/Home';
+import AppsIcon from '@mui/icons-material/Apps';
+import CodeIcon from '@mui/icons-material/Code';
+import SaveIcon from '@mui/icons-material/Save';
+import ColorLensIcon from '@mui/icons-material/ColorLens';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 
-const menuItems = [
-    { text: '仪表盘', icon: <DashboardIcon /> },
-    { text: '客户管理', icon: <PeopleIcon /> },
-    { text: '工单中心', icon: <AssignmentIcon /> },
-    { text: '设置', icon: <SettingsIcon /> },
+interface NavItem {
+    label: string;
+    icon: React.ReactNode;
+    path: string;
+}
+
+export const sideNavWidth = 100; // 侧栏固定宽度
+
+const navItems: NavItem[] = [
+    { label: '搜索', icon: <SearchIcon />, path: '/search' },
+    { label: '首页', icon: <HomeIcon />, path: '/' },
+    { label: '入门', icon: <AppsIcon />, path: '/get-started' },
+    { label: '开发', icon: <CodeIcon />, path: '/develop' },
+    { label: '基础', icon: <SaveIcon />, path: '/foundations' },
+    { label: '样式', icon: <ColorLensIcon />, path: '/styles' },
+    { label: '组件', icon: <AddCircleOutlineIcon />, path: '/components' },
+    { label: '博客', icon: <StarBorderIcon />, path: '/blog' },
 ];
 
 const SideNav: React.FC = () => {
+    const [selected, setSelected] = React.useState('/');
+
     return (
         <Drawer
             variant="permanent"
             sx={{
-                width: drawerWidth,
+                width: sideNavWidth,
                 flexShrink: 0,
                 [`& .MuiDrawer-paper`]: {
-                    width: drawerWidth,
+                    width: sideNavWidth,
                     boxSizing: 'border-box',
-                    backgroundColor: '#1976d2', // 主蓝色 M3 标准蓝
-                    color: '#fff',
                     borderRight: 'none',
+                    backgroundColor: '#1976d2', // 深蓝底
                 },
             }}
         >
-            {/* Logo 区域 */}
-            <Box sx={{ height: 64, display: 'flex', alignItems: 'center', px: 3, bgcolor: '#1565c0' }}>
-                <Typography variant="h6" noWrap sx={{ fontWeight: 'bold', color: '#e3f2fd' }}>
-                    运维管理
-                </Typography>
+            <Box sx={{ mt: 2 }}>
+                <List>
+                    {navItems.map(({ label, icon, path }) => {
+                        const isSelected = selected === path;
+                        return (
+                            <ListItem key={path} disablePadding sx={{ justifyContent: 'center' }}>
+                                <ListItemButton
+                                    onClick={() => setSelected(path)}
+                                    sx={{
+                                        width: 72,            // 按钮自身宽度
+                                        height: 72,
+                                        mx: 1,                // 左右各留 8px 空隙
+                                        borderRadius: 2,
+                                        flexDirection: 'column',
+                                        my: 1,
+                                        color: '#ffffff',
+                                        backgroundColor: isSelected ? '#64b5f6' : 'transparent',
+                                        '&:hover': { backgroundColor: '#64b5f6' },
+                                    }}
+                                >
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 0,
+                                            color: '#ffffff',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        {icon}
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={label}
+                                        primaryTypographyProps={{
+                                            sx: {
+                                                fontSize: 12,
+                                                mt: 0.5,
+                                                textAlign: 'center',
+                                                color: '#ffffff',
+                                            },
+                                        }}
+                                    />
+                                </ListItemButton>
+                            </ListItem>
+                        );
+                    })}
+                </List>
             </Box>
-
-            {/* 菜单列表 */}
-            <List>
-                {menuItems.map(({ text, icon }) => (
-                    <ListItem key={text} disablePadding>
-                        <ListItemButton
-                            sx={{
-                                '&:hover': { backgroundColor: '#1565c0' },
-                                '&.Mui-selected': { backgroundColor: '#42a5f5', color: '#0d47a1' },
-                            }}
-                            // 这里后续可以加选中状态控制
-                        >
-                            <ListItemIcon sx={{ color: 'inherit' }}>{icon}</ListItemIcon>
-                            <ListItemText primary={text} />
-                        </ListItemButton>
-                    </ListItem>
-                ))}
-            </List>
         </Drawer>
     );
 };
