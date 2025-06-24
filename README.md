@@ -4,7 +4,7 @@
 >
 > * **后端**：Rust + Axum / SeaORM / SQLite（可切换 MySQL、Oracle）
 > * **前端**：React + Vite + Material‑UI (M3 风格)
-> * **特性**：单文件后端、桌面端优先布局、PDF 工单导出、离线可用
+> * **特性**：桌面端优先布局、PDF 工单导出、离线可用
 
 ---
 
