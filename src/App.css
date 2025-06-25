@@ -1,42 +1,33 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* src/App.css */
+
+/* 全局容器：侧边栏 + 主内容 */
+.dashboard-container {
+  display: flex;
+  height: 100vh;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* 如果你额外需要全局 Root 宽度限制，可以放在 index.css */
+.sidebar {
+  width: 82px; /* 与 SideNav.BASE_WIDTH 对应 */
+  border-right: 1px solid #e0e0e0;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.main-content {
+  flex: 1;
+  padding: 2rem 1.5rem;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* 概览页标题样式 */
+.dashboard-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
 }
 
-.card {
-  padding: 2em;
+.dashboard-subtitle {
+  font-size: 1.25rem;
+  color: #666;
+  margin-bottom: 1.5rem;
 }
 
-.read-the-docs {
-  color: #888;
-}
+/* 你之前在 App.css 中的其他样式…… */
+/* .logo, .card, .read-the-docs 等，可根据需要合并到 index.css 或各组件 CSS 中 */
