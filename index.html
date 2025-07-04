@@ -1,13 +1,30 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- ========= 浏览器标签图标 ========= -->
+  <!-- 1. 首选：矢量 SVG（已放在 public/favicon.svg） -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- 2. 备用：位图 PNG（准备好文件后，去掉注释即可） -->
+  <!-- <link rel="alternate icon" type="image/png" href="/favicon.png" /> -->
+
+  <!-- 3. 兼容老浏览器的 ICO（准备好文件后，去掉注释即可） -->
+  <!-- <link rel="shortcut icon" href="/favicon.ico" /> -->
+
+  <!-- ========= 视口设置（移动端缩放） ========= -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ========= 浏览器标签文本 ========= -->
+  <title>运维信息表</title>
+</head>
+
+<body>
+<!-- React 挂载点 -->
+<div id="root"></div>
+
+<!-- 主入口脚本（由 Vite 注入 ESM 模块） -->
+<script type="module" src="/src/main.tsx"></script>
+</body>
 </html>
