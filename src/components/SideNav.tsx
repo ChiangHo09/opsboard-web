@@ -72,9 +72,9 @@ const btnStyle = {
 
 // 7. 组件 -----------------------------------------------------------------------
 const SideNav: React.FC = () => {
-    const [selected, setSelected] = useState('/dashboard')
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-    const menuOpen = Boolean(anchorEl)
+    const [selected, setSelected]   = useState<string>('/dashboard')
+    const [anchorEl, setAnchorEl]   = useState<null | HTMLElement>(null)
+    const menuOpen                  = Boolean(anchorEl)
 
     // 点击导航按钮
     const handleMainClick = (it: NavItem) => setSelected(it.path)
@@ -125,15 +125,21 @@ const SideNav: React.FC = () => {
                     </List>
                 </Box>
 
-                {/* 底部头像区域 */}
-                <Box sx={{ textAlign: 'left', pb: 1 }}>
+                {/* 底部头像区域，居中显示头像 */}
+                <Box sx={{ textAlign: 'center', pb: 2 }}>
                     <Tooltip title="账户菜单" placement="right">
                         <Avatar
-                            sx={{ ml: 1, mb: 1, bgcolor: '#64b5f6', width: 40, height: 40, cursor: 'pointer' }}
+                            sx={{
+                                mx: 'auto', // 水平居中
+                                mb: 1,      // 下边距 8px
+                                bgcolor: '#64b5f6',
+                                width: 40, height: 40,
+                                cursor: 'pointer',
+                            }}
                             onClick={handleAvatarOpen}
                             onMouseEnter={handleAvatarOpen}
                         >
-                            <AccountCircleIcon sx={{ color: '#1976d2', fontSize: 20 }} />
+                            <AccountCircleIcon sx={{ color: '#1976d2', fontSize: 17 }} />
                         </Avatar>
                     </Tooltip>
 
