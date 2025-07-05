@@ -1,28 +1,52 @@
 /*****************************************************************
- * Dashboard 页面
- * --------------------------------------------------------------
- * 只专注于业务内容，由 MainLayout 负责侧栏与整体布局。
- * 已移除浅蓝色背景块，使用默认背景。
+ * Dashboard —— 欢迎语 + 右侧功能按钮
  *****************************************************************/
-
 import React from 'react'
-import { Box, Typography } from '@mui/material'
+import { Box, Typography, Button } from '@mui/material'
 
-const Dashboard: React.FC = () => {
-    const username = 'chiangho' // TODO: 登录后改为实际用户
-
-    return (
-        <Box sx={{ minHeight: '100%', p: 3 /* 内边距 24px */ }}>
-            <Typography variant="h4" gutterBottom>
-                欢迎回来，{username}
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                接下来要做什么
-            </Typography>
-
-            {/* TODO: 在此放置仪表盘图表 / 快捷入口等组件 */}
-        </Box>
-    )
+const sideBlue = '#1976d2'
+const btnStyle = {
+    flex: '1 1 200px',
+    minWidth: 120,
+    height: 200,
+    borderRadius: 3,
+    bgcolor: sideBlue,
+    color: '#fff',
+    fontSize: 18,
+    '&:hover': { bgcolor: '#1565c0' },
 }
+
+const Dashboard: React.FC = () => (
+    <Box sx={{ minHeight: '100%' }}>
+        <Box sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 4,
+        }}>
+            {/* 左侧文字 */}
+            <Box sx={{ flex: '0 1 360px', minWidth: 260 }}>
+                <Typography variant="h3" gutterBottom>运维信息表</Typography>
+                <Typography variant="h5" gutterBottom>
+                    欢迎回来，chiangho，接下来做什么？
+                </Typography>
+            </Box>
+
+            {/* 右侧按钮 */}
+            <Box sx={{
+                ml: 'auto',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end',
+                gap: 4,
+                maxWidth: 800,
+            }}>
+                <Button sx={btnStyle}>新建更新记录</Button>
+                <Button sx={btnStyle}>生成工单</Button>
+                <Button sx={btnStyle}>查看服务器信息</Button>
+            </Box>
+        </Box>
+    </Box>
+)
 
 export default Dashboard

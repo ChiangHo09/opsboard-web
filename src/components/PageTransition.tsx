@@ -1,41 +1,39 @@
 /*****************************************************************
- * PageTransition —— Material Design Fade-Through 动画（完整版）
- * --------------------------------------------------------------
- * - 使用 MUI <Fade>（无第三方依赖）
- * - 动画：opacity 0→1、scale 0.96→1
- * - 无绝对定位，100% 填充父容器，避免重叠和滚动条
+ * PageTransition —— Fade-Through 动画（绝对定位 + 内边距）
  *****************************************************************/
-import React from 'react'
+import React, { useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Fade } from '@mui/material'
+import { Fade, useTheme } from '@mui/material'
 import { styled } from '@mui/system'
 
-/* 包裹层：普通 block 元素，撑满父容器 */
-const Wrapper = styled('div')({
+interface WrapProps { padding: number }
+
+/* 绝对定位层，覆盖父容器，带统一内边距 */
+const Wrapper = styled('div')<WrapProps>(({ padding }) => ({
+    position: 'absolute',
+    inset: 0,
     width: '100%',
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    transform: 'scale(0.96)',                       // 初始略缩小
+    boxSizing: 'border-box',
+    padding,
+    transform: 'scale(0.96)',
     transition: 'transform 280ms cubic-bezier(0.4,0,0.2,1)',
-})
+}))
 
-/* 进入结束时 scale → 1 */
-const enteredStyle = { transform: 'scale(1)' }
+const entered = { transform: 'scale(1)' }
 
 const PageTransition: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-    const { pathname } = useLocation()              // 每次路由变化触发动画
+    const { pathname } = useLocation()
+    const theme = useTheme()
+    const ref = useRef<HTMLDivElement>(null) // 防 StrictMode warning
 
     return (
-        <Fade
-            key={pathname}
-            in
-            appear
-            timeout={280}
-            mountOnEnter
-            unmountOnExit
-        >
-            <Wrapper style={enteredStyle}>{children}</Wrapper>
+        <Fade key={pathname} in appear timeout={280} mountOnEnter unmountOnExit>
+            <Wrapper ref={ref} padding={theme.spacing(3) as unknown as number} style={entered}>
+                {children}
+            </Wrapper>
         </Fade>
     )
 }

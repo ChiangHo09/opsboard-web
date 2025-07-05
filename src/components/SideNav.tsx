@@ -1,171 +1,111 @@
-// src/components/SideNav.tsx
-// -----------------------------------------------------------------------------
-// 侧边栏：整体宽 88px；按钮 72×72；四周间距 8px / 4px；新增“统计信息”按钮
-// 点击按钮时自动路由跳转；头像弹出账户菜单
-// -----------------------------------------------------------------------------
-
-// 1. React 相关 ----------------------------------------------------------------
-import React, { useState, type MouseEvent } from 'react'
-import { useNavigate } from 'react-router-dom'      // 路由跳转钩子
-
-// 2. MUI 组件 -------------------------------------------------------------------
+// 侧边栏：固定宽 88px，按钮 72×72；点击高亮 & 路由跳转
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-    Box,
-    Drawer,
-    List,
-    ListItem,
-    ListItemButton,
-    Typography,
-    Avatar,
-    Tooltip,
-    Menu,
-    MenuItem,
-    Divider,
-    ListItemIcon,
+    Box, Drawer, List, ListItem, ListItemButton, Typography,
+    Avatar, Tooltip, Menu, MenuItem, Divider, ListItemIcon,
 } from '@mui/material'
 
-// 3. MUI 图标 -------------------------------------------------------------------
-import SearchIcon        from '@mui/icons-material/Search'
-import DashboardIcon     from '@mui/icons-material/Dashboard'
-import DnsIcon           from '@mui/icons-material/Dns'
-import UpdateIcon        from '@mui/icons-material/Update'
-import AssignmentIcon    from '@mui/icons-material/Assignment'
-import BarChartIcon      from '@mui/icons-material/BarChart'
-import ScienceIcon       from '@mui/icons-material/Science'
-import SettingsIcon      from '@mui/icons-material/Settings'
-import LogoutIcon        from '@mui/icons-material/Logout'
+import SearchIcon from '@mui/icons-material/Search'
+import DashboardIcon from '@mui/icons-material/Dashboard'
+import DnsIcon from '@mui/icons-material/Dns'
+import UpdateIcon from '@mui/icons-material/Update'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import BarChartIcon from '@mui/icons-material/BarChart'
+import ScienceIcon from '@mui/icons-material/Science'
+import SettingsIcon from '@mui/icons-material/Settings'
+import LogoutIcon from '@mui/icons-material/Logout'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 
-// 4. 类型定义 -------------------------------------------------------------------
-interface NavItem { label: string; path: string; icon?: React.ReactNode }
+interface NavItem { label: string; path: string; icon: React.ReactNode }
 
-// 5. 导航数据 -------------------------------------------------------------------
 const navItems: NavItem[] = [
-    { label: '搜索',         path: '/search',    icon: <SearchIcon /> },
-    { label: '概览',         path: '/dashboard', icon: <DashboardIcon /> },
-    { label: '服务器',       path: '/servers',   icon: <DnsIcon /> },
-    { label: '更新日志',     path: '/changelog', icon: <UpdateIcon /> },
-    { label: '工单',         path: '/tickets',   icon: <AssignmentIcon /> },
-    { label: '统计信息',     path: '/stats',     icon: <BarChartIcon /> },
-    { label: '实验性\n功能', path: '/labs',      icon: <ScienceIcon /> },
-    { label: '设置',         path: '/settings',  icon: <SettingsIcon /> },
+    { label: '搜索',   path: '/search',    icon: <SearchIcon /> },
+    { label: '概览',   path: '/dashboard', icon: <DashboardIcon /> },
+    { label: '服务器', path: '/servers',   icon: <DnsIcon /> },
+    { label: '更新日志', path: '/changelog', icon: <UpdateIcon /> },
+    { label: '工单',   path: '/tickets',   icon: <AssignmentIcon /> },
+    { label: '统计信息', path: '/stats',   icon: <BarChartIcon /> },
+    { label: '实验性\n功能', path: '/labs', icon: <ScienceIcon /> },
+    { label: '设置',   path: '/settings',  icon: <SettingsIcon /> },
 ]
 
-// 6. 样式常量 -------------------------------------------------------------------
-const BASE_WIDTH = 88
-const BTN_SIZE   = 72
+const BASE = 88
+const BTN = 72
 const btnStyle = {
-    width: BTN_SIZE, height: BTN_SIZE,
-    minWidth: BTN_SIZE, minHeight: BTN_SIZE,
-    maxWidth: BTN_SIZE, maxHeight: BTN_SIZE,
-    mx: 1,           // 左右 8px
-    my: 0.5,         // 上下 4px
-    p: 0,
-    borderRadius: 2,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: BTN, height: BTN, minWidth: BTN, minHeight: BTN,
+    mx: 1, my: 0.5, p: 0, borderRadius: 2,
+    display: 'flex', flexDirection: 'column' as const,
+    justifyContent: 'center', alignItems: 'center',
     color: '#fff',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
 }
 
-// 7. 组件 -----------------------------------------------------------------------
 const SideNav: React.FC = () => {
     const [selected, setSelected] = useState('/dashboard')
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-    const menuOpen = Boolean(anchorEl)
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+    const nav = useNavigate()
 
-    const navigate = useNavigate()                  // ← 获得路由跳转函数
-
-    // 点击导航按钮：高亮并路由跳转
-    const handleMainClick = (item: NavItem) => {
-        setSelected(item.path)
-        navigate(item.path)
-    }
-
-    // 头像菜单逻辑
-    const handleAvatarOpen = (e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)
-    const handleMenuClose  = () => setAnchorEl(null)
-    const handleLogout     = () => { handleMenuClose(); alert('退出登录') } // TODO: 替换为真实登出流程
+    const handleClick = (it: NavItem) => { setSelected(it.path); nav(it.path) }
+    const logout = () => { setAnchorEl(null); alert('退出登录') }
 
     return (
-        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-            <Drawer
-                variant="permanent"
-                sx={{
-                    width: BASE_WIDTH,
-                    flexShrink: 0,
-                    '& .MuiDrawer-paper': {
-                        width: BASE_WIDTH,
-                        backgroundColor: '#1976d2',
-                        borderRight: 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                    },
-                }}
-            >
-                {/* 顶部按钮列表 */}
-                <Box sx={{ mt: 1 }}>
-                    <List disablePadding>
-                        {navItems.map(item => (
-                            <ListItem key={item.path} disablePadding sx={{ justifyContent: 'center' }}>
-                                <ListItemButton
-                                    onClick={() => handleMainClick(item)}
-                                    sx={{
-                                        ...btnStyle,
-                                        backgroundColor: selected === item.path ? '#64b5f6' : 'transparent',
-                                        transition: 'background-color 0.3s ease',
-                                        '&:hover': { backgroundColor: '#64b5f6' },
-                                    }}
-                                >
-                                    {item.icon}
-                                    <Typography sx={{ fontSize: 12, textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.2, mt: 0.5 }}>
-                                        {item.label}
-                                    </Typography>
-                                </ListItemButton>
-                            </ListItem>
-                        ))}
-                    </List>
-                </Box>
+        <Drawer variant="permanent" sx={{
+            width: BASE, flexShrink: 0,
+            '& .MuiDrawer-paper': {
+                width: BASE, bgcolor: '#1976d2', borderRight: 'none',
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+            },
+        }}>
+            {/* 菜单列表 */}
+            <Box sx={{ mt: 1 }}>
+                <List disablePadding>
+                    {navItems.map(it => (
+                        <ListItem key={it.path} disablePadding sx={{ justifyContent: 'center' }}>
+                            <ListItemButton
+                                onClick={() => handleClick(it)}
+                                sx={{
+                                    ...btnStyle,
+                                    bgcolor: selected === it.path ? '#64b5f6' : 'transparent',
+                                    transition: 'background-color .3s',
+                                    '&:hover': { bgcolor: '#64b5f6' },
+                                }}
+                            >
+                                {it.icon}
+                                <Typography sx={{ fontSize: 12, textAlign: 'center', whiteSpace: 'pre-line', mt: .5 }}>
+                                    {it.label}
+                                </Typography>
+                            </ListItemButton>
+                        </ListItem>
+                    ))}
+                </List>
+            </Box>
 
-                {/* 底部头像区域，水平居中 */}
-                <Box sx={{ textAlign: 'center', pb: 2 }}>
-                    <Tooltip title="账户菜单" placement="right">
-                        <Avatar
-                            sx={{ mx: 'auto', mb: 1, bgcolor: '#64b5f6', width: 40, height: 40, cursor: 'pointer' }}
-                            onClick={handleAvatarOpen}
-                            onMouseEnter={handleAvatarOpen}
-                        >
-                            <AccountCircleIcon sx={{ color: '#1976d2', fontSize: 17 }} />
-                        </Avatar>
-                    </Tooltip>
-
-                    {/* 头像弹出菜单 */}
-                    <Menu
-                        anchorEl={anchorEl}
-                        open={menuOpen}
-                        onClose={handleMenuClose}
-                        anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
-                        transformOrigin={{ vertical: 'center', horizontal: 'left' }}
-                        disableAutoFocusItem
+            {/* 头像 & 菜单 */}
+            <Box sx={{ textAlign: 'center', pb: 2 }}>
+                <Tooltip title="账户菜单" placement="right">
+                    <Avatar
+                        sx={{ mx: 'auto', mb: 1, bgcolor: '#64b5f6', width: 40, height: 40, cursor: 'pointer' }}
+                        onClick={e => setAnchorEl(e.currentTarget)}
                     >
-                        <MenuItem disabled>
-                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                用户信息
-                            </Typography>
-                        </MenuItem>
-                        <Divider />
-                        <MenuItem onClick={handleLogout}>
-                            <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
-                            退出登录
-                        </MenuItem>
-                    </Menu>
-                </Box>
-            </Drawer>
-        </Box>
+                        <AccountCircleIcon sx={{ color: '#1976d2', fontSize: 17 }} />
+                    </Avatar>
+                </Tooltip>
+                <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={() => setAnchorEl(null)}
+                    anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'center', horizontal: 'left' }}
+                >
+                    <MenuItem disabled><Typography variant="body2">用户信息</Typography></MenuItem>
+                    <Divider />
+                    <MenuItem onClick={logout}>
+                        <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
+                        退出登录
+                    </MenuItem>
+                </Menu>
+            </Box>
+        </Drawer>
     )
 }
 
