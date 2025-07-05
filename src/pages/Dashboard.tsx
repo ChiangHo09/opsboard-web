@@ -1,34 +1,26 @@
-// src/pages/Dashboard.tsx
+/*****************************************************************
+ * Dashboard 页面
+ * --------------------------------------------------------------
+ * 只专注于业务内容，由 MainLayout 负责侧栏与整体布局。
+ * 已移除浅蓝色背景块，使用默认背景。
+ *****************************************************************/
+
 import React from 'react'
-import SideNav from '../components/SideNav'
 import { Box, Typography } from '@mui/material'
 
-const drawerWidth = 82  // 与 SideNav.BASE_WIDTH 保持一致
-
 const Dashboard: React.FC = () => {
-    const username = 'chiangho'  // TODO: 登录后改为从 Context / Redux / API 读取
+    const username = 'chiangho' // TODO: 登录后改为实际用户
 
     return (
-        <Box sx={{ display: 'flex' }}>
-            <SideNav />
-            <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    bgcolor: '#e3f2fd',
-                    minHeight: '100vh',
-                    p: 3,
-                    ml: `${drawerWidth}px`,
-                }}
-            >
-                <Typography variant="h4" gutterBottom>
-                    欢迎回来，{username}
-                </Typography>
-                <Typography variant="subtitle1" gutterBottom color="text.secondary">
-                    接下来要做什么
-                </Typography>
-                {/* 下半部分内容后续扩展 */}
-            </Box>
+        <Box sx={{ minHeight: '100%', p: 3 /* 内边距 24px */ }}>
+            <Typography variant="h4" gutterBottom>
+                欢迎回来，{username}
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                接下来要做什么
+            </Typography>
+
+            {/* TODO: 在此放置仪表盘图表 / 快捷入口等组件 */}
         </Box>
     )
 }

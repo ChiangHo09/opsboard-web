@@ -1,10 +1,12 @@
 // src/components/SideNav.tsx
 // -----------------------------------------------------------------------------
 // 侧边栏：整体宽 88px；按钮 72×72；四周间距 8px / 4px；新增“统计信息”按钮
+// 点击按钮时自动路由跳转；头像弹出账户菜单
 // -----------------------------------------------------------------------------
 
 // 1. React 相关 ----------------------------------------------------------------
 import React, { useState, type MouseEvent } from 'react'
+import { useNavigate } from 'react-router-dom'      // 路由跳转钩子
 
 // 2. MUI 组件 -------------------------------------------------------------------
 import {
@@ -28,7 +30,7 @@ import DashboardIcon     from '@mui/icons-material/Dashboard'
 import DnsIcon           from '@mui/icons-material/Dns'
 import UpdateIcon        from '@mui/icons-material/Update'
 import AssignmentIcon    from '@mui/icons-material/Assignment'
-import BarChartIcon      from '@mui/icons-material/BarChart'      // 新增：统计信息图标
+import BarChartIcon      from '@mui/icons-material/BarChart'
 import ScienceIcon       from '@mui/icons-material/Science'
 import SettingsIcon      from '@mui/icons-material/Settings'
 import LogoutIcon        from '@mui/icons-material/Logout'
@@ -44,7 +46,6 @@ const navItems: NavItem[] = [
     { label: '服务器',       path: '/servers',   icon: <DnsIcon /> },
     { label: '更新日志',     path: '/changelog', icon: <UpdateIcon /> },
     { label: '工单',         path: '/tickets',   icon: <AssignmentIcon /> },
-    /* 新增：统计信息按钮（排在实验性功能之上） */
     { label: '统计信息',     path: '/stats',     icon: <BarChartIcon /> },
     { label: '实验性\n功能', path: '/labs',      icon: <ScienceIcon /> },
     { label: '设置',         path: '/settings',  icon: <SettingsIcon /> },
@@ -72,17 +73,22 @@ const btnStyle = {
 
 // 7. 组件 -----------------------------------------------------------------------
 const SideNav: React.FC = () => {
-    const [selected, setSelected]   = useState<string>('/dashboard')
-    const [anchorEl, setAnchorEl]   = useState<null | HTMLElement>(null)
-    const menuOpen                  = Boolean(anchorEl)
+    const [selected, setSelected] = useState('/dashboard')
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+    const menuOpen = Boolean(anchorEl)
 
-    // 点击导航按钮
-    const handleMainClick = (it: NavItem) => setSelected(it.path)
+    const navigate = useNavigate()                  // ← 获得路由跳转函数
 
-    // 头像菜单
+    // 点击导航按钮：高亮并路由跳转
+    const handleMainClick = (item: NavItem) => {
+        setSelected(item.path)
+        navigate(item.path)
+    }
+
+    // 头像菜单逻辑
     const handleAvatarOpen = (e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)
     const handleMenuClose  = () => setAnchorEl(null)
-    const handleLogout     = () => { handleMenuClose(); alert('退出登录') } // TODO: 替换真实逻辑
+    const handleLogout     = () => { handleMenuClose(); alert('退出登录') } // TODO: 替换为真实登出流程
 
     return (
         <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -104,20 +110,20 @@ const SideNav: React.FC = () => {
                 {/* 顶部按钮列表 */}
                 <Box sx={{ mt: 1 }}>
                     <List disablePadding>
-                        {navItems.map(it => (
-                            <ListItem key={it.path} disablePadding sx={{ justifyContent: 'center' }}>
+                        {navItems.map(item => (
+                            <ListItem key={item.path} disablePadding sx={{ justifyContent: 'center' }}>
                                 <ListItemButton
-                                    onClick={() => handleMainClick(it)}
+                                    onClick={() => handleMainClick(item)}
                                     sx={{
                                         ...btnStyle,
-                                        backgroundColor: selected === it.path ? '#64b5f6' : 'transparent',
+                                        backgroundColor: selected === item.path ? '#64b5f6' : 'transparent',
                                         transition: 'background-color 0.3s ease',
                                         '&:hover': { backgroundColor: '#64b5f6' },
                                     }}
                                 >
-                                    {it.icon}
+                                    {item.icon}
                                     <Typography sx={{ fontSize: 12, textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.2, mt: 0.5 }}>
-                                        {it.label}
+                                        {item.label}
                                     </Typography>
                                 </ListItemButton>
                             </ListItem>
@@ -125,17 +131,11 @@ const SideNav: React.FC = () => {
                     </List>
                 </Box>
 
-                {/* 底部头像区域，居中显示头像 */}
+                {/* 底部头像区域，水平居中 */}
                 <Box sx={{ textAlign: 'center', pb: 2 }}>
                     <Tooltip title="账户菜单" placement="right">
                         <Avatar
-                            sx={{
-                                mx: 'auto', // 水平居中
-                                mb: 1,      // 下边距 8px
-                                bgcolor: '#64b5f6',
-                                width: 40, height: 40,
-                                cursor: 'pointer',
-                            }}
+                            sx={{ mx: 'auto', mb: 1, bgcolor: '#64b5f6', width: 40, height: 40, cursor: 'pointer' }}
                             onClick={handleAvatarOpen}
                             onMouseEnter={handleAvatarOpen}
                         >
@@ -143,7 +143,7 @@ const SideNav: React.FC = () => {
                         </Avatar>
                     </Tooltip>
 
-                    {/* 弹出菜单 */}
+                    {/* 头像弹出菜单 */}
                     <Menu
                         anchorEl={anchorEl}
                         open={menuOpen}

@@ -1,33 +1,54 @@
-// src/App.tsx
+/*****************************************************************
+ *  src/App.tsx
+ *  --------------------------------------------------------------
+ *  负责描述整站路由结构：
+ *    ① /login                 → <Login />               （无侧栏）
+ *    ② /、/dashboard…         → <MainLayout />
+ *         └─ Outlet           → 各业务页面组件
+ *    ③ 任何未知路径           → 重定向到 /
+ *****************************************************************/
+
 import React from 'react'
-// 路由相关 API 引入
 import {
-    BrowserRouter as Router, // 给 BrowserRouter 起个别名 Router，使用时更简洁
-    Routes,                  // 路由表容器
-    Route,                   // 单条路由
-    Navigate,                // 重定向组件
+    BrowserRouter as Router,
+    Routes,
+    Route,
+    Navigate,
 } from 'react-router-dom'
 
-// 样式 & 页面组件引入
-import './App.css'
-import Login from './pages/Login'         // 登录页面
-import Dashboard from './pages/Dashboard' // 后台主界面
+/* --------- 页面组件 --------- */
+import Login      from './pages/Login'
+import Dashboard  from './pages/Dashboard'
+import Servers    from './pages/Servers'
+import Changelog  from './pages/Changelog'
+import Tickets    from './pages/Tickets'
+import Stats      from './pages/Stats'
+import Labs       from './pages/Labs'
+import Settings   from './pages/Settings'
 
-/**
- * App 组件 —— 描述整站的路由结构
- * ⭐ 不负责挂载根节点，也不直接包裹 ThemeProvider
- */
+/* --------- 布局组件（左侧侧栏 + 右侧内容 + 动画） --------- */
+import MainLayout from './layouts/MainLayout'
+
 const App: React.FC = () => (
-    // Router 必须包住 Routes，才能启用 HTML5 history 路由
     <Router>
         <Routes>
-            {/* ① 访问根路径时渲染登陆页 */}
-            <Route path="/" element={<Login />} />
+            {/* ① 登录页：单独路由，不显示侧边栏 */}
+            <Route path="/login" element={<Login />} />
 
-            {/* ② 成功登录后跳转到 /dashboard 渲染后台主界面 */}
-            <Route path="/dashboard" element={<Dashboard />} />
+            {/* ② 主布局：带侧边栏的所有业务页面都写在这里 */}
+            <Route path="/" element={<MainLayout />}>
+                {/* index == “/” → 默认仪表盘 */}
+                <Route index            element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="servers"   element={<Servers   />} />
+                <Route path="changelog" element={<Changelog />} />
+                <Route path="tickets"   element={<Tickets   />} />
+                <Route path="stats"     element={<Stats     />} />
+                <Route path="labs"      element={<Labs      />} />
+                <Route path="settings"  element={<Settings  />} />
+            </Route>
 
-            {/* ③ 兜底：任何未知路径都重定向到根路径（可防 404） */}
+            {/* ③ 兜底：所有未知路径重定向到根路径 */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </Router>
