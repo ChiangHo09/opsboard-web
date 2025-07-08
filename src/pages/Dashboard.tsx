@@ -1,52 +1,80 @@
 /*****************************************************************
- * Dashboard —— 欢迎语 + 右侧功能按钮
+ *  仪表盘首页 —— Material Design 3 风格（兼容 MUI v7 Grid v2）
  *****************************************************************/
-import React from 'react'
-import { Box, Typography, Button } from '@mui/material'
 
-const sideBlue = '#1976d2'
-const btnStyle = {
-    flex: '1 1 200px',
-    minWidth: 120,
-    height: 200,
-    borderRadius: 3,
-    bgcolor: sideBlue,
-    color: '#fff',
-    fontSize: 18,
-    '&:hover': { bgcolor: '#1565c0' },
-}
+/* -------- MUI 组件 -------- */
+import Box        from '@mui/material/Box'
+import Grid       from '@mui/material/Grid'
+import Typography from '@mui/material/Typography'
+import Button     from '@mui/material/Button'
+import Stack      from '@mui/material/Stack'
 
-const Dashboard: React.FC = () => (
-    <Box sx={{ minHeight: '100%' }}>
-        <Box sx={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: 4,
-        }}>
-            {/* 左侧文字 */}
-            <Box sx={{ flex: '0 1 360px', minWidth: 260 }}>
-                <Typography variant="h3" gutterBottom>运维信息表</Typography>
-                <Typography variant="h5" gutterBottom>
-                    欢迎回来，chiangho，接下来做什么？
-                </Typography>
-            </Box>
+/* -------- 图标 -------- */
+import NoteAddIcon     from '@mui/icons-material/NoteAdd'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import StorageIcon     from '@mui/icons-material/Storage'
 
-            {/* 右侧按钮 */}
-            <Box sx={{
-                ml: 'auto',
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'flex-end',
-                gap: 4,
-                maxWidth: 800,
-            }}>
-                <Button sx={btnStyle}>新建更新记录</Button>
-                <Button sx={btnStyle}>生成工单</Button>
-                <Button sx={btnStyle}>查看服务器信息</Button>
+export default function Dashboard() {
+    const nickname = 'chiangho' // TODO: 从后端获取
+
+    return (
+        <Box sx={{ flex: 1, bgcolor: 'grey.50', py: 6 }}>
+            <Box sx={{ maxWidth: 1280, mx: 'auto', px: 3 }}>
+                {/* 欢迎语 */}
+                <Stack spacing={1} mb={6}>
+                    <Typography variant="headlineMedium">
+                        运维信息管理系统
+                    </Typography>
+                    <Typography variant="titleMedium" color="text.secondary">
+                        欢迎回来，{nickname}！接下来想做些什么？
+                    </Typography>
+                </Stack>
+
+                {/* 快捷按钮区 */}
+                <Grid container spacing={3} justifyContent="flex-start">
+                    {/* 新建更新记录 */}
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            size="large"
+                            startIcon={<NoteAddIcon />}
+                            sx={{ height: 160, borderRadius: 3 }}
+                            onClick={() => {/* TODO: /changelog/new */}}
+                        >
+                            新建更新记录
+                        </Button>
+                    </Grid>
+
+                    {/* 生成工单 */}
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            size="large"
+                            startIcon={<ReceiptLongIcon />}
+                            sx={{ height: 160, borderRadius: 3 }}
+                            onClick={() => {/* TODO: /tickets/new */}}
+                        >
+                            生成工单
+                        </Button>
+                    </Grid>
+
+                    {/* 查看服务器信息 */}
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            size="large"
+                            startIcon={<StorageIcon />}
+                            sx={{ height: 160, borderRadius: 3 }}
+                            onClick={() => {/* TODO: /servers */}}
+                        >
+                            查看服务器信息
+                        </Button>
+                    </Grid>
+                </Grid>
             </Box>
         </Box>
-    </Box>
-)
-
-export default Dashboard
+    )
+}
