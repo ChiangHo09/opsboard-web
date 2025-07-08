@@ -3,9 +3,9 @@
  *  --------------------------------------------------------------
  *  路由结构：
  *    /login                 → <Login />          （无侧栏）
- *    其余所有业务路径       → <MainLayout />
+ *    登录后                → <MainLayout />     （含侧栏）
  *       └─ Outlet           → Dashboard / Servers ...
- *    未知路径               → 重定向到 /
+ *    未知路径               → 重定向到 /dashboard
  *****************************************************************/
 
 import React from 'react'
@@ -15,6 +15,7 @@ import {
     Route,
     Navigate,
 } from 'react-router-dom'
+import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 
 /* ---------- 页面组件 ---------- */
 import Login      from './pages/Login'
@@ -25,35 +26,50 @@ import Tickets    from './pages/Tickets'
 import Stats      from './pages/Stats'
 import Labs       from './pages/Labs'
 import Settings   from './pages/Settings'
-import Search     from './pages/Search'        // 新增：搜索页
+import Search     from './pages/Search'
 
 /* ---------- 布局组件 ---------- */
+import AppLayout  from './layouts/AppLayout'     // 新增：统一权限控制
 import MainLayout from './layouts/MainLayout'
 
+/* ---------- 全局主题 ---------- */
+const theme = createTheme({
+    typography: {
+        fontFamily: `'Roboto','Noto Sans SC','PingFang SC',sans-serif`,
+    },
+})
+
 const App: React.FC = () => (
-    <Router>
-        <Routes>
-            {/* ① 登录页（不带侧栏） */}
-            <Route path="/login" element={<Login />} />
+    <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+            <Routes>
 
-            {/* ② 主布局：不加 path，匹配除 /login 外的所有子路由 */}
-            <Route element={<MainLayout />}>
-                {/* index == '/' → 默认仪表盘 */}
-                <Route index            element={<Dashboard />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="servers"   element={<Servers   />} />
-                <Route path="changelog" element={<Changelog />} />
-                <Route path="tickets"   element={<Tickets   />} />
-                <Route path="stats"     element={<Stats     />} />
-                <Route path="labs"      element={<Labs      />} />
-                <Route path="settings"  element={<Settings  />} />
-                <Route path="search"    element={<Search    />} />
-            </Route>
+                {/* 所有页面都挂在 AppLayout 下，由其判断是否已登录 */}
+                <Route element={<AppLayout />}>
 
-            {/* ③ 兜底：未知路径重定向到根路径 */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-    </Router>
+                    {/* ① 登录页（不带侧栏） */}
+                    <Route path="/login" element={<Login />} />
+
+                    {/* ② 主布局：登录后的所有功能页（带侧栏） */}
+                    <Route path="/" element={<MainLayout />}>
+                        <Route index            element={<Navigate to="dashboard" replace />} />
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="servers"   element={<Servers   />} />
+                        <Route path="changelog" element={<Changelog />} />
+                        <Route path="tickets"   element={<Tickets   />} />
+                        <Route path="stats"     element={<Stats     />} />
+                        <Route path="labs"      element={<Labs      />} />
+                        <Route path="settings"  element={<Settings  />} />
+                        <Route path="search"    element={<Search    />} />
+                    </Route>
+                </Route>
+
+                {/* ③ 兜底：未知路径重定向 */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+        </Router>
+    </ThemeProvider>
 )
 
 export default App
