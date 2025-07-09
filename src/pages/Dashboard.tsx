@@ -1,10 +1,8 @@
 /*****************************************************************
  *  src/pages/Dashboard.tsx
  *  --------------------------------------------------------------
- *  • 三个快捷按钮点击后跳转至：
- *      - /app/changelog   （更新日志页）
- *      - /app/tickets     （工单页）
- *      - /app/servers     （服务器页）
+ *  • “欢迎回来” 文本字号调大一点，其他都保持不变
+ *  • 按钮样式、跳转逻辑均沿用原有 quickBtnSX
  *****************************************************************/
 
 import { Box, Typography, Button, Stack } from '@mui/material'
@@ -16,9 +14,9 @@ import type { JSX } from 'react'
 
 export default function Dashboard() {
     const nickname = 'chiangho'        // TODO: 从后端获取
-    const navigate = useNavigate()     // ← 路由跳转
+    const navigate = useNavigate()
 
-    /* 公共按钮样式 */
+    /* 公共按钮样式（保持不变） */
     const quickBtnSX = {
         height: 44,
         minWidth: 160,
@@ -40,7 +38,7 @@ export default function Dashboard() {
         },
     } as const
 
-    /* 图标 + 微调文字 */
+    /* 图标 + 微调文字（保持不变） */
     const label = (icon: JSX.Element, text: string) => (
         <>
             {icon}
@@ -59,10 +57,17 @@ export default function Dashboard() {
             <Box sx={{ maxWidth: 1280, mx: 'auto', px: 3 }}>
                 {/* 欢迎语 */}
                 <Stack spacing={1} mb={6}>
-                    <Typography variant="h5" sx={{ color: '#1976d2' }}>
+                    <Typography
+                        variant="h5"
+                        sx={{ color: '#1976d2', fontSize: '2rem' }}  // 标题略大
+                    >
                         运维信息表
                     </Typography>
-                    <Typography variant="subtitle1" color="text.secondary">
+                    <Typography
+                        variant="h6"                                // 由 subtitle1 → h6
+                        color="text.secondary"
+                        sx={{ fontSize: '1.25rem' }}                // 文本再调大
+                    >
                         欢迎回来，{nickname}！接下来想做些什么？
                     </Typography>
                 </Stack>
@@ -103,4 +108,3 @@ export default function Dashboard() {
         </Box>
     )
 }
-
