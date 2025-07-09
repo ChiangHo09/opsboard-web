@@ -1,79 +1,106 @@
-/*****************************************************************
- *  仪表盘首页 —— Material Design 3 风格（兼容 MUI v7 Grid v2）
- *****************************************************************/
+/**
+ * @fileOverview 运维仪表盘页面组件
+ * @description 位于路径: E:\ProjectFiles\opsboard-web\src\pages\Dashboard.tsx
+ * @created 2023-10-15（可根据实际创建时间修改）
+ * @author 开发者姓名（可根据实际情况填写）
+ *
+ * @feature 主要功能：
+ * - 显示欢迎语及用户昵称（TODO：需对接后端接口获取真实数据）
+ * - 提供三个核心操作入口：
+ *   1. 新建更新记录
+ *   2. 生成工单
+ *   3. 查看服务器信息
+ *
+ * @structure 组件构成：
+ * - 使用Material UI基础组件构建界面
+ * - 自定义按钮样式对象 quickBtnSX 统一视觉规范
+ * - 标签生成函数 label 实现图标+文字标准化布局
+ * - 响应式布局适配不同屏幕尺寸
+ *
+ * @todo 待办事项：
+ * - 替换测试用的 'chiangho' 为真实用户数据（参考 nickname 变量）
+ * - 添加按钮点击事件处理逻辑
+ * - 补充页面数据统计模块（当前仅为静态UI）
+ */
 
-/* -------- MUI 组件 -------- */
-import Box        from '@mui/material/Box'
-import Grid       from '@mui/material/Grid'
-import Typography from '@mui/material/Typography'
-import Button     from '@mui/material/Button'
-import Stack      from '@mui/material/Stack'
 
-/* -------- 图标 -------- */
-import NoteAddIcon     from '@mui/icons-material/NoteAdd'
+import { Box, Typography, Button, Stack } from '@mui/material'
+import NoteAddIcon from '@mui/icons-material/NoteAdd'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
-import StorageIcon     from '@mui/icons-material/Storage'
+import StorageIcon from '@mui/icons-material/Storage'
+import type { JSX } from "react";
+
 
 export default function Dashboard() {
     const nickname = 'chiangho' // TODO: 从后端获取
+
+    /* 通用按钮样式 */
+    const quickBtnSX = {
+        height: 44,
+        minWidth: 160,
+        px: 4,
+        borderRadius: 30,
+        bgcolor: '#1976d2',
+        color: '#fff',
+        boxShadow: 0,
+        textTransform: 'none',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        columnGap: 1.5,
+        '&:hover': { bgcolor: '#1565c0', boxShadow: 0 },
+        '& .MuiButton-startIcon': {
+            margin: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+        },
+    } as const
+
+    /* 统一生成按钮内容：图标 + 微调后的文字 */
+    const label = (icon: JSX.Element, text: string) => (
+        <>
+            {icon}
+            <Typography
+                component="span"
+                variant="button"
+                sx={{
+                    lineHeight: 1,
+                    transform: 'translateY(1px)', // ↓ 文字整体向下 1 px
+                    fontWeight: 500,
+                }}
+            >
+                {text}
+            </Typography>
+        </>
+    )
 
     return (
         <Box sx={{ flex: 1, bgcolor: 'grey.50', py: 6 }}>
             <Box sx={{ maxWidth: 1280, mx: 'auto', px: 3 }}>
                 {/* 欢迎语 */}
                 <Stack spacing={1} mb={6}>
-                    <Typography variant="headlineMedium">
-                        运维信息管理系统
+                    <Typography variant="h5" sx={{ color: '#1976d2' }}>
+                        运维信息表
                     </Typography>
-                    <Typography variant="titleMedium" color="text.secondary">
+                    <Typography variant="subtitle1" color="text.secondary">
                         欢迎回来，{nickname}！接下来想做些什么？
                     </Typography>
                 </Stack>
 
                 {/* 快捷按钮区 */}
-                <Grid container spacing={3} justifyContent="flex-start">
-                    {/* 新建更新记录 */}
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            size="large"
-                            startIcon={<NoteAddIcon />}
-                            sx={{ height: 160, borderRadius: 3 }}
-                            onClick={() => {/* TODO: /changelog/new */}}
-                        >
-                            新建更新记录
-                        </Button>
-                    </Grid>
+                <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+                    <Button variant="contained" disableElevation sx={quickBtnSX}>
+                        {label(<NoteAddIcon />, '新建更新记录')}
+                    </Button>
 
-                    {/* 生成工单 */}
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            size="large"
-                            startIcon={<ReceiptLongIcon />}
-                            sx={{ height: 160, borderRadius: 3 }}
-                            onClick={() => {/* TODO: /tickets/new */}}
-                        >
-                            生成工单
-                        </Button>
-                    </Grid>
+                    <Button variant="contained" disableElevation sx={quickBtnSX}>
+                        {label(<ReceiptLongIcon />, '生成工单')}
+                    </Button>
 
-                    {/* 查看服务器信息 */}
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            size="large"
-                            startIcon={<StorageIcon />}
-                            sx={{ height: 160, borderRadius: 3 }}
-                            onClick={() => {/* TODO: /servers */}}
-                        >
-                            查看服务器信息
-                        </Button>
-                    </Grid>
-                </Grid>
+                    <Button variant="contained" disableElevation sx={quickBtnSX}>
+                        {label(<StorageIcon />, '查看服务器信息')}
+                    </Button>
+                </Box>
             </Box>
         </Box>
     )
