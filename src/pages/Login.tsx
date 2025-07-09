@@ -1,14 +1,13 @@
 /*****************************************************************
- *  src/pages/Login.tsx  ——  登录页（MUI v7 / Grid v2 语法）
+ *  src/pages/Login.tsx  ——  登录页（放大左侧 LOGO）
  *  --------------------------------------------------------------
- *  • 根路径 “/” 渲染本页面
- *  • 调用父组件传入的 onFakeLogin() → 写入 localStorage → 跳后台
+ *  • 左侧 logo 尺寸从 80 → 120 px
  *****************************************************************/
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-/* -------- MUI 组件（Grid 用默认导入 + size 写法） -------- */
+/* -------- MUI 组件 -------- */
 import Grid        from '@mui/material/Grid'
 import Box         from '@mui/material/Box'
 import Card        from '@mui/material/Card'
@@ -18,7 +17,6 @@ import Button      from '@mui/material/Button'
 import Typography  from '@mui/material/Typography'
 import LoginIcon   from '@mui/icons-material/Login'
 
-/* 假登录回调由 App.tsx 传入 */
 interface LoginProps {
     onFakeLogin: () => void
 }
@@ -28,42 +26,50 @@ export default function Login({ onFakeLogin }: LoginProps) {
     const [password, setPassword] = useState('')
     const navigate = useNavigate()
 
-    /* 提交登录表单：调用假登录 → 跳转后台首页 */
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        onFakeLogin()                 // 写 localStorage & setAuthed(true)
-        navigate('/app/dashboard')    // 进入后台
+        onFakeLogin()
+        navigate('/app/dashboard')
     }
 
     return (
         <Grid container sx={{ minHeight: '100vh' }}>
-            {/* ---------- 左侧品牌区 ---------- */}
+            {/* ---------- 左侧 LOGO 区 ---------- */}
             <Grid
-                size={{ xs: 12, md: 7 }}    /* ✅ Grid v2：用 size 属性 */
+                size={{ xs: 12, md: 7 }}
                 sx={{
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
+                    bgcolor: 'background.default',
+                    color: 'text.primary',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                 }}
             >
-                <Box textAlign="center">
-                    <img src="/vite.svg" width={96} height={96} alt="logo" />
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center',
+                    }}
+                >
+                    {/* LOGO 放大到 120 × 120 px */}
+                    <img src="/favicon.svg" width={120} height={120} alt="logo" />
                     <Typography variant="h5" mt={3}>
-                        运维信息管理系统
+                        运维信息表
                     </Typography>
                 </Box>
             </Grid>
 
             {/* ---------- 右侧表单区 ---------- */}
             <Grid
-                size={{ xs: 12, md: 5 }}    /* ✅ 同样用 size */
+                size={{ xs: 12, md: 5 }}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     p: 4,
+                    bgcolor: 'background.default',
                 }}
             >
                 <Card elevation={3} sx={{ width: 360 }}>
@@ -81,7 +87,6 @@ export default function Login({ onFakeLogin }: LoginProps) {
                                 onChange={e => setUsername(e.target.value)}
                                 autoFocus
                             />
-
                             <TextField
                                 fullWidth
                                 margin="normal"
@@ -90,7 +95,6 @@ export default function Login({ onFakeLogin }: LoginProps) {
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                             />
-
                             <Button
                                 fullWidth
                                 variant="contained"
