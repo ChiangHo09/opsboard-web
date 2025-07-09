@@ -1,12 +1,30 @@
 /*****************************************************************
- *  src/components/SideNav.tsx
+ *  src/components/SideNav.tsx —— 侧边导航栏（Material Design 3 风格）
  *  --------------------------------------------------------------
- *  • Drawer 88 px  |  按钮 72 × 72 px  |  四周留白一致
- *  • 顶部留白从 8 px → 4 px
+ *  核心功能：
+ *    1. 固定侧栏（桌面端）：72x72px 图标 + 88px 宽度
+ *    2. 路由高亮同步：自动匹配路径并更新按钮状态
+ *    3. 用户账户菜单：头像悬浮显示信息与登出功能
+ *    4. 响应式设计：适配移动端（需启用 SideNav-2.tsx）
+ *
+ *  关键实现：
+ *    • 使用 useLocation 同步路由状态
+ *    • 自定义 Drawer 宽度计算（88px = 72px 按钮 + 8px×2 边距）
+ *    • 按钮悬停效果（透明度渐变）
+ *    • 头像菜单使用真实用户数据（当前为硬编码）
+ *
+ *  路由关联：
+ *    支持的路径：/app/search /dashboard /servers /changelog /tickets /stats /labs /settings
+ *    菜单高亮状态自动匹配 location.pathname
+ *
+ *  注意事项：
+ *    1. 需要配合 MainLayout 使用（通过 onFakeLogout 传递登出逻辑）
+ *    2. 用户数据建议从 context 或 API 获取（当前为硬编码）
+ *    3. 移动端适配需切换为 SideNav-2.tsx 实现
  *****************************************************************/
 
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 import {
@@ -20,30 +38,51 @@ import {
     AccountCircle as AccountIcon, Logout as LogoutIcon,
 } from '@mui/icons-material'
 
-interface SideNavProps { onFakeLogout: () => void }
-interface NavItem { label: string; path: string; icon: ReactNode }
+interface SideNavProps {
+    onFakeLogout: () => void
+}
+
+interface NavItem {
+    label: string
+    path: string
+    icon: ReactNode
+}
 
 const navItems: NavItem[] = [
-    { label: '搜索',        path: '/app/search',    icon: <SearchIcon /> },
-    { label: '概览',        path: '/app/dashboard', icon: <DashboardIcon /> },
-    { label: '服务器',      path: '/app/servers',   icon: <DnsIcon /> },
-    { label: '更新日志',    path: '/app/changelog', icon: <UpdateIcon /> },
-    { label: '工单',        path: '/app/tickets',   icon: <AssignmentIcon /> },
-    { label: '统计信息',    path: '/app/stats',     icon: <BarChartIcon /> },
-    { label: '实验性\n功能', path: '/app/labs',      icon: <ScienceIcon /> },
-    { label: '设置',        path: '/app/settings',  icon: <SettingsIcon /> },
+    { label: '搜索', path: '/app/search', icon: <SearchIcon /> },
+    { label: '概览', path: '/app/dashboard', icon: <DashboardIcon /> },
+    { label: '服务器', path: '/app/servers', icon: <DnsIcon /> },
+    { label: '更新日志', path: '/app/changelog', icon: <UpdateIcon /> },
+    { label: '工单', path: '/app/tickets', icon: <AssignmentIcon /> },
+    { label: '统计信息', path: '/app/stats', icon: <BarChartIcon /> },
+    { label: '实验性\n功能', path: '/app/labs', icon: <ScienceIcon /> },
+    { label: '设置', path: '/app/settings', icon: <SettingsIcon /> },
 ]
 
-const BTN  = 72
-const GAP  = 8
-const DRAWER_W = BTN + GAP * 2  // 88 px
+const BTN = 72
+const GAP = 8
+const DRAWER_W = BTN + GAP * 2 // 88 px
 
 const USER = { name: 'Chiangho', email: 'chiangho@example.com' }
 
 export default function SideNav({ onFakeLogout }: SideNavProps) {
-    const [selected, setSelected] = useState('/app/dashboard')
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    // ✅ 初始化 selected 为当前路径
+    const [selected, setSelected] = useState(location.pathname)
+
+    // ✅ 路径变化时更新 selected
+    useEffect(() => {
+        setSelected(location.pathname)
+    }, [location.pathname])
+
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-    const nav = useNavigate()
+
+    const handleJump = (it: NavItem) => {
+        setSelected(it.path)
+        navigate(it.path)
+    }
 
     return (
         <Drawer
@@ -68,17 +107,17 @@ export default function SideNav({ onFakeLogout }: SideNavProps) {
             <List
                 disablePadding
                 sx={{
-                    pt: GAP / 2,      // ★ 顶部留白 4px
-                    pb: GAP,          // 底部保持 8px
+                    pt: GAP / 2,
+                    pb: GAP,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: `${GAP}px`,  // 按钮间距 8px
+                    gap: `${GAP}px`,
                 }}
             >
                 {navItems.map(it => (
                     <ListItem key={it.path} disablePadding sx={{ justifyContent: 'center' }}>
                         <ListItemButton
-                            onClick={() => { setSelected(it.path); nav(it.path) }}
+                            onClick={() => handleJump(it)}
                             sx={{
                                 width: BTN,
                                 height: BTN,
