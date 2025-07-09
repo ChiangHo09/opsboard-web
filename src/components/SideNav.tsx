@@ -1,18 +1,16 @@
 /*****************************************************************
  *  src/components/SideNav.tsx
  *  --------------------------------------------------------------
- *  • 侧栏背景：#1976d2（Blue 500）
- *  • 按钮顺序：搜索 → 概览 → 服务器 → 更新日志 → 工单 → 实验性功能 → 设置
- *  • 按钮上下间距：8 px，圆角：1 px
- *  • 头像样式：外圈淡蓝环 + 内圈深蓝圆 + 用户图标
- *  • 头像位置：距底 48 px（mb = 6）
+ *  • 侧栏宽度：84 px  =  按钮 72 px  +  左右边距 6 px × 2
+ *  • 每个按钮：72 × 72 px 正方形，圆角 1 px
+ *  • 四周可见空隙：6 px；相邻按钮垂直间距同样 6 px
+ *  • 使用 ListItemButton → 自带 Material TouchRipple 特效
  *****************************************************************/
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
-/* -------- MUI 组件 -------- */
 import Drawer         from '@mui/material/Drawer'
 import Box            from '@mui/material/Box'
 import List           from '@mui/material/List'
@@ -25,12 +23,12 @@ import Menu           from '@mui/material/Menu'
 import MenuItem       from '@mui/material/MenuItem'
 import Divider        from '@mui/material/Divider'
 
-/* -------- Icons -------- */
 import SearchIcon        from '@mui/icons-material/Search'
 import DashboardIcon     from '@mui/icons-material/Dashboard'
 import DnsIcon           from '@mui/icons-material/Dns'
 import UpdateIcon        from '@mui/icons-material/Update'
 import AssignmentIcon    from '@mui/icons-material/Assignment'
+import BarChartIcon      from '@mui/icons-material/BarChart'
 import ScienceIcon       from '@mui/icons-material/Science'
 import SettingsIcon      from '@mui/icons-material/Settings'
 import LogoutIcon        from '@mui/icons-material/Logout'
@@ -38,100 +36,98 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 
 interface NavItem { label: string; path: string; icon: ReactNode }
 
-/* 菜单顺序 */
 const navItems: NavItem[] = [
     { label: '搜索',          path: '/search',    icon: <SearchIcon /> },
     { label: '概览',          path: '/dashboard', icon: <DashboardIcon /> },
     { label: '服务器',        path: '/servers',   icon: <DnsIcon /> },
     { label: '更新日志',      path: '/changelog', icon: <UpdateIcon /> },
     { label: '工单',          path: '/tickets',   icon: <AssignmentIcon /> },
+    { label: '统计信息',      path: '/stats',     icon: <BarChartIcon /> },
     { label: '实验性\n功能',   path: '/labs',      icon: <ScienceIcon /> },
     { label: '设置',          path: '/settings',  icon: <SettingsIcon /> },
 ]
 
-const BASE = 88   // 抽屉宽度
-const BTN  = 72   // 按钮尺寸
-
-/* 公共按钮样式 */
-const btnStyle = {
-    width: BTN,
-    height: BTN,
-    minWidth: BTN,
-    minHeight: BTN,
-    mx: 1,
-    my: 1,             // 8 px 上下间距
-    p: 0,
-    borderRadius: 1,   // 1 px 圆角
-    display: 'flex',
-    flexDirection: 'column' as const,
-    justifyContent: 'center',
-    alignItems: 'center',
-    color: '#fff',
-}
+/* ---------- 尺寸常量 ---------- */
+const BTN      = 72   // 按钮边长
+const GAP      = 6    // 目标可见间隙
+const HALF_GAP = GAP / 2
+const DRAWER_W = BTN + GAP * 2 // 72 + 6×2 = 84
 
 const SideNav = () => {
     const [selected, setSelected] = useState('/dashboard')
-
-    /* 头像菜单 */
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-    const openMenu  = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)
-    const closeMenu = () => setAnchorEl(null)
+    const nav = useNavigate()
 
-    const navigate = useNavigate()
-    const handleClick = (it: NavItem) => {
+    const handleJump = (it: NavItem) => {
         setSelected(it.path)
-        navigate(it.path)
+        nav(it.path)
     }
-    const logout = () => navigate('/login')   // TODO: 清理 token
 
     return (
         <Drawer
             variant="permanent"
             sx={{
-                width: BASE,
+                width: DRAWER_W,
                 flexShrink: 0,
                 '& .MuiDrawer-paper': {
-                    width: BASE,
-                    boxSizing: 'border-box',
-                    bgcolor: '#1976d2',          // Blue 500
+                    width: DRAWER_W,
+                    bgcolor: '#1976d2',
                     color: '#fff',
                     borderRight: 'none',
+                    boxSizing: 'border-box',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                 },
             }}
         >
-            {/* ---------- 顶部按钮区 ---------- */}
-            <Box>
-                <List disablePadding>
-                    {navItems.map(it => (
-                        <ListItem key={it.path} disablePadding sx={{ justifyContent: 'center' }}>
-                            <ListItemButton
-                                onClick={() => handleClick(it)}
+            {/* ---------- 按钮区 ---------- */}
+            <List
+                disablePadding
+                sx={{ pt: `${HALF_GAP}px`, pb: `${HALF_GAP}px` }}   /* 顶 / 底 3px */
+            >
+                {navItems.map(it => (
+                    <ListItem key={it.path} disablePadding sx={{ justifyContent: 'center' }}>
+                        <ListItemButton
+                            onClick={() => handleJump(it)}
+                            sx={{
+                                width: BTN,
+                                height: BTN,
+                                my: `${HALF_GAP}px`,      /* 上下 3px  →  相邻按钮间隔 6px  */
+                                mx: `${GAP}px`,           /* 左右 6px  */
+                                p: 0,
+                                borderRadius: 1,
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                bgcolor:
+                                    selected === it.path
+                                        ? 'rgba(255,255,255,0.24)'
+                                        : 'transparent',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.16)' },
+                                transition: 'background-color .3s',
+                            }}
+                        >
+                            {it.icon}
+                            <Typography
                                 sx={{
-                                    ...btnStyle,
-                                    bgcolor: selected === it.path ? 'rgba(255,255,255,0.24)' : 'transparent',
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.16)' },
-                                    transition: 'background-color .3s',
+                                    fontSize: 11,
+                                    mt: 0.5,
+                                    lineHeight: 1.15,
+                                    textAlign: 'center',
+                                    whiteSpace: 'pre-line',
                                 }}
                             >
-                                {it.icon}
-                                <Typography
-                                    sx={{ fontSize: 12, textAlign: 'center', whiteSpace: 'pre-line', mt: 0.5 }}
-                                >
-                                    {it.label}
-                                </Typography>
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
-                </List>
-            </Box>
+                                {it.label}
+                            </Typography>
+                        </ListItemButton>
+                    </ListItem>
+                ))}
+            </List>
 
-            {/* ---------- 头像区（距底 48 px） ---------- */}
+            {/* ---------- 头像区 ---------- */}
             <Box sx={{ mb: 6, display: 'flex', justifyContent: 'center' }}>
                 <Tooltip title="账户设置">
-                    {/* 外圈淡蓝环 */}
                     <Avatar
                         sx={{
                             width: 56,
@@ -139,34 +135,26 @@ const SideNav = () => {
                             bgcolor: 'rgba(255,255,255,0.25)',
                             cursor: 'pointer',
                         }}
-                        onClick={openMenu}
+                        onClick={e => setAnchorEl(e.currentTarget)}
                     >
-                        {/* 内圈深蓝圆 */}
-                        <Avatar
-                            sx={{
-                                width: 36,
-                                height: 36,
-                                bgcolor: '#1976d2',
-                            }}
-                        >
+                        <Avatar sx={{ width: 36, height: 36, bgcolor: '#1976d2' }}>
                             <AccountCircleIcon sx={{ fontSize: 20 }} />
                         </Avatar>
                     </Avatar>
                 </Tooltip>
 
+                {/* 头像下拉菜单 */}
                 <Menu
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
-                    onClose={closeMenu}
+                    onClose={() => setAnchorEl(null)}
                     anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
                     transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 >
-                    <MenuItem disabled>
-                        <Typography variant="body2">用户信息</Typography>
-                    </MenuItem>
+                    <MenuItem disabled>用户信息</MenuItem>
                     <Divider />
-                    <MenuItem onClick={logout}>
-                        <LogoutIcon fontSize="small" style={{ marginRight: 8 }} />
+                    <MenuItem onClick={() => nav('/login')}>
+                        <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
                         退出登录
                     </MenuItem>
                 </Menu>
