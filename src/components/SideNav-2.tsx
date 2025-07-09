@@ -51,15 +51,16 @@
 //
 // /* -------- 菜单项配置 -------- */
 // const navItems = [
-//     { label: '仪表盘',  path: '/dashboard', icon: <DashboardIcon /> },
-//     { label: '服务器',  path: '/servers',   icon: <StorageIcon /> },
-//     { label: '更新记录', path: '/changelog', icon: <NoteAddIcon /> },
-//     { label: '工单管理', path: '/tickets',   icon: <ReceiptIcon /> },
-//     { label: '统计分析', path: '/stats',     icon: <AssessmentIcon /> },
-//     { label: '实验室',  path: '/labs',      icon: <ScienceIcon /> },
-//     { label: '全局搜索', path: '/search',    icon: <SearchIcon /> },
-//     { label: '系统设置', path: '/settings',  icon: <SettingsIcon /> },
+//     { label: '搜索',          path: '/search',    icon: <SearchIcon /> },
+//     { label: '概览',        path: '/dashboard', icon: <DashboardIcon /> },
+//     { label: '服务器',        path: '/servers',   icon: <StorageIcon /> },
+//     { label: '更新记录',      path: '/changelog', icon: <NoteAddIcon /> },
+//     { label: '工单管理',      path: '/tickets',   icon: <ReceiptIcon /> },
+//     { label: '统计分析',      path: '/stats',     icon: <AssessmentIcon /> },
+//     { label: '实验性功能',        path: '/labs',      icon: <ScienceIcon /> },
+//     { label: '系统设置',      path: '/settings',  icon: <SettingsIcon /> },
 // ]
+//
 //
 // /* -------- 组件实现 -------- */
 // export default function SideNav({

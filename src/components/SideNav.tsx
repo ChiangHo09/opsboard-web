@@ -1,67 +1,49 @@
 /*****************************************************************
  *  src/components/SideNav.tsx
  *  --------------------------------------------------------------
- *  • 侧栏宽度：84 px  =  按钮 72 px  +  左右边距 6 px × 2
- *  • 每个按钮：72 × 72 px 正方形，圆角 1 px
- *  • 四周可见空隙：6 px；相邻按钮垂直间距同样 6 px
- *  • 使用 ListItemButton → 自带 Material TouchRipple 特效
+ *  • Drawer 88 px  |  按钮 72 × 72 px  |  四周留白一致
+ *  • 顶部留白从 8 px → 4 px
  *****************************************************************/
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
-import Drawer         from '@mui/material/Drawer'
-import Box            from '@mui/material/Box'
-import List           from '@mui/material/List'
-import ListItem       from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import Typography     from '@mui/material/Typography'
-import Avatar         from '@mui/material/Avatar'
-import Tooltip        from '@mui/material/Tooltip'
-import Menu           from '@mui/material/Menu'
-import MenuItem       from '@mui/material/MenuItem'
-import Divider        from '@mui/material/Divider'
+import {
+    Drawer, Box, List, ListItem, ListItemButton, Typography,
+    Avatar, Tooltip, Menu, MenuItem, Divider,
+} from '@mui/material'
+import {
+    Search as SearchIcon, Dashboard as DashboardIcon, Dns as DnsIcon,
+    Update as UpdateIcon, Assignment as AssignmentIcon, BarChart as BarChartIcon,
+    Science as ScienceIcon, Settings as SettingsIcon,
+    AccountCircle as AccountIcon, Logout as LogoutIcon,
+} from '@mui/icons-material'
 
-import SearchIcon        from '@mui/icons-material/Search'
-import DashboardIcon     from '@mui/icons-material/Dashboard'
-import DnsIcon           from '@mui/icons-material/Dns'
-import UpdateIcon        from '@mui/icons-material/Update'
-import AssignmentIcon    from '@mui/icons-material/Assignment'
-import BarChartIcon      from '@mui/icons-material/BarChart'
-import ScienceIcon       from '@mui/icons-material/Science'
-import SettingsIcon      from '@mui/icons-material/Settings'
-import LogoutIcon        from '@mui/icons-material/Logout'
-import AccountCircleIcon from '@mui/icons-material/AccountCircle'
-
+interface SideNavProps { onFakeLogout: () => void }
 interface NavItem { label: string; path: string; icon: ReactNode }
 
 const navItems: NavItem[] = [
-    { label: '搜索',          path: '/search',    icon: <SearchIcon /> },
-    { label: '概览',          path: '/dashboard', icon: <DashboardIcon /> },
-    { label: '服务器',        path: '/servers',   icon: <DnsIcon /> },
-    { label: '更新日志',      path: '/changelog', icon: <UpdateIcon /> },
-    { label: '工单',          path: '/tickets',   icon: <AssignmentIcon /> },
-    { label: '统计信息',      path: '/stats',     icon: <BarChartIcon /> },
-    { label: '实验性\n功能',   path: '/labs',      icon: <ScienceIcon /> },
-    { label: '设置',          path: '/settings',  icon: <SettingsIcon /> },
+    { label: '搜索',        path: '/app/search',    icon: <SearchIcon /> },
+    { label: '概览',        path: '/app/dashboard', icon: <DashboardIcon /> },
+    { label: '服务器',      path: '/app/servers',   icon: <DnsIcon /> },
+    { label: '更新日志',    path: '/app/changelog', icon: <UpdateIcon /> },
+    { label: '工单',        path: '/app/tickets',   icon: <AssignmentIcon /> },
+    { label: '统计信息',    path: '/app/stats',     icon: <BarChartIcon /> },
+    { label: '实验性\n功能', path: '/app/labs',      icon: <ScienceIcon /> },
+    { label: '设置',        path: '/app/settings',  icon: <SettingsIcon /> },
 ]
 
-/* ---------- 尺寸常量 ---------- */
-const BTN      = 72   // 按钮边长
-const GAP      = 6    // 目标可见间隙
-const HALF_GAP = GAP / 2
-const DRAWER_W = BTN + GAP * 2 // 72 + 6×2 = 84
+const BTN  = 72
+const GAP  = 8
+const DRAWER_W = BTN + GAP * 2  // 88 px
 
-const SideNav = () => {
-    const [selected, setSelected] = useState('/dashboard')
+const USER = { name: 'Chiangho', email: 'chiangho@example.com' }
+
+export default function SideNav({ onFakeLogout }: SideNavProps) {
+    const [selected, setSelected] = useState('/app/dashboard')
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const nav = useNavigate()
-
-    const handleJump = (it: NavItem) => {
-        setSelected(it.path)
-        nav(it.path)
-    }
 
     return (
         <Drawer
@@ -78,46 +60,44 @@ const SideNav = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
+                    overflowX: 'hidden',
                 },
             }}
         >
-            {/* ---------- 按钮区 ---------- */}
+            {/* ---------- 导航按钮 ---------- */}
             <List
                 disablePadding
-                sx={{ pt: `${HALF_GAP}px`, pb: `${HALF_GAP}px` }}   /* 顶 / 底 3px */
+                sx={{
+                    pt: GAP / 2,      // ★ 顶部留白 4px
+                    pb: GAP,          // 底部保持 8px
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: `${GAP}px`,  // 按钮间距 8px
+                }}
             >
                 {navItems.map(it => (
                     <ListItem key={it.path} disablePadding sx={{ justifyContent: 'center' }}>
                         <ListItemButton
-                            onClick={() => handleJump(it)}
+                            onClick={() => { setSelected(it.path); nav(it.path) }}
                             sx={{
                                 width: BTN,
                                 height: BTN,
-                                my: `${HALF_GAP}px`,      /* 上下 3px  →  相邻按钮间隔 6px  */
-                                mx: `${GAP}px`,           /* 左右 6px  */
+                                minWidth: BTN,
+                                minHeight: BTN,
+                                flexShrink: 0,
+                                mx: GAP,
                                 p: 0,
                                 borderRadius: 1,
                                 flexDirection: 'column',
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                bgcolor:
-                                    selected === it.path
-                                        ? 'rgba(255,255,255,0.24)'
-                                        : 'transparent',
+                                bgcolor: selected === it.path ? 'rgba(255,255,255,0.24)' : 'transparent',
                                 '&:hover': { bgcolor: 'rgba(255,255,255,0.16)' },
                                 transition: 'background-color .3s',
                             }}
                         >
                             {it.icon}
-                            <Typography
-                                sx={{
-                                    fontSize: 11,
-                                    mt: 0.5,
-                                    lineHeight: 1.15,
-                                    textAlign: 'center',
-                                    whiteSpace: 'pre-line',
-                                }}
-                            >
+                            <Typography sx={{ fontSize: 11, mt: 0.5, whiteSpace: 'pre-line', textAlign: 'center' }}>
                                 {it.label}
                             </Typography>
                         </ListItemButton>
@@ -125,35 +105,32 @@ const SideNav = () => {
                 ))}
             </List>
 
-            {/* ---------- 头像区 ---------- */}
-            <Box sx={{ mb: 6, display: 'flex', justifyContent: 'center' }}>
-                <Tooltip title="账户设置">
+            {/* ---------- 头像 + 浮窗 ---------- */}
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                <Tooltip title="账户信息">
                     <Avatar
-                        sx={{
-                            width: 56,
-                            height: 56,
-                            bgcolor: 'rgba(255,255,255,0.25)',
-                            cursor: 'pointer',
-                        }}
+                        sx={{ width: 56, height: 56, bgcolor: 'rgba(255,255,255,0.25)', cursor: 'pointer' }}
                         onClick={e => setAnchorEl(e.currentTarget)}
                     >
-                        <Avatar sx={{ width: 36, height: 36, bgcolor: '#1976d2' }}>
-                            <AccountCircleIcon sx={{ fontSize: 20 }} />
-                        </Avatar>
+                        <AccountIcon sx={{ fontSize: 28 }} />
                     </Avatar>
                 </Tooltip>
 
-                {/* 头像下拉菜单 */}
                 <Menu
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
                     onClose={() => setAnchorEl(null)}
-                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                    transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 >
-                    <MenuItem disabled>用户信息</MenuItem>
+                    <MenuItem disabled sx={{ display: 'block', whiteSpace: 'normal' }}>
+                        <Typography variant="body2">{USER.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {USER.email}
+                        </Typography>
+                    </MenuItem>
                     <Divider />
-                    <MenuItem onClick={() => nav('/login')}>
+                    <MenuItem onClick={onFakeLogout}>
                         <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
                         退出登录
                     </MenuItem>
@@ -162,5 +139,3 @@ const SideNav = () => {
         </Drawer>
     )
 }
-
-export default SideNav
