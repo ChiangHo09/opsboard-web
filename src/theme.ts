@@ -8,7 +8,7 @@ import { red } from '@mui/material/colors'
 /* ① 调色板等保持不变 */
 const palette = { mode: 'light' as const, primary: { main: '#2962ff' }, secondary: { main: '#ff6d00' }, error: { main: red.A400 } }
 const typography = { fontFamily: `'Roboto','Noto Sans SC','PingFang SC',sans-serif` }
-const shape = { borderRadius: 12 }
+const shape = { borderRadius: 8 }
 const spacing = 4
 
 /* ② 直接在 createTheme 里写 components，避免独立变量类型不匹配 */
