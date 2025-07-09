@@ -1,21 +1,18 @@
 /*****************************************************************
- *  src/pages/Login.tsx  ——  登录页（放大左侧 LOGO）
- *  --------------------------------------------------------------
- *  • 左侧 logo 尺寸从 80 → 120 px
+ *  src/pages/Login.tsx  ——  登录页（默认不自动聚焦输入框）
  *****************************************************************/
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-/* -------- MUI 组件 -------- */
-import Grid        from '@mui/material/Grid'
-import Box         from '@mui/material/Box'
-import Card        from '@mui/material/Card'
+import Grid from '@mui/material/Grid'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
-import TextField   from '@mui/material/TextField'
-import Button      from '@mui/material/Button'
-import Typography  from '@mui/material/Typography'
-import LoginIcon   from '@mui/icons-material/Login'
+import TextField from '@mui/material/TextField'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
+import LoginIcon from '@mui/icons-material/Login'
 
 interface LoginProps {
     onFakeLogin: () => void
@@ -32,9 +29,21 @@ export default function Login({ onFakeLogin }: LoginProps) {
         navigate('/app/dashboard')
     }
 
+    /* 统一的 TextField 高亮样式 */
+    const tfSX = {
+        '& .MuiOutlinedInput-root': {
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#1976d2',
+            },
+        },
+        '& .MuiInputLabel-root.Mui-focused': {
+            color: '#1976d2',
+        },
+    } as const
+
     return (
         <Grid container sx={{ minHeight: '100vh' }}>
-            {/* ---------- 左侧 LOGO 区 ---------- */}
+            {/* 左侧 LOGO */}
             <Grid
                 size={{ xs: 12, md: 7 }}
                 sx={{
@@ -45,15 +54,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
                     justifyContent: 'center',
                 }}
             >
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        textAlign: 'center',
-                    }}
-                >
-                    {/* LOGO 放大到 120 × 120 px */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                     <img src="/favicon.svg" width={120} height={120} alt="logo" />
                     <Typography variant="h5" mt={3}>
                         运维信息表
@@ -61,16 +62,10 @@ export default function Login({ onFakeLogin }: LoginProps) {
                 </Box>
             </Grid>
 
-            {/* ---------- 右侧表单区 ---------- */}
+            {/* 右侧表单 */}
             <Grid
                 size={{ xs: 12, md: 5 }}
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    p: 4,
-                    bgcolor: 'background.default',
-                }}
+                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4, bgcolor: 'background.default' }}
             >
                 <Card elevation={3} sx={{ width: 360 }}>
                     <CardContent>
@@ -85,8 +80,9 @@ export default function Login({ onFakeLogin }: LoginProps) {
                                 label="用户名"
                                 value={username}
                                 onChange={e => setUsername(e.target.value)}
-                                autoFocus
+                                sx={tfSX}
                             />
+
                             <TextField
                                 fullWidth
                                 margin="normal"
@@ -94,13 +90,20 @@ export default function Login({ onFakeLogin }: LoginProps) {
                                 type="password"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
+                                sx={tfSX}
                             />
+
                             <Button
                                 fullWidth
                                 variant="contained"
+                                disableElevation
                                 startIcon={<LoginIcon />}
                                 type="submit"
-                                sx={{ mt: 2 }}
+                                sx={{
+                                    mt: 2,
+                                    bgcolor: '#1976d2',
+                                    '&:hover': { bgcolor: '#1565c0' },
+                                }}
                             >
                                 登录
                             </Button>

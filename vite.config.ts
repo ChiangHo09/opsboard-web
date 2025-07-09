@@ -14,6 +14,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',  // 允许局域网访问
     port: 3000,      // 开发服务器端口，可改
     open: true,      // 启动后自动打开浏览器
   },
