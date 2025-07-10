@@ -1,11 +1,9 @@
 /*****************************************************************
- *  src/pages/Login.tsx  ——  登录页（默认不自动聚焦输入框）
+ *  src/pages/Login.tsx
+ *  —— 响应式：Box + Flexbox（无需 Grid）
  *****************************************************************/
-
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-import Grid from '@mui/material/Grid'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -29,12 +27,9 @@ export default function Login({ onFakeLogin }: LoginProps) {
         navigate('/app/dashboard')
     }
 
-    /* 统一的 TextField 高亮样式 */
     const tfSX = {
-        '& .MuiOutlinedInput-root': {
-            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#1976d2',
-            },
+        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#1976d2',
         },
         '& .MuiInputLabel-root.Mui-focused': {
             color: '#1976d2',
@@ -42,37 +37,71 @@ export default function Login({ onFakeLogin }: LoginProps) {
     } as const
 
     return (
-        <Grid container sx={{ minHeight: '100vh' }}>
-            {/* 左侧 LOGO */}
-            <Grid
-                size={{ xs: 12, md: 7 }}
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                height: '100vh',
+                bgcolor: 'background.default',
+            }}
+        >
+            {/* 左侧 Logo + 标题 */}
+            <Box
                 sx={{
-                    bgcolor: 'background.default',
-                    color: 'text.primary',
+                    flex: { xs: 'none', md: '0 0 60%' },
+                    width: { xs: '100%', md: '60%' },
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    p: { xs: 2, md: 4 },
                 }}
             >
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                    <img src="/favicon.svg" width={120} height={120} alt="logo" />
-                    <Typography variant="h5" mt={3}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'row', md: 'column' },
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 2,
+                    }}
+                >
+                    <Box
+                        component="img"
+                        src="/favicon.svg"
+                        alt="logo"
+                        sx={{
+                            height: { xs: '1.5rem', md: 120 },
+                            width: 'auto',
+                        }}
+                    />
+                    <Typography
+                        variant="h4"
+                        sx={{
+                            fontSize: { xs: '1.5rem', md: '2rem' },
+                            fontWeight: 500,
+                        }}
+                    >
                         运维信息表
                     </Typography>
                 </Box>
-            </Grid>
+            </Box>
 
-            {/* 右侧表单 */}
-            <Grid
-                size={{ xs: 12, md: 5 }}
-                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4, bgcolor: 'background.default' }}
+            {/* 右侧 登录卡片 */}
+            <Box
+                sx={{
+                    flex: { xs: 'none', md: '0 0 40%' },
+                    width: { xs: '100%', md: '40%' },
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: { xs: 2, md: 4 },
+                }}
             >
-                <Card elevation={3} sx={{ width: 360 }}>
+                <Card elevation={3} sx={{ width: '100%', maxWidth: 360 }}>
                     <CardContent>
                         <Typography variant="h6" gutterBottom>
                             用户登录
                         </Typography>
-
                         <Box component="form" onSubmit={handleSubmit} noValidate>
                             <TextField
                                 fullWidth
@@ -82,7 +111,6 @@ export default function Login({ onFakeLogin }: LoginProps) {
                                 onChange={e => setUsername(e.target.value)}
                                 sx={tfSX}
                             />
-
                             <TextField
                                 fullWidth
                                 margin="normal"
@@ -92,7 +120,6 @@ export default function Login({ onFakeLogin }: LoginProps) {
                                 onChange={e => setPassword(e.target.value)}
                                 sx={tfSX}
                             />
-
                             <Button
                                 fullWidth
                                 variant="contained"
@@ -110,7 +137,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
                         </Box>
                     </CardContent>
                 </Card>
-            </Grid>
-        </Grid>
+            </Box>
+        </Box>
     )
 }

@@ -29,14 +29,14 @@ interface SideNavProps { onFakeLogout: () => void }
 interface NavItem { label: string; path: string; icon: ReactNode }
 
 const navItems: NavItem[] = [
-    { label: '搜索',        path: '/app/search',    icon: <SearchIcon /> },
-    { label: '概览',        path: '/app/dashboard', icon: <DashboardIcon /> },
-    { label: '服务器',      path: '/app/servers',   icon: <DnsIcon /> },
-    { label: '更新日志',    path: '/app/changelog', icon: <UpdateIcon /> },
-    { label: '工单',        path: '/app/tickets',   icon: <AssignmentIcon /> },
-    { label: '统计信息',    path: '/app/stats',     icon: <BarChartIcon /> },
+    { label: '搜索',         path: '/app/search',    icon: <SearchIcon /> },
+    { label: '概览',         path: '/app/dashboard', icon: <DashboardIcon /> },
+    { label: '服务器',       path: '/app/servers',   icon: <DnsIcon /> },
+    { label: '更新日志',     path: '/app/changelog', icon: <UpdateIcon /> },
+    { label: '工单',         path: '/app/tickets',   icon: <AssignmentIcon /> },
+    { label: '统计信息',     path: '/app/stats',     icon: <BarChartIcon /> },
     { label: '实验性\n功能', path: '/app/labs',      icon: <ScienceIcon /> },
-    { label: '设置',        path: '/app/settings',  icon: <SettingsIcon /> },
+    { label: '设置',         path: '/app/settings',  icon: <SettingsIcon /> },
 ]
 
 const BTN  = 72
