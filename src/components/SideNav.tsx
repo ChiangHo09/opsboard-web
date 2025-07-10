@@ -1,8 +1,8 @@
 /*****************************************************************
  *  src/components/SideNav.tsx
  *  --------------------------------------------------------------
- *  • 改用 useLocation 获取当前 path 作为选中项
- *  • 不再维护本地 selected state，从路由自动同步
+ *  • 侧边栏按钮根据 location.pathname.startsWith() 高亮
+ *  • 无需额外 state，支持 /app/servers/123 等深层路径
  *****************************************************************/
 
 import { useState } from 'react'
@@ -43,9 +43,8 @@ const BTN  = 72
 const GAP  = 8
 
 export default function SideNav({ onFakeLogout }: SideNavProps) {
-    const location = useLocation()         // 获取当前路由
+    const location = useLocation()
     const nav = useNavigate()
-
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
     return (
@@ -67,7 +66,6 @@ export default function SideNav({ onFakeLogout }: SideNavProps) {
                 },
             }}
         >
-            {/* 导航按钮 */}
             <List
                 disablePadding
                 sx={{
@@ -79,7 +77,7 @@ export default function SideNav({ onFakeLogout }: SideNavProps) {
                 }}
             >
                 {navItems.map(it => {
-                    const isSelected = location.pathname === it.path
+                    const isSelected = location.pathname.startsWith(it.path)
                     return (
                         <ListItem key={it.path} disablePadding sx={{ justifyContent: 'center' }}>
                             <ListItemButton
@@ -120,7 +118,6 @@ export default function SideNav({ onFakeLogout }: SideNavProps) {
                 })}
             </List>
 
-            {/* 头像 + 浮窗 */}
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
                 <Tooltip title="账户信息">
                     <Avatar
