@@ -7,6 +7,7 @@ import { Box, Typography } from '@mui/material';
  * 该模板旨在为应用程序中的新页面提供一致的布局和样式。
  * 它继承了以下关键样式：
  * 1. 页面整体在 MainLayout 中的固定内边距 (p:3)。
+ *    此内边距现在由 MainLayout 中白色背景的“显示区域”提供，确保所有页面有一个统一的外层边距。
  * 2. 内容区域在浏览器尺寸收窄时左右留白随之收窄，
  *    默认左右各 10% 留白，最低收窄到各 5% 留白（通过响应式宽度和 mx:'auto' 实现）。
  * 3. 内容区域内部的顶部和底部有固定的内边距 (py:4)，提供视觉上的“呼吸空间”。
@@ -18,13 +19,11 @@ import { Box, Typography } from '@mui/material';
 const TemplatePage: React.FC = () => {
     return (
         // 外层 Box:
-        // 负责页面的整体布局和与 MainLayout 容器之间的固定内边距。
-        // 它确保无论内部内容如何，页面视图本身都占满可用空间并具有统一的外边距。
+        // 不再需要 p:3，因为显示区域的边距现在由 MainLayout 中的白色背景 Box 提供。
+        // 这里的 Box 仅负责宽度和高度填充，并成为内部内容盒的 flex 容器。
         <Box sx={{
             width: '100%', // 确保 Box 占据其父容器（MainLayout 的 MotionBox）的全部宽度。
             height: '100%', // 确保 Box 占据其父容器的全部高度，以便内部内容可以伸展或滚动。
-            p: 3, // 固定内边距：在所有四个方向（上、下、左、右）都应用 3 个 MUI 主题单位（默认 3*8=24px）的内边距。
-                  // 这是页面与应用主内容面板边缘的间距。
             boxSizing: 'border-box', // 盒模型设置：确保 padding 和 border 包含在元素的总宽度和高度内。
             display: 'flex', // 启用 Flexbox 布局：允许其子元素进行灵活排列。
             flexDirection: 'column' // Flex 方向：使子元素垂直堆叠。

@@ -46,12 +46,11 @@ export default function Dashboard() {
     )
 
     return (
-        // Dashboard 页面现在在 MainLayout 的 MotionBox 内部渲染，需要自己添加内边距
-        // 这个最外层的 Box 负责整体页面区域的填充和其固定的四边内边距 (p:3)
+        // 外层 Box: 不再需要 p:3，因为显示区域的边距现在由 MainLayout 中的白色背景 Box 提供。
+        // 这里的 Box 仅负责宽度和高度填充，并成为内部内容盒的 flex 容器。
         <Box sx={{
             width: '100%',
             height: '100%',
-            p: 3, // 保持所有方向的内边距，这是页面外边距
             boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column'
@@ -62,7 +61,7 @@ export default function Dashboard() {
                 width: { xs: '90%', md: '80%' }, // 小屏幕 90% 宽度 (各留 5% 留白)，中大屏幕 80% 宽度 (各留 10% 留白)
                 maxWidth: 1280, // 内容最大宽度限制
                 mx: 'auto', // 自动左右外边距，实现居中和两侧留白
-                py: 4, // 新增：为内容区域添加上下内边距，提供视觉余地
+                py: 4, // 为内容区域添加上下内边距，提供视觉余地
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column'

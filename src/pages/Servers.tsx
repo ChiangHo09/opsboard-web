@@ -11,7 +11,6 @@ type ServerSearchForm = Record<string, unknown>;
 
 const Servers: React.FC = () => {
     // 从 useLayout 解构出需要的状态和方法
-    // 移除 isPanelOpen，因为它在这个组件中没有被直接使用，从而消除未使用的变量警告/错误
     const { togglePanel, setPanelContent, setPanelActions } = useLayout();
 
     // 定义页面特定的搜索处理函数
@@ -58,15 +57,14 @@ const Servers: React.FC = () => {
     }, [setPanelContent, setPanelActions, handleSearch, handleReset]); // 依赖项只包含设置函数和回调
 
     return (
-        // 页面内容现在在 MainLayout 的 MotionBox 内部渲染，需要自己添加内边距。
-        // 同时，Servers 页面内容内部是 Flex 布局，所以这里也用一个 Box 包裹。
-        <Box sx={{ width: '100%', height: '100%', p: 3, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            {/* 新增的 Box，用于控制内容的响应式宽度和居中 */}
+        // 外层 Box: 不再需要 p:3，因为显示区域的边距现在由 MainLayout 中的白色背景 Box 提供。
+        <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+            {/* 内层 Box，用于控制内容的响应式宽度和居中，并添加内部上下边距 */}
             <Box sx={{
                 width: { xs: '90%', md: '80%' }, // 小屏幕 90% 宽度 (各留 5% 留白)，中大屏幕 80% 宽度 (各留 10% 留白)
                 maxWidth: 1280, // 内容最大宽度限制
                 mx: 'auto', // 自动左右外边距，实现居中和两侧留白
-                py: 4, // 新增：为内容区域添加上下内边距
+                py: 4, // 为内容区域添加上下内边距
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column'
