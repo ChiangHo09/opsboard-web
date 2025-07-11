@@ -61,19 +61,30 @@ const Servers: React.FC = () => {
         // 页面内容现在在 MainLayout 的 MotionBox 内部渲染，需要自己添加内边距。
         // 同时，Servers 页面内容内部是 Flex 布局，所以这里也用一个 Box 包裹。
         <Box sx={{ width: '100%', height: '100%', p: 3, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                <Typography variant="h4">服务器信息</Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<SearchIcon />}
-                    onClick={togglePanel} // 调用 LayoutContext 的 togglePanel
-                >
-                    搜索
-                </Button>
-            </Box>
-            <Typography sx={{ mt: 2, flexShrink: 0 }}>这里实现服务器信息的展示和修改。</Typography>
-            <Box sx={{ height: '120vh', mt: 2, border: '1px dashed grey', p: 1, flexGrow: 1, overflowY: 'auto' }}>
-                <Typography>这是一个很高的占位符，用于测试主内容区的滚动。</Typography>
+            {/* 新增的 Box，用于控制内容的响应式宽度和居中 */}
+            <Box sx={{
+                width: { xs: '90%', md: '80%' }, // 小屏幕 90% 宽度 (各留 5% 留白)，中大屏幕 80% 宽度 (各留 10% 留白)
+                maxWidth: 1280, // 内容最大宽度限制
+                mx: 'auto', // 自动左右外边距，实现居中和两侧留白
+                py: 4, // 新增：为内容区域添加上下内边距
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <Typography variant="h4">服务器信息</Typography>
+                    <Button
+                        variant="contained"
+                        startIcon={<SearchIcon />}
+                        onClick={togglePanel} // 调用 LayoutContext 的 togglePanel
+                    >
+                        搜索
+                    </Button>
+                </Box>
+                <Typography sx={{ mt: 2, flexShrink: 0 }}>这里实现服务器信息的展示和修改。</Typography>
+                <Box sx={{ height: '120vh', mt: 2, border: '1px dashed grey', p: 1, flexGrow: 1, overflowY: 'auto' }}>
+                    <Typography>这是一个很高的占位符，用于测试主内容区的滚动。</Typography>
+                </Box>
             </Box>
             {/* 注意：RightSearchPanel 不再在这里直接渲染 */}
         </Box>

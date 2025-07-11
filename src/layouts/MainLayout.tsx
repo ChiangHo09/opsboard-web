@@ -58,7 +58,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                         flexDirection: 'column', // 如果需要，让内部内容垂直堆叠
                     }}
                 >
-                    {/* 这个 MotionBox 负责页面的动画效果，不负责内边距 */}
+                    {/* 这个 MotionBox 负责页面的动画效果，同时处理溢出滚动 */}
                     <MotionBox
                         key={pathname}
                         variants={pageVariants}
@@ -71,7 +71,8 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                             height: '100%',
                             // 移除这里的 p:3，确保它不产生额外的绿色区域
                             boxSizing: 'border-box',
-                            overflow: 'hidden', // 动画层进行内容裁剪
+                            overflowY: 'auto', // 允许垂直方向滚动
+                            overflowX: 'hidden', // 隐藏水平方向滚动
                             display: 'flex',
                             flexDirection: 'column',
                         }}
