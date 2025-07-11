@@ -11,6 +11,7 @@ import Stats       from './pages/Stats'
 import Labs        from './pages/Labs'
 import Settings    from './pages/Settings'
 import Search      from './pages/Search'
+import HoneypotInfo from './pages/HoneypotInfo'
 
 /* 布局：后台主框架（侧栏 + 顶栏 + <Outlet/>）*/
 import MainLayout from './layouts/MainLayout'
@@ -35,6 +36,7 @@ export default function App() {
             <Routes>
                 {/* 根路径：永远显示登录页（把 fakeLogin 方法作为 prop 传下去） */}
                 <Route path="/" element={<Login onFakeLogin={fakeLogin} />} />
+                <Route path="/honeypot-info" element={<HoneypotInfo/>} />
 
                 {/* 受保护的后台路由：必须 authed 才能访问 */}
                 <Route
