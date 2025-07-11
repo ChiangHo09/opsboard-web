@@ -28,7 +28,7 @@ import {
     Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-// ✅ 修复: 引入 MouseEvent 类型
+// 修复: 引入 MouseEvent 类型
 import type { ReactElement, MouseEvent } from 'react';
 
 /* ---------- 常量 ---------- */
@@ -225,7 +225,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         {bottomNavItems.map(renderNavButton)}
                         <ListItem disablePadding sx={{ position: 'relative', height: BTN_SIZE }}>
                             <MotionButtonBase
-                                // ✅ 修复: 将 MouseEvent 细化为 MouseEvent<HTMLButtonElement>
+                                // 修复: 将 MouseEvent 细化为 MouseEvent<HTMLButtonElement>
                                 onClick={(e: MouseEvent<HTMLButtonElement>) => {
                                     e.stopPropagation();
                                     setAnchorEl(e.currentTarget);

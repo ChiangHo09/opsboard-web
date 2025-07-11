@@ -1,7 +1,7 @@
 /*****************************************************************
  *  src/pages/Login.tsx
  *  —— 响应式：Box + Flexbox（无需 Grid）
- *  —— ✅ 修复: 引用独立的 HoneypotInfo 组件来展示弹窗内容
+ *  —— 修复: 引用独立的 HoneypotInfo 组件来展示弹窗内容
  *****************************************************************/
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import LoginIcon from '@mui/icons-material/Login';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
-import HoneypotInfo from './HoneypotInfo'; // ✅ 引入内容组件
+import HoneypotInfo from './HoneypotInfo'; // 引入内容组件
 
 interface LoginProps {
     onFakeLogin: () => void;
@@ -125,7 +125,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
             >
                 <DialogTitle fontWeight="bold">TODO: 实施本地化机器人验证机制</DialogTitle>
                 <DialogContent dividers>
-                    {/* ✅ 修复: 在此处引用独立的组件 */}
+                    {/* 修复: 在此处引用独立的组件 */}
                     <HoneypotInfo />
                 </DialogContent>
                 <DialogActions>

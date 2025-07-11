@@ -1,10 +1,3 @@
-/*****************************************************************
- *  src/pages/Dashboard.tsx
- *  --------------------------------------------------------------
- *  • “欢迎回来” 文本字号调大一点，其他都保持不变
- *  • 按钮样式、跳转逻辑均沿用原有 quickBtnSX
- *****************************************************************/
-
 import { Box, Typography, Button, Stack } from '@mui/material'
 import NoteAddIcon from '@mui/icons-material/NoteAdd'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
@@ -53,20 +46,21 @@ export default function Dashboard() {
     )
 
     return (
-        <Box sx={{ flex: 1, py: 6 }}>
-            <Box sx={{ maxWidth: 1280, mx: 'auto', px: 3 }}>
+        // Dashboard 页面现在在 MainLayout 的 MotionBox 内部渲染，需要自己添加内边距
+        <Box sx={{ width: '100%', height: '100%', p: 3, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ maxWidth: 1280, mx: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                 {/* 欢迎语 */}
                 <Stack spacing={1} mb={6}>
                     <Typography
                         variant="h5"
-                        sx={{ color: '#1976d2', fontSize: '2rem' }}  // 标题略大
+                        sx={{ color: '#1976d2', fontSize: '2rem' }}
                     >
                         运维信息表
                     </Typography>
                     <Typography
-                        variant="h6"                                // 由 subtitle1 → h6
+                        variant="h6"
                         color="text.secondary"
-                        sx={{ fontSize: '1.25rem' }}                // 文本再调大
+                        sx={{ fontSize: '1.5rem' }} // 字号已调大
                     >
                         欢迎回来，{nickname}！接下来想做些什么？
                     </Typography>

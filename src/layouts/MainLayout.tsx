@@ -1,89 +1,108 @@
+// MainLayout.tsx
 /*****************************************************************
- *  MainLayout — 使用天然 Flex 推挤，避免重叠
+ *  MainLayout — FINAL FIX: 只提供最简单的布局骨架，不控制任何间距
  *****************************************************************/
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import Box from '@mui/material/Box';
+import SideNav from '../components/SideNav';
+import { LayoutProvider, useLayout } from '../contexts/LayoutContext.tsx';
+import RightSearchPanel from '../components/RightSearchPanel';
+import { pageVariants, pageTransition } from '../utils/pageAnimations';
 
-import React, { useRef, useState } from 'react'
-import { Outlet, useLocation, useOutletContext } from 'react-router-dom'
-import { motion, type Variants } from 'framer-motion'
-import Box from '@mui/material/Box'
-import SideNav from '../components/SideNav'
-
-/* --------- 常量 --------- */
-// 修复: 移除冗余常量，因为 SideNav 内部已有
-const EASE = [0.4, 0, 0.2, 1] as const;
-const DUR = 0.28; // 秒
-
-/* 页面淡入动画（原逻辑保持） */
-const variants: Variants = {
-    initial: { opacity: 0, y: 48 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 },
-};
 const MotionBox = motion(Box);
 
-/* --------- context hook --------- */
-export type SearchContainerCtx = { searchContainer: React.RefObject<HTMLDivElement> };
-export function useSearchContainer() {
-    return useOutletContext<SearchContainerCtx>();
-}
-
-export default function MainLayout({ onFakeLogout }: { onFakeLogout: () => void }) {
+// 内部组件，用于使用 LayoutContext
+function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     const { pathname } = useLocation();
-    // 修复: 状态管理。默认收起(false)与 SideNav 保持一致
-    const [sideOpen, setSideOpen] = useState(false);
-    const toggleSide = () => setSideOpen(o => !o);
+    const [sideNavOpen, setSideNavOpen] = useState(false);
+    // 从 LayoutContext 解构出 panelActions 和 setPanelActions
+    const { isPanelOpen, panelContent, setPanelContent, togglePanel, panelActions, setPanelActions } = useLayout();
 
-    const cardRef = useRef<HTMLDivElement | null>(null);
+    // 当页面路径改变时，重置右侧面板内容和动作
+    useEffect(() => {
+        setPanelContent(null);
+        setPanelActions({}); // 也要清除面板动作
+    }, [pathname, setPanelContent, setPanelActions]); // 添加 setPanelActions 到依赖
 
     return (
-        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-            {/* 修复: 传入 open 和 onToggle，移除不再需要的 props */}
+        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#f7f9fd' }}>
             <SideNav
-                open={sideOpen}
-                onToggle={toggleSide}
+                open={sideNavOpen}
+                onToggle={() => setSideNavOpen(o => !o)}
                 onFakeLogout={onFakeLogout}
             />
 
-            {/* ---------- 工作区容器：纯 flex 推挤，无 translateX ---------- */}
             <Box
-                component="main" // 使用 main 标签更符合语义
+                component="main"
                 sx={{
                     flexGrow: 1,
-                    bgcolor: '#f7f9fd',
-                    display: 'flex',
-                    flexDirection: 'column', // 让内部卡片可以轻松控制
-                    alignItems: 'stretch',
-                    pt: { xs: 2, md: 3 },
-                    pr: { xs: 2, md: 3 },
-                    pb: { xs: 2, md: 3 },
-                    // 修复: 移除不必要的 transition，让 flex 推挤效果自然发生
+                    height: '100%',
+                    py: 3, // 只保留上下内边距，移除左右内边距
+                    boxSizing: 'border-box',
+                    display: 'flex', // 使主内容面板和右侧面板可以并排
+                    gap: 3, // 主内容面板和右侧面板之间的间距
                 }}
             >
-                {/* ---------- 白色主卡片 ---------- */}
+                {/* 静态的白色背景主内容面板 */}
                 <Box
-                    ref={cardRef}
                     sx={{
                         flexGrow: 1,
+                        height: '100%',
                         bgcolor: 'background.paper',
                         borderRadius: 2,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        position: 'relative', // 保持，为内部 MotionBox 定位
+                        // 移除这里的 p:3，由内部的 MotionBox 或更内部的页面内容来提供
+                        // overflow: 'hidden', // 移除这里的 overflow，动画 MotionBox 会处理
+                        display: 'flex', // 让内部的 MotionBox 能够填充
+                        flexDirection: 'column', // 如果需要，让内部内容垂直堆叠
                     }}
                 >
+                    {/* 这个 MotionBox 负责页面的动画效果，不负责内边距 */}
                     <MotionBox
                         key={pathname}
-                        variants={variants}
+                        variants={pageVariants}
+                        transition={pageTransition}
                         initial="initial"
                         animate="animate"
                         exit="exit"
-                        transition={{ duration: DUR, ease: EASE }}
-                        sx={{ flexGrow: 1, overflowY: 'auto', p: 3 }}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            // 移除这里的 p:3，确保它不产生额外的绿色区域
+                            boxSizing: 'border-box',
+                            overflow: 'hidden', // 动画层进行内容裁剪
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}
                     >
-                        <Outlet context={{ searchContainer: cardRef }} />
+                        <Outlet /> {/* 页面内容在这里渲染 */}
                     </MotionBox>
                 </Box>
+
+                {/* 右侧搜索面板 - 由 LayoutContext 控制其内容和打开状态 */}
+                <RightSearchPanel<Record<string, unknown>>
+                    open={isPanelOpen}
+                    onClose={togglePanel}
+                    // 从 panelActions 中获取页面特定的搜索和重置函数
+                    onSearch={panelActions.onSearch || (() => console.log('MainLayout: No search handler provided for this page'))}
+                    onReset={panelActions.onReset} // 仅在定义时传递
+                    title={panelActions.title}
+                    width={panelActions.width}
+                    showActionBar={panelActions.showActionBar}
+                >
+                    {panelContent}
+                </RightSearchPanel>
             </Box>
         </Box>
+    );
+}
+
+// 导出带有 LayoutProvider 的 MainLayout
+export default function MainLayout({ onFakeLogout }: { onFakeLogout: () => void }) {
+    return (
+        <LayoutProvider>
+            <MainContentWrapper onFakeLogout={onFakeLogout} />
+        </LayoutProvider>
     );
 }

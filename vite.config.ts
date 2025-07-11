@@ -9,7 +9,7 @@
 import { defineConfig, loadEnv } from 'vite'        // defineConfig 提供类型提示；loadEnv 读取 .env
 import react from '@vitejs/plugin-react'            // 官方 React 插件：JSX、Fast Refresh
 import svgr from 'vite-plugin-svgr'                 // 将 .svg 转成 React 组件
-import { resolve } from 'node:path'                 // ✅ Node-ESM 推荐写法，用于解析绝对路径
+import { resolve } from 'node:path'                 // Node-ESM 推荐写法，用于解析绝对路径
 
 // -----------------------------------------------------------------
 // 以函数形式导出配置，可根据运行模式 (mode) 动态读取环境变量
@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
     /* ================= 路径别名 ================= */
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'src'),             // ✅ “@” 指向 src 目录，写 import '@/xyz'
+        '@': resolve(__dirname, 'src'),             // “@” 指向 src 目录，写 import '@/xyz'
       },
     },
 
