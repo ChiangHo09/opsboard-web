@@ -1,7 +1,12 @@
-/*****************************************************************
- *  src/pages/Servers.tsx
- *  FINAL FIX: 页面自己负责完整的内部布局，包括所有内边距和间距
- *****************************************************************/
+/*
+ * [文件用途说明]
+ * - 此文件为“服务器信息”页面，负责展示服务器列表数据。
+ * - 它通过 useLayout 上下文来动态设置右侧搜索面板的内容和行为。
+ *
+ * [本次修改记录]
+ * - 在 setPanelActions 的调用中，移除了 `width: 360` 这一行。
+ * - 因为 RightSearchPanel 组件现在已经有了 360px 的默认宽度，所以页面无需再重复指定，从而简化了页面级代码。
+ */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button, TextField } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
@@ -45,8 +50,8 @@ const Servers: React.FC = () => {
             onSearch: handleSearch, // 传递本页的搜索处理函数
             onReset: handleReset,   // 传递本页的重置处理函数
             title: '服务器搜索', // 为面板设置自定义标题
-            width: 360, // 为面板设置自定义宽度
             showActionBar: true, // 是否显示动作条
+            // width: 360, // <- 修改点：此行已被移除
         });
 
         // 返回一个清理函数，当组件卸载时清除面板内容和动作

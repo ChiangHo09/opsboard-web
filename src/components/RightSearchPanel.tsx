@@ -1,7 +1,13 @@
-/********************************************************************
- *  组件名：RightSearchPanel
- *  FINAL FIX: 纯粹的动画组件，只控制自身宽度
- ********************************************************************/
+/*
+ * [文件用途说明]
+ * - 此文件定义了 RightSearchPanel 组件，这是一个可复用的、带动画效果的右侧面板。
+ * - 它主要用于承载各种搜索表单，并提供了标题、关闭按钮和统一的“搜索/重置”操作栏。
+ *
+ * [本次修改记录]
+ * - 为根组件 MotionBox 添加了 `ml: open ? 3 : 0` 样式。
+ * - 这个改动使面板仅在展开（open=true）时，才为自己添加一个左外边距（marginLeft），
+ *   从而动态地创建与主内容区域的间隙。当面板关闭时，此边距为0，完美解决了关闭后面板区域仍有空白间隙的问题。
+ */
 import React from 'react';
 import { Box, Typography, Divider, IconButton, Stack, Button } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -26,7 +32,7 @@ export default function RightSearchPanel<T>({
                                                 onSearch,
                                                 onReset,
                                                 title = '搜索',
-                                                width = 320,
+                                                width = 360,
                                                 showActionBar = true,
                                                 children,
                                             }: RightSearchPanelProps<T>) {
@@ -54,6 +60,8 @@ export default function RightSearchPanel<T>({
                 bgcolor: 'background.paper',
                 borderRadius: 2,
                 boxSizing: 'border-box',
+                ml: open ? 3 : 0, // <- 修改点：只在展开时添加左边距来创建间隙
+                transition: 'margin-left 0.28s ease', // 配合动画，使边距变化更平滑
             }}
         >
             <Box
