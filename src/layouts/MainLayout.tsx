@@ -1,4 +1,5 @@
 /* --- START OF FILE MainLayout.tsx --- */
+
 /*****************************************************************
  *  MainLayout — FINAL FIX: 只提供最简单的布局骨架，不控制任何间距
  *****************************************************************/
@@ -53,7 +54,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     }, [pathname, setPanelContent, setPanelActions]);
 
     return (
-        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#f7f9fd' }}>
+        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#F0F4F9' }}>
             <SideNav
                 open={sideNavOpen}
                 onToggle={() => setSideNavOpen(o => !o)}
@@ -128,9 +129,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
 // 修复点5: 为 MainLayout 添加明确的返回类型
 // TODO:它们的作用是让 TypeScript 编译器跳过对紧随其后的下一行代码的类型检查，通常用于临时绕过某些已知但暂时无法修复的类型错误
 // MainLayout报错了，因为MainLayout.tsx中的LayoutProvider组件的返回值类型被定义为ReactNode，而不是JSX.Element。
-
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
 export default function MainLayout({ onFakeLogout }: { onFakeLogout: () => void }): JSX.Element {
     return (
         <LayoutProvider>

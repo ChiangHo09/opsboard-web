@@ -100,7 +100,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
     const controlIconSx = { fontSize: ICON_SIZE, color: GRAY, position: 'relative', top: '1px' };
 
     const tooltipSx = {
-        bgcolor: '#f7f9fd',
+        bgcolor: '#F0F4F9',
         color: GRAY,
         borderRadius: 0.75,
         border: '1px solid rgba(0,0,0,0.12)',
@@ -259,7 +259,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         flexShrink: 0, // 确保 Drawer 不收缩，避免移动端布局问题
                         '& .MuiDrawer-paper': {
                             width: W_EXPANDED, // 显式设置展开宽度
-                            bgcolor: '#f7f9fd',
+                            bgcolor: '#F0F4F9',
                             border: 'none',
                             boxSizing: 'border-box',
                             overflow: 'hidden',
@@ -333,7 +333,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         flexShrink: 0,
                         '& .MuiDrawer-paper': {
                             width: 'inherit',
-                            bgcolor: '#f7f9fd',
+                            bgcolor: '#F0F4F9',
                             border: 'none',
                             display: 'flex',
                             flexDirection: 'column',
@@ -394,13 +394,13 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
 
                         <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                             <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
-                                {mainNavItems.map(renderNavButton)}
+                                {mainNavItems.map(item => renderNavButton(item))}
                             </List>
                         </Box>
 
                         <Box sx={{ py: `${GAP}px` }}>
                             <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
-                                {bottomNavItems.map(renderNavButton)}
+                                {bottomNavItems.map(item => renderNavButton(item))}
                                 <ListItem disablePadding sx={{ position: 'relative', height: BTN_SIZE }}>
                                     <MotionButtonBase
                                         onClick={(e: MouseEvent<HTMLButtonElement>) => {

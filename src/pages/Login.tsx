@@ -1,8 +1,11 @@
+/* --- START OF FILE Login.tsx --- */
+
 /*****************************************************************
  *  src/pages/Login.tsx
  *  —— 响应式：Box + Flexbox（无需 Grid）
  *  —— 修复: 引用独立的 HoneypotInfo 组件来展示弹窗内容
  *  —— 调整: 移动端视图布局，实现居中、Logo-文字垂直排列及Logo-文字组合定位
+ *  —— 调整: 登录页面的背景色改为 #f7f9fd
  *****************************************************************/
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -55,7 +58,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
                 justifyContent: { xs: 'space-evenly', md: 'center' }, // 在主轴上分布内容。
                 // 移动端：均匀分布 Logo 区域和卡片区域，使它们在垂直方向上有“呼吸空间”，Logo 偏上，卡片偏下。
                 // 桌面端：在水平方向上居中两个区域。
-                bgcolor: 'background.default', // 设置背景色。
+                bgcolor: '#f7f9fd', // 背景色已修改为 #f7f9fd。
                 p: { xs: 2, md: 0 }, // 移动端添加一些外层内边距，防止内容紧贴边缘，桌面端不需要。
             }}
         >
@@ -175,3 +178,4 @@ export default function Login({ onFakeLogin }: LoginProps) {
         </Box>
     );
 }
+/* --- END OF FILE Login.tsx --- */
