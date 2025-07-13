@@ -1,14 +1,16 @@
-/*
- * [文件用途说明]
- * - 此文件定义了应用的登录页面，包含用户输入表单和品牌标识。
- * - 它采用了响应式设计，以适应桌面和移动设备。
+/**
+ * 文件功能：
+ * 此文件定义了应用的登录页面，包含用户输入表单和品牌标识。
+ * 它采用了响应式设计，以适应桌面和移动设备。
  *
- * [本次修改记录]
- * - 将登录页的 Logo 从 Material-UI 的 <CodeOffIcon /> 组件改回使用 `/favicon.svg` 图片文件。
- * - 使用了 `<Box component="img">` 来渲染该 SVG，并为其设置了响应式的高度，确保了与之前图标相似的视觉尺寸。
- * - 移除登录组件阴影：将 elevation 属性设置为 0，或者移除该属性。
+ * 本次修改：
+ * - 防止页面加载时输入框自动获得焦点。
+ * - 引入了 `useRef` 和 `useEffect` Hooks。
+ * - 为登录表单的 `Card` 组件添加了 `ref` 和 `tabIndex={-1}` 属性，使其可以被程序化地聚焦。
+ * - 通过 `useEffect` 在组件挂载时将焦点设置到 `Card` 上，从而移开输入框的默认焦点。
+ * - 在 `Card` 的 `sx` 样式中添加了 `outline: 'none'`，以移除聚焦时产生的默认轮廓线。
  */
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box, Card, CardContent, TextField, Button,
@@ -27,6 +29,12 @@ export default function Login({ onFakeLogin }: LoginProps) {
     const [password, setPassword] = useState('');
     const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
     const navigate = useNavigate();
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        // 将焦点设置到 Card 上，以防止 TextField 自动聚焦
+        cardRef.current?.focus();
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,7 +85,6 @@ export default function Login({ onFakeLogin }: LoginProps) {
                         gap: 2,
                     }}
                 >
-                    {/* --- START OF MODIFICATION --- */}
                     <Box
                         component="img"
                         src="/favicon.svg"
@@ -87,7 +94,6 @@ export default function Login({ onFakeLogin }: LoginProps) {
                             width: 'auto',
                         }}
                     />
-                    {/* --- END OF MODIFICATION --- */}
                     <Typography
                         variant="h4"
                         sx={{
@@ -110,13 +116,15 @@ export default function Login({ onFakeLogin }: LoginProps) {
                     justifyContent: 'center',
                 }}
             >
-                {/* 恢复阴影：将 elevation 属性设置为 3（默认值）。 */}
-                {/* 如果要移除阴影，请将 elevation={3} 改为 elevation={0} 或直接移除 elevation 属性。 */}
-                <Card elevation={3}
-                      sx={{
-                          width: '100%',
-                          maxWidth: 360
-                      }}
+                <Card
+                    ref={cardRef}
+                    tabIndex={-1}
+                    elevation={3}
+                    sx={{
+                        width: '100%',
+                        maxWidth: 360,
+                        outline: 'none', // 移除聚焦时的轮廓线
+                    }}
                 >
                     <CardContent>
                         <Typography variant="h6" gutterBottom>用户登录</Typography>
