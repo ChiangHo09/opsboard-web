@@ -4,9 +4,8 @@
  * 它实现了响应式设计，能够在桌面端和移动端提供不同的布局和交互体验。
  *
  * 本次修改：
- * - 进一步修复触摸屏问题：在展开状态下，点击侧边栏背景区域也会残留点击效果。
- * - 通过使用 `@media (hover: hover)` 媒体查询，将桌面端侧边栏的 `cursor: 'pointer'` 样式限制在能真正悬停的设备上。
- * - 此修改可以防止触摸设备将侧边栏背景渲染为可点击元素，从而彻底杜绝了浏览器原生的点击高亮（“阴影”）效果。
+ * - 根据用户要求，将侧边栏的展开/收起图标从 `MenuIcon` 更换为 `ViewStreamRoundedIcon`。
+ * - 此修改已应用于桌面端和移动端，以确保视觉风格的统一。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -20,15 +19,15 @@ import {
     useMediaQuery, useTheme
 } from '@mui/material';
 import {
-    Menu as MenuIcon,
+    ViewStreamRounded as ViewStreamRoundedIcon, // 修复点：导入新图标
     Search as SearchIcon,
     Dashboard as DashboardIcon,
     Dns as DnsIcon,
-    Article as ArticleIcon,
-    Build as BuildIcon,
+    RestorePage as RestorePageIcon,
+    PlaylistAddCheckCircle as PlaylistAddCheckCircleIcon,
     Assignment as AssignmentIcon,
-    BarChart as BarChartIcon,
-    Science as ScienceIcon,
+    PollRounded as PollRoundedIcon,
+    ScienceRounded as ScienceRoundedIcon,
     Settings as SettingsIcon,
     AccountCircle as AccountIcon,
     Logout as LogoutIcon,
@@ -64,11 +63,11 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
     { label: '概览', path: '/app/dashboard', icon: <DashboardIcon /> },
     { label: '服务器', path: '/app/servers', icon: <DnsIcon /> },
-    { label: '更新日志', path: '/app/changelog', icon: <ArticleIcon /> },
-    { label: '巡检备份', path: '/app/inspection-backup', icon: <BuildIcon /> },
+    { label: '更新日志', path: '/app/changelog', icon: <RestorePageIcon /> },
+    { label: '巡检备份', path: '/app/inspection-backup', icon: <PlaylistAddCheckCircleIcon /> },
     { label: '工单', path: '/app/tickets', icon: <AssignmentIcon /> },
-    { label: '统计信息', path: '/app/stats', icon: <BarChartIcon /> },
-    { label: '实验性功能', path: '/app/labs', icon: <ScienceIcon /> },
+    { label: '统计信息', path: '/app/stats', icon: <PollRoundedIcon /> },
+    { label: '实验性功能', path: '/app/labs', icon: <ScienceRoundedIcon /> },
 ];
 
 const bottomNavItems: NavItem[] = [
@@ -205,7 +204,8 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                     }}
                 >
                     <IconButton onClick={() => setMobileDrawerOpen(true)} aria-label="open drawer">
-                        <MenuIcon sx={controlIconSx} />
+                        {/* 修复点：更换移动端图标 */}
+                        <ViewStreamRoundedIcon sx={controlIconSx} />
                     </IconButton>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {bottomNavItems
@@ -305,7 +305,6 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                             flexDirection: 'column',
                             boxSizing: 'border-box',
                             overflow: 'hidden',
-                            // 修复点: 仅在支持悬停的设备上显示指针光标
                             '@media (hover: hover)': {
                                 cursor: 'pointer',
                             }
@@ -343,7 +342,8 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                             justifyContent: 'center', flexShrink: 0,
                                         }}>
                                             <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: TRANS_DUR }}>
-                                                <MenuIcon sx={controlIconSx} />
+                                                {/* 修复点：更换桌面端图标 */}
+                                                <ViewStreamRoundedIcon sx={controlIconSx} />
                                             </motion.div>
                                         </Box>
                                     </Tooltip>
