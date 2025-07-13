@@ -5,11 +5,12 @@
  * - 它还通过 LayoutProvider 为子组件提供了控制右侧面板显隐和内容的状态。
  *
  * [本次修改记录]
- * - 从 useLayout 上下文中解构出新增的 `closePanel` 方法。
- * - 在监听路由 `pathname` 变化的 useEffect 中，增加了 `closePanel()` 的调用。
- * - 这确保了每当用户导航到一个新页面时，右侧的搜索面板（如果之前是打开的）都会自动关闭，提升了用户体验的一致性。
+ * - 响应 `LayoutContext` 的重构，现在从上下文中获取 `panelContent`, `panelTitle`, `panelWidth`。
+ * - `RightSearchPanel` 组件现在接收简化的 props (`open`, `onClose`, `title`, `width`, `children`)。
+ * - `panelContent`（现在是一个完整的组件实例，如 ServerSearchForm）被直接作为 `children` 传递给 `RightSearchPanel`。
+ * - 每次路由切换时，会调用 `closePanel` 和 `setPanelContent(null)` 来清理状态，确保页面间的隔离。
  */
-import {useState, useEffect, type ReactNode, type JSX} from 'react';
+import { useState, useEffect, type JSX } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
@@ -17,14 +18,6 @@ import SideNav from '../components/SideNav';
 import { LayoutProvider, useLayout } from '../contexts/LayoutContext.tsx';
 import RightSearchPanel from '../components/RightSearchPanel';
 import { pageVariants, pageTransition } from '../utils/pageAnimations';
-
-interface PanelActions {
-    onSearch?: (query?: string) => void;
-    onReset?: () => void;
-    title?: string;
-    width?: number;
-    showActionBar?: boolean;
-}
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
@@ -35,29 +28,22 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
+    // 从重构后的 LayoutContext 获取状态
     const {
         isPanelOpen,
         panelContent,
         setPanelContent,
         togglePanel,
-        closePanel, // <- 修改点1：获取 closePanel 方法
-        panelActions,
-        setPanelActions
-    } = useLayout() as {
-        isPanelOpen: boolean;
-        panelContent: ReactNode;
-        setPanelContent: (content: ReactNode) => void;
-        togglePanel: () => void;
-        closePanel: () => void; // <- 类型断言中也加上
-        panelActions: PanelActions;
-        setPanelActions: (actions: PanelActions) => void;
-    };
+        closePanel,
+        panelTitle,
+        panelWidth,
+    } = useLayout();
 
+    // 路由切换时，清理面板状态
     useEffect(() => {
-        closePanel(); // <- 修改点2：在路由切换时，总是先关闭面板
+        closePanel();
         setPanelContent(null);
-        setPanelActions({});
-    }, [pathname, setPanelContent, setPanelActions, closePanel]); // <- 修改点3：添加依赖项
+    }, [pathname, setPanelContent, closePanel]);
 
     return (
         <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#F0F4F9' }}>
@@ -114,15 +100,14 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                     </MotionBox>
                 </Box>
 
+                {/* RightSearchPanel 现在接收简化的 props */}
                 <RightSearchPanel
                     open={isPanelOpen}
                     onClose={togglePanel}
-                    onSearch={panelActions.onSearch || (() => console.log('MainLayout: No search handler'))}
-                    onReset={panelActions.onReset}
-                    title={panelActions.title}
-                    width={panelActions.width}
-                    showActionBar={panelActions.showActionBar}
+                    title={panelTitle}
+                    width={panelWidth}
                 >
+                    {/* panelContent (一个完整的组件) 被作为 children 传递 */}
                     {panelContent}
                 </RightSearchPanel>
             </Box>
@@ -130,7 +115,6 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     );
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 export default function MainLayout({ onFakeLogout }: { onFakeLogout: () => void }): JSX.Element {
     return (
         <LayoutProvider>

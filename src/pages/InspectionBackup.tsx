@@ -1,56 +1,49 @@
 /*
  * [文件用途说明]
- * - 此文件是一个通用的页面模板，展示了如何采用新的“状态驱动、高解耦”模式来集成右侧搜索面板。
- * - 开发者可以复制此文件，替换其中的搜索表单组件和业务逻辑，快速创建新页面。
+ * - 此文件是“巡检备份”的占位页面。
+ * - 它是基于通用页面模板创建的，旨在提供一个功能齐全的页面起点，包括与右侧搜索面板的交互逻辑。
  *
  * [本次修改记录]
- * - 完全重构了与面板的交互方式，以匹配新的架构。
- * - 不再在页面内构建JSX，而是直接在 `useEffect` 中调用 `setPanelContent`，并传入一个独立的表单组件实例。
- * - 示范了一个内联定义的简单搜索表单组件，展示了即使对于简单表单也能保持解耦的模式。
+ * - 新建文件，作为“巡检备份”功能的主页面。
  */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button, TextField, Stack } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayout } from '../contexts/LayoutContext.tsx';
 
-// 1. 定义一个独立的、可复用的搜索表单（为简单起见，直接定义在此文件中）
-const TemplateSearchForm: React.FC<{ onSearch: (v: string) => void }> = ({ onSearch }) => {
+// 定义一个简单的搜索表单组件
+const InspectionSearchForm: React.FC<{ onSearch: (v: string) => void }> = ({ onSearch }) => {
     const [searchTerm, setSearchTerm] = React.useState('');
     return (
         <Stack spacing={2} sx={{ width: '100%' }}>
             <TextField
                 fullWidth
                 margin="normal"
-                label="模板搜索字段"
+                label="按设备或日期搜索..."
                 variant="outlined"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Typography variant="caption" color="textSecondary">
-                这是一个示例搜索表单，请在新页面中替换为您需要的字段。
-            </Typography>
             <Box sx={{ flexGrow: 1 }} />
             <Button variant="contained" onClick={() => onSearch(searchTerm)} size="large">
-                开始搜索
+                搜索记录
             </Button>
         </Stack>
     );
 };
 
-const TemplatePage: React.FC = () => {
+const InspectionBackup: React.FC = () => {
     const { togglePanel, setPanelContent, setPanelTitle } = useLayout();
 
-    // 2. 定义页面自己的搜索逻辑
     const handleSearch = useCallback((searchTerm: string) => {
-        console.log('在 TemplatePage 页面执行搜索:', searchTerm);
+        console.log('在巡检备份页面执行搜索:', searchTerm);
         alert(`搜索: ${searchTerm}`);
         togglePanel();
     }, [togglePanel]);
 
-    // 3. 使用 useEffect 设置面板内容
     useEffect(() => {
-        setPanelContent(<TemplateSearchForm onSearch={handleSearch} />);
-        setPanelTitle('模板搜索');
+        setPanelContent(<InspectionSearchForm onSearch={handleSearch} />);
+        setPanelTitle('巡检记录搜索');
 
         return () => {
             setPanelContent(null);
@@ -69,27 +62,38 @@ const TemplatePage: React.FC = () => {
                 flexDirection: 'column'
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                    <Typography variant="h4">模板页面 (Template Page)</Typography>
+                    <Typography variant="h4">巡检备份</Typography>
                     <Button
                         variant="contained"
                         startIcon={<SearchIcon />}
                         onClick={togglePanel}
+                        sx={{
+                            height: '42px',
+                            borderRadius: '50px',
+                            bgcolor: '#F0F4F9',
+                            color: '#424242',
+                            boxShadow: 'none',
+                            textTransform: 'none',
+                            fontSize: '15px',
+                            fontWeight: 500,
+                            px: 3,
+                            '&:hover': {
+                                bgcolor: '#E1E5E9',
+                                boxShadow: 'none',
+                            },
+                        }}
                     >
-                        搜索
+                        <Typography component="span" sx={{ transform: 'translateY(1px)' }}>
+                            搜索
+                        </Typography>
                     </Button>
                 </Box>
-                <Typography sx={{ mt: 2, flexShrink: 0 }}>
-                    这是一个根据其他页面样式生成的通用模板。
-                </Typography>
-                <Typography sx={{ mt: 1, flexShrink: 0 }}>
-                    在这里编写您的页面内容。例如：
-                </Typography>
                 <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', flexGrow: 1, overflowY: 'auto' }}>
-                    <Typography>您的实际内容会在这里渲染。</Typography>
+                    <Typography>这里将用于展示巡检任务和备份记录。</Typography>
                 </Box>
             </Box>
         </Box>
     );
 };
 
-export default TemplatePage;
+export default InspectionBackup;

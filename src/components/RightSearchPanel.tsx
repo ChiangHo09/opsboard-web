@@ -1,41 +1,35 @@
 /*
  * [文件用途说明]
- * - 此文件定义了 RightSearchPanel 组件，这是一个可复用的、带动画效果的右侧面板。
- * - 它主要用于承载各种搜索表单，并提供了标题、关闭按钮和统一的“搜索/重置”操作栏。
+ * - 此文件定义了 RightSearchPanel 组件，它是一个纯粹的、带动画的右侧“容器”或“壳”。
+ * - 它的职责是管理自身的展开/收起动画、显示标题和关闭按钮，并为子内容提供一个带标准内边距的插槽。
  *
  * [本次修改记录]
- * - 为根组件 MotionBox 添加了 `ml: open ? 3 : 0` 样式。
- * - 这个改动使面板仅在展开（open=true）时，才为自己添加一个左外边距（marginLeft），
- *   从而动态地创建与主内容区域的间隙。当面板关闭时，此边距为0，完美解决了关闭后面板区域仍有空白间隙的问题。
+ * - 移除了 onSearch, onReset, showActionBar, 和泛型 <T>。
+ * - 该组件不再关心其内容的具体行为（如搜索/重置），这些逻辑现在由传入的 children（例如 ServerSearchForm）完全负责。
+ * - 这使得 RightSearchPanel 成为一个高度可复用、与业务逻辑完全解耦的纯UI容器。
  */
 import React from 'react';
-import { Box, Typography, Divider, IconButton, Stack, Button } from '@mui/material';
+import { Box, Typography, Divider, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { motion, type Variants } from 'framer-motion';
 
-export interface RightSearchPanelProps<T> {
+export interface RightSearchPanelProps {
     open: boolean;
     onClose: () => void;
-    onSearch: (values: T) => void;
-    onReset?: () => void;
     title?: string;
     width?: number;
-    showActionBar?: boolean;
     children: React.ReactNode;
 }
 
 const MotionBox = motion(Box);
 
-export default function RightSearchPanel<T>({
-                                                open,
-                                                onClose,
-                                                onSearch,
-                                                onReset,
-                                                title = '搜索',
-                                                width = 360,
-                                                showActionBar = true,
-                                                children,
-                                            }: RightSearchPanelProps<T>) {
+export default function RightSearchPanel({
+                                             open,
+                                             onClose,
+                                             title = '搜索',
+                                             width = 360,
+                                             children,
+                                         }: RightSearchPanelProps) {
 
     const panelVariants: Variants = {
         open: {
@@ -60,8 +54,8 @@ export default function RightSearchPanel<T>({
                 bgcolor: 'background.paper',
                 borderRadius: 2,
                 boxSizing: 'border-box',
-                ml: open ? 3 : 0, // <- 修改点：只在展开时添加左边距来创建间隙
-                transition: 'margin-left 0.28s ease', // 配合动画，使边距变化更平滑
+                ml: open ? 3 : 0,
+                transition: 'margin-left 0.28s ease',
             }}
         >
             <Box
@@ -81,15 +75,10 @@ export default function RightSearchPanel<T>({
                     </IconButton>
                 </Box>
                 <Divider sx={{ mx: -3, flexShrink: 0 }} />
-                <Box sx={{ mt: 2, flexGrow: 1, overflowY: 'auto' }}>
+                {/* 子内容（现在是完整的表单组件）被渲染在这里 */}
+                <Box sx={{ mt: 2, flexGrow: 1, overflowY: 'hidden', display: 'flex' }}>
                     {children}
                 </Box>
-                {showActionBar && (
-                    <Stack direction="row" spacing={2} sx={{ mt: 3, justifyContent: 'flex-end', flexShrink: 0 }}>
-                        {onReset && <Button variant="outlined" onClick={onReset} size="large">重置</Button>}
-                        <Button variant="contained" onClick={() => onSearch({} as T)} size="large">搜索</Button>
-                    </Stack>
-                )}
             </Box>
         </MotionBox>
     );
