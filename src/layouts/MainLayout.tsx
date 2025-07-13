@@ -5,10 +5,8 @@
  * - 它还通过 LayoutProvider 为子组件提供了控制右侧面板显隐和内容的状态。
  *
  * [本次修改记录]
- * - 彻底修复了在移动设备上，工作区底部内容被遮挡或无法滚动的问题。
- * - 将最外层容器 `Box` 的高度从 `height: '100vh'` 修改为 `height: '100dvh'` (动态视口高度)。
- *   - `100dvh` 是一个现代 CSS 单位，它会根据移动端浏览器地址栏的显示/隐藏而动态调整，确保布局始终填充可见区域而无内容被遮挡。
- * - 还原了内部白色工作区容器的 `overflow: 'hidden'` 属性，以确保其圆角和内部绝对定位的搜索面板能正确显示。
+ * - 将 `sideNavOpen` 状态的初始值从 `useState(true)` (默认展开) 修改回 `useState(false)` (默认收起)，
+ *   以满足用户登录后侧边栏应为收起状态的新要求。
  */
 import { useState, useEffect, type JSX } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -42,7 +40,7 @@ const mobilePanelVariants: Variants = {
 
 function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     const { pathname } = useLocation();
-    const [sideNavOpen, setSideNavOpen] = useState(true);
+    const [sideNavOpen, setSideNavOpen] = useState(false); // <- 修改点：从 true 改回 false
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -62,10 +60,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     }, [pathname, setPanelContent, closePanel]);
 
     return (
-        // --- START OF MODIFICATION ---
-        // 使用 100dvh 替代 100vh
         <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: '#F0F4F9' }}>
-            {/* --- END OF MODIFICATION --- */}
             <SideNav
                 open={sideNavOpen}
                 onToggle={() => setSideNavOpen(o => !o)}
@@ -102,7 +97,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                         transition: theme.transitions.create(['border-radius', 'padding'], {
                             duration: theme.transitions.duration.short,
                         }),
-                        overflow: 'hidden', // 还原此属性以保证圆角和覆盖式面板的正确显示
+                        overflow: 'hidden',
                     }}
                 >
                     <MotionBox
