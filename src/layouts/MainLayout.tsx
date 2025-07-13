@@ -5,11 +5,10 @@
  * - 它还通过 LayoutProvider 为子组件提供了控制右侧面板显隐和内容的状态。
  *
  * [本次修改记录]
- * - 根据用户的明确要求，将移动端搜索面板的动画效果修改为与桌面端页面切换（pageVariants）的动画风格完全一致。
- * - 创建了新的 `mobilePanelVariants` 动画变体，精确地组合了 `opacity` 和 `scale` 属性。
- * - `initial` 和 `exit` 状态为 `opacity: 0, scale: 0.98`。
- * - `animate` 状态为 `opacity: 1, scale: 1`。
- * - 这确保了移动端覆盖式面板的出现和消失，都具有和桌面端页面切换一样平滑、精致的淡入淡出及缩放效果。
+ * - 彻底修复了在移动设备上，工作区底部内容被遮挡或无法滚动的问题。
+ * - 将最外层容器 `Box` 的高度从 `height: '100vh'` 修改为 `height: '100dvh'` (动态视口高度)。
+ *   - `100dvh` 是一个现代 CSS 单位，它会根据移动端浏览器地址栏的显示/隐藏而动态调整，确保布局始终填充可见区域而无内容被遮挡。
+ * - 还原了内部白色工作区容器的 `overflow: 'hidden'` 属性，以确保其圆角和内部绝对定位的搜索面板能正确显示。
  */
 import { useState, useEffect, type JSX } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -24,7 +23,6 @@ import { pageVariants, pageTransition } from '../utils/pageAnimations';
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
-// 为移动端覆盖式面板定义与 pageVariants 风格一致的动画
 const mobilePanelVariants: Variants = {
     initial: {
         opacity: 0,
@@ -64,7 +62,10 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     }, [pathname, setPanelContent, closePanel]);
 
     return (
-        <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#F0F4F9' }}>
+        // --- START OF MODIFICATION ---
+        // 使用 100dvh 替代 100vh
+        <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: '#F0F4F9' }}>
+            {/* --- END OF MODIFICATION --- */}
             <SideNav
                 open={sideNavOpen}
                 onToggle={() => setSideNavOpen(o => !o)}
@@ -91,18 +92,17 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                 <Box
                     sx={{
                         flexGrow: 1,
-                        height: '100%',
                         bgcolor: 'background.paper',
                         borderRadius: { xs: '16px 16px 0 0', md: 2 },
                         p: { xs: 0, md: 3 },
                         boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
-                        overflow: 'hidden',
                         position: 'relative',
                         transition: theme.transitions.create(['border-radius', 'padding'], {
                             duration: theme.transitions.duration.short,
                         }),
+                        overflow: 'hidden', // 还原此属性以保证圆角和覆盖式面板的正确显示
                     }}
                 >
                     <MotionBox
