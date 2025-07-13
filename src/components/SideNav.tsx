@@ -4,8 +4,9 @@
  * 它实现了响应式设计，能够在桌面端和移动端提供不同的布局和交互体验。
  *
  * 本次修改：
- * - 根据用户要求，将侧边栏的展开/收起图标从 `MenuIcon` 更换为 `ViewStreamRoundedIcon`。
- * - 此修改已应用于桌面端和移动端，以确保视觉风格的统一。
+ * - 再次调整了账户菜单中用户信息的左侧内边距（padding-left），以实现与下方“退出登录”按钮文本的精确视觉对齐。
+ * - 从菜单中移除了分割线（Divider）及其 import，使设计更简洁。
+ * - 调整了用户信箱 Box 的下边距（padding-bottom），以补偿移除分割线后损失的垂直间距。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -14,12 +15,11 @@ import {
     Tooltip, Avatar,
     Menu,
     MenuItem,
-    Divider,
     IconButton,
     useMediaQuery, useTheme
 } from '@mui/material';
 import {
-    ViewStreamRounded as ViewStreamRoundedIcon, // 修复点：导入新图标
+    ViewStreamRounded as ViewStreamRoundedIcon,
     Search as SearchIcon,
     Dashboard as DashboardIcon,
     Dns as DnsIcon,
@@ -167,16 +167,15 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
             onClose={() => setAnchorEl(null)}
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
             transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            slotProps={{ paper: { sx: { ml: 1 } } }}
+            slotProps={{ paper: { sx: { ml: 1, p: 1 } } }}
         >
-            <Box sx={{ p: 2, minWidth: 200 }}>
+            <Box sx={{ pt: 1, pb: 1, pr: 2, pl: 4, minWidth: 200 }}>
                 <Typography fontWeight="bold">chiangho</Typography>
                 <Typography variant="caption" color="text.secondary">user@example.com</Typography>
             </Box>
-            <Divider />
             <MenuItem
                 onClick={() => { setAnchorEl(null); onFakeLogout(); }}
-                sx={{ color: 'error.main' }}
+                sx={{ color: 'error.main', borderRadius: 1.5 }}
             >
                 <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
                 退出登录
@@ -204,7 +203,6 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                     }}
                 >
                     <IconButton onClick={() => setMobileDrawerOpen(true)} aria-label="open drawer">
-                        {/* 修复点：更换移动端图标 */}
                         <ViewStreamRoundedIcon sx={controlIconSx} />
                     </IconButton>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -342,7 +340,6 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                             justifyContent: 'center', flexShrink: 0,
                                         }}>
                                             <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: TRANS_DUR }}>
-                                                {/* 修复点：更换桌面端图标 */}
                                                 <ViewStreamRoundedIcon sx={controlIconSx} />
                                             </motion.div>
                                         </Box>
