@@ -4,12 +4,10 @@
  * - 它的职责是管理自身的展开/收起动画、显示标题和关闭按钮，并为子内容提供一个带标准内边距的插槽。
  *
  * [本次修改记录]
- * - 移除了 onSearch, onReset, showActionBar, 和泛型 <T>。
- * - 该组件不再关心其内容的具体行为（如搜索/重置），这些逻辑现在由传入的 children（例如 ServerSearchForm）完全负责。
- * - 这使得 RightSearchPanel 成为一个高度可复用、与业务逻辑完全解耦的纯UI容器。
+ * - 移除了标题栏下方的 `<Divider />` 组件，使面板头部与内容区的过渡更加简洁、无缝。
  */
 import React from 'react';
-import { Box, Typography, Divider, IconButton } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { motion, type Variants } from 'framer-motion';
 
@@ -74,8 +72,7 @@ export default function RightSearchPanel({
                         <CloseIcon />
                     </IconButton>
                 </Box>
-                <Divider sx={{ mx: -3, flexShrink: 0 }} />
-                {/* 子内容（现在是完整的表单组件）被渲染在这里 */}
+                {/* <Divider sx={{ mx: -3, flexShrink: 0 }} />  <-- 此行已被移除 */}
                 <Box sx={{ mt: 2, flexGrow: 1, overflowY: 'hidden', display: 'flex' }}>
                     {children}
                 </Box>

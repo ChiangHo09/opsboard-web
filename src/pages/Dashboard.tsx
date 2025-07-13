@@ -1,3 +1,13 @@
+/*
+ * [文件用途说明]
+ * - 此文件定义了应用的仪表盘（Dashboard）页面，是用户登录后看到的主界面。
+ * - 它展示了欢迎信息和一组快捷操作按钮，用于导航到应用的其他核心功能区。
+ *
+ * [本次修改记录]
+ * - 更新了快捷操作按钮的样式对象 `quickBtnSX`。
+ * - 将按钮的背景色 `bgcolor` 和文字颜色 `color` 修改为与侧边栏一致的风格（浅灰背景，深灰文字），以增强整个应用的视觉统一性。
+ * - 相应地更新了按钮的 `&:hover` 状态颜色。
+ */
 import { Box, Typography, Button, Stack } from '@mui/material'
 import NoteAddIcon from '@mui/icons-material/NoteAdd'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
@@ -9,29 +19,32 @@ export default function Dashboard() {
     const nickname = 'chiangho'        // TODO: 从后端获取
     const navigate = useNavigate()
 
-    /* 公共按钮样式（保持不变） */
+    /* --- START OF MODIFICATION --- */
     const quickBtnSX = {
         height: 44,
         minWidth: 160,
         px: 4,
         borderRadius: 30,
-        bgcolor: '#1976d2',
-        color: '#fff',
+        bgcolor: '#F0F4F9',      // 1. 背景色匹配侧边栏
+        color: '#424242',        // 2. 文字/图标颜色匹配侧边栏
         boxShadow: 0,
         textTransform: 'none',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         columnGap: 1.5,
-        '&:hover': { bgcolor: '#1565c0', boxShadow: 0 },
+        '&:hover': {
+            bgcolor: '#E1E5E9',   // 3. 定义匹配的悬停颜色
+            boxShadow: 0
+        },
         '& .MuiButton-startIcon': {
             margin: 0,
             display: 'inline-flex',
             alignItems: 'center',
         },
     } as const
+    /* --- END OF MODIFICATION --- */
 
-    /* 图标 + 微调文字（保持不变） */
     const label = (icon: JSX.Element, text: string) => (
         <>
             {icon}
@@ -46,8 +59,6 @@ export default function Dashboard() {
     )
 
     return (
-        // 外层 Box: 不再需要 p:3，因为显示区域的边距现在由 MainLayout 中的白色背景 Box 提供。
-        // 这里的 Box 仅负责宽度和高度填充，并成为内部内容盒的 flex 容器。
         <Box sx={{
             width: '100%',
             height: '100%',
@@ -55,18 +66,15 @@ export default function Dashboard() {
             display: 'flex',
             flexDirection: 'column'
         }}>
-            {/* 这个 Box 负责内容的实际显示区域，通过响应式宽度和 mx: 'auto' 控制左右留白 */}
-            {/* 同时，为其添加 py:4 (MUI 默认间距单位的 4 倍，即 32px) 作为内部上下边距 */}
             <Box sx={{
-                width: { xs: '90%', md: '80%' }, // 小屏幕 90% 宽度 (各留 5% 留白)，中大屏幕 80% 宽度 (各留 10% 留白)
-                maxWidth: 1280, // 内容最大宽度限制
-                mx: 'auto', // 自动左右外边距，实现居中和两侧留白
-                py: 4, // 为内容区域添加上下内边距，提供视觉余地
+                width: { xs: '90%', md: '80%' },
+                maxWidth: 1280,
+                mx: 'auto',
+                py: 4,
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column'
             }}>
-                {/* 欢迎语 */}
                 <Stack spacing={1} mb={6}>
                     <Typography
                         variant="h5"
@@ -77,13 +85,12 @@ export default function Dashboard() {
                     <Typography
                         variant="h6"
                         color="text.secondary"
-                        sx={{ fontSize: '1.5rem' }} // 字号已调大
+                        sx={{ fontSize: '1.5rem' }}
                     >
                         欢迎回来，{nickname}！接下来想做些什么？
                     </Typography>
                 </Stack>
 
-                {/* 快捷按钮区 */}
                 <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
                     <Button
                         variant="contained"

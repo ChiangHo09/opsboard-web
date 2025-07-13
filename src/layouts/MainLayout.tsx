@@ -1,19 +1,21 @@
 /*
  * [文件用途说明]
  * - 此文件定义了应用的主布局（MainLayout），它包含了固定的侧边导航栏（SideNav）、
- *   一个动态的主内容区域（通过 <Outlet> 渲染）以及一个可抽拉的右侧搜索面板（RightSearchPanel）。
+ *   一个动态的主内容区域（通过 <Outlet> 渲染）以及一个响应式的搜索面板。
  * - 它还通过 LayoutProvider 为子组件提供了控制右侧面板显隐和内容的状态。
  *
  * [本次修改记录]
- * - 响应 `LayoutContext` 的重构，现在从上下文中获取 `panelContent`, `panelTitle`, `panelWidth`。
- * - `RightSearchPanel` 组件现在接收简化的 props (`open`, `onClose`, `title`, `width`, `children`)。
- * - `panelContent`（现在是一个完整的组件实例，如 ServerSearchForm）被直接作为 `children` 传递给 `RightSearchPanel`。
- * - 每次路由切换时，会调用 `closePanel` 和 `setPanelContent(null)` 来清理状态，确保页面间的隔离。
+ * - 根据用户的明确要求，将移动端搜索面板的动画效果修改为与桌面端页面切换（pageVariants）的动画风格完全一致。
+ * - 创建了新的 `mobilePanelVariants` 动画变体，精确地组合了 `opacity` 和 `scale` 属性。
+ * - `initial` 和 `exit` 状态为 `opacity: 0, scale: 0.98`。
+ * - `animate` 状态为 `opacity: 1, scale: 1`。
+ * - 这确保了移动端覆盖式面板的出现和消失，都具有和桌面端页面切换一样平滑、精致的淡入淡出及缩放效果。
  */
 import { useState, useEffect, type JSX } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Box, useMediaQuery, useTheme } from '@mui/material';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { Box, useMediaQuery, useTheme, IconButton, Typography } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import SideNav from '../components/SideNav';
 import { LayoutProvider, useLayout } from '../contexts/LayoutContext.tsx';
 import RightSearchPanel from '../components/RightSearchPanel';
@@ -22,13 +24,30 @@ import { pageVariants, pageTransition } from '../utils/pageAnimations';
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
+// 为移动端覆盖式面板定义与 pageVariants 风格一致的动画
+const mobilePanelVariants: Variants = {
+    initial: {
+        opacity: 0,
+        scale: 0.98,
+    },
+    animate: {
+        opacity: 1,
+        scale: 1,
+        transition: { duration: 0.2, ease: 'easeOut' },
+    },
+    exit: {
+        opacity: 0,
+        scale: 0.98,
+        transition: { duration: 0.2, ease: 'easeOut' },
+    },
+};
+
 function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     const { pathname } = useLocation();
-    const [sideNavOpen, setSideNavOpen] = useState(false);
+    const [sideNavOpen, setSideNavOpen] = useState(true);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    // 从重构后的 LayoutContext 获取状态
     const {
         isPanelOpen,
         panelContent,
@@ -39,7 +58,6 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
         panelWidth,
     } = useLayout();
 
-    // 路由切换时，清理面板状态
     useEffect(() => {
         closePanel();
         setPanelContent(null);
@@ -58,13 +76,16 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                 sx={{
                     flexGrow: 1,
                     height: '100%',
-                    pt: isMobile ? `${MOBILE_TOP_BAR_HEIGHT}px` : 3,
-                    pb: 3,
+                    pt: { xs: `${MOBILE_TOP_BAR_HEIGHT}px`, md: 3 },
+                    pb: { xs: 0, md: 3 },
+                    pr: { xs: 0, md: 3 },
                     pl: 0,
-                    pr: 3,
                     boxSizing: 'border-box',
                     display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    transition: theme.transitions.create('padding-top', {
+                        duration: theme.transitions.duration.short,
+                    }),
                 }}
             >
                 <Box
@@ -72,11 +93,16 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                         flexGrow: 1,
                         height: '100%',
                         bgcolor: 'background.paper',
-                        borderRadius: 2,
-                        p: 3,
+                        borderRadius: { xs: '16px 16px 0 0', md: 2 },
+                        p: { xs: 0, md: 3 },
                         boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        transition: theme.transitions.create(['border-radius', 'padding'], {
+                            duration: theme.transitions.duration.short,
+                        }),
                     }}
                 >
                     <MotionBox
@@ -94,22 +120,53 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                             overflowX: 'hidden',
                             display: 'flex',
                             flexDirection: 'column',
+                            p: { xs: 2, md: 0 }
                         }}
                     >
                         <Outlet />
                     </MotionBox>
+
+                    <AnimatePresence>
+                        {isMobile && isPanelOpen && (
+                            <MotionBox
+                                variants={mobilePanelVariants}
+                                initial="initial"
+                                animate="animate"
+                                exit="exit"
+                                sx={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    bgcolor: 'background.paper',
+                                    zIndex: 10,
+                                    p: 3,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
+                                    <Typography variant="h6" noWrap>{panelTitle}</Typography>
+                                    <IconButton size="small" onClick={togglePanel} aria-label="close search panel">
+                                        <CloseIcon />
+                                    </IconButton>
+                                </Box>
+                                <Box sx={{ mt: 2, flexGrow: 1, overflowY: 'hidden', display: 'flex' }}>
+                                    {panelContent}
+                                </Box>
+                            </MotionBox>
+                        )}
+                    </AnimatePresence>
                 </Box>
 
-                {/* RightSearchPanel 现在接收简化的 props */}
-                <RightSearchPanel
-                    open={isPanelOpen}
-                    onClose={togglePanel}
-                    title={panelTitle}
-                    width={panelWidth}
-                >
-                    {/* panelContent (一个完整的组件) 被作为 children 传递 */}
-                    {panelContent}
-                </RightSearchPanel>
+                {!isMobile && (
+                    <RightSearchPanel
+                        open={isPanelOpen}
+                        onClose={togglePanel}
+                        title={panelTitle}
+                        width={panelWidth}
+                    >
+                        {panelContent}
+                    </RightSearchPanel>
+                )}
             </Box>
         </Box>
     );

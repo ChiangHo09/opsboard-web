@@ -4,9 +4,8 @@
  * - 它实现了响应式设计，能够在桌面端和移动端提供不同的布局和交互体验。
  *
  * [本次修改记录]
- * - 针对移动设备视图进行了两项样式优化，以匹配 Google AI Studio 的风格：
- *   1. 将顶部栏的背景色 `bgcolor` 从 `background.paper` (白色) 修改为 `#F0F4F9`，使其与应用主背景色融为一体。
- *   2. 移除了顶部栏的 `boxShadow`，消除了与下方工作区的分割线，实现了无缝连接。
+ * - 修复了移动端顶栏的样式回归问题：将其背景色 `bgcolor` 改为 `#F0F4F9` 并移除了 `boxShadow`，以匹配无缝的 Google AI Studio 风格。
+ * - 修复了移动端抽屉内 Logo 和标题的对齐问题：通过将其容器改回 `p: 2` 的内边距样式，并取消 `justifyContent: 'center'`，使其恢复为视觉上更舒适的左对齐。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -193,13 +192,13 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         left: 0,
                         right: 0,
                         height: MOBILE_TOP_BAR_HEIGHT,
-                        bgcolor: '#F0F4F9', // 1. 背景色与主应用背景一致
+                        bgcolor: '#F0F4F9',      // 修复点1: 恢复背景色
                         zIndex: theme.zIndex.appBar + 1,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         px: 2,
-                        boxShadow: 'none', // 2. 移除阴影/分割线
+                        boxShadow: 'none',        // 修复点2: 移除阴影
                     }}
                 >
                     <IconButton onClick={() => setMobileDrawerOpen(true)} aria-label="open drawer">
@@ -251,7 +250,13 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                     }}
                 >
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', height: MOBILE_TOP_BAR_HEIGHT, boxSizing: 'border-box' }}>
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: MOBILE_TOP_BAR_HEIGHT,
+                            boxSizing: 'border-box',
+                            p: 12, // 修复点3: 恢复内边距，使其通过左对齐居中
+                        }}>
                             <Box
                                 component="img"
                                 src="/favicon.svg"
@@ -262,6 +267,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                 运维信息表
                             </Typography>
                         </Box>
+
                         <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden', pt: `${GAP}px`, pb: `${GAP}px` }}>
                             <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
                                 {mainNavItems.map(item => renderNavButton(item, () => setMobileDrawerOpen(false)))}
