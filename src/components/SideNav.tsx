@@ -1,11 +1,12 @@
-/*
- * [文件用途说明]
- * - 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航。
- * - 它实现了响应式设计，能够在桌面端和移动端提供不同的布局和交互体验。
+/**
+ * 文件功能：
+ * 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航。
+ * 它实现了响应式设计，能够在桌面端和移动端提供不同的布局和交互体验。
  *
- * [本次修改记录]
- * - 修复了移动端顶栏的样式回归问题：将其背景色 `bgcolor` 改为 `#F0F4F9` 并移除了 `boxShadow`，以匹配无缝的 Google AI Studio 风格。
- * - 修复了移动端抽屉内 Logo 和标题的对齐问题：通过将其容器改回 `p: 2` 的内边距样式，并取消 `justifyContent: 'center'`，使其恢复为视觉上更舒适的左对齐。
+ * 本次修改：
+ * - 进一步修复触摸屏问题：在展开状态下，点击侧边栏背景区域也会残留点击效果。
+ * - 通过使用 `@media (hover: hover)` 媒体查询，将桌面端侧边栏的 `cursor: 'pointer'` 样式限制在能真正悬停的设备上。
+ * - 此修改可以防止触摸设备将侧边栏背景渲染为可点击元素，从而彻底杜绝了浏览器原生的点击高亮（“阴影”）效果。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -122,8 +123,10 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         left: HORIZONTAL_PADDING, display: 'flex', alignItems: 'center',
                         justifyContent: 'flex-start', p: 0, overflow: 'hidden',
                         bgcolor: selected ? 'rgba(0,0,0,0.12)' : 'transparent',
-                        '&:hover': {
-                            bgcolor: selected ? 'rgba(0,0,0,0.16)' : 'rgba(0,0,0,0.04)'
+                        '@media (hover: hover)': {
+                            '&:hover': {
+                                bgcolor: selected ? 'rgba(0,0,0,0.16)' : 'rgba(0,0,0,0.04)'
+                            }
                         }
                     }}
                 >
@@ -192,13 +195,13 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         left: 0,
                         right: 0,
                         height: MOBILE_TOP_BAR_HEIGHT,
-                        bgcolor: '#F0F4F9',      // 修复点1: 恢复背景色
+                        bgcolor: '#F0F4F9',
                         zIndex: theme.zIndex.appBar + 1,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         px: 2,
-                        boxShadow: 'none',        // 修复点2: 移除阴影
+                        boxShadow: 'none',
                     }}
                 >
                     <IconButton onClick={() => setMobileDrawerOpen(true)} aria-label="open drawer">
@@ -255,7 +258,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                             alignItems: 'center',
                             height: MOBILE_TOP_BAR_HEIGHT,
                             boxSizing: 'border-box',
-                            p: 12, // 修复点3: 恢复内边距，使其通过左对齐居中
+                            p: 2,
                         }}>
                             <Box
                                 component="img"
@@ -302,7 +305,10 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                             flexDirection: 'column',
                             boxSizing: 'border-box',
                             overflow: 'hidden',
-                            cursor: 'pointer',
+                            // 修复点: 仅在支持悬停的设备上显示指针光标
+                            '@media (hover: hover)': {
+                                cursor: 'pointer',
+                            }
                         },
                     }}
                 >
@@ -320,7 +326,11 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                         position: 'absolute', height: BTN_SIZE, borderRadius: 9999,
                                         left: HORIZONTAL_PADDING, display: 'flex', alignItems: 'center',
                                         justifyContent: 'flex-start', p: 0, overflow: 'hidden',
-                                        '&:hover': { bgcolor: 'rgba(0,0,0,.04)' },
+                                        '@media (hover: hover)': {
+                                            '&:hover': {
+                                                bgcolor: 'rgba(0,0,0,.04)',
+                                            },
+                                        },
                                     }}
                                 >
                                     <Tooltip
@@ -376,7 +386,11 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                             position: 'absolute', height: BTN_SIZE, borderRadius: 9999,
                                             left: HORIZONTAL_PADDING, display: 'flex', alignItems: 'center',
                                             justifyContent: 'flex-start', p: 0, overflow: 'hidden',
-                                            '&:hover': { bgcolor: 'rgba(0,0,0,.04)' },
+                                            '@media (hover: hover)': {
+                                                '&:hover': {
+                                                    bgcolor: 'rgba(0,0,0,.04)',
+                                                },
+                                            },
                                         }}
                                     >
                                         <Tooltip

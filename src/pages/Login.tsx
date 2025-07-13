@@ -4,8 +4,9 @@
  * - 它采用了响应式设计，以适应桌面和移动设备。
  *
  * [本次修改记录]
- * - 根据用户要求，将登录页的 Logo 从 Material-UI 的 <CodeOffIcon /> 组件改回使用 `/favicon.svg` 图片文件。
+ * - 将登录页的 Logo 从 Material-UI 的 <CodeOffIcon /> 组件改回使用 `/favicon.svg` 图片文件。
  * - 使用了 `<Box component="img">` 来渲染该 SVG，并为其设置了响应式的高度，确保了与之前图标相似的视觉尺寸。
+ * - 移除登录组件阴影：将 elevation 属性设置为 0，或者移除该属性。
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -109,6 +110,8 @@ export default function Login({ onFakeLogin }: LoginProps) {
                     justifyContent: 'center',
                 }}
             >
+                {/* 恢复阴影：将 elevation 属性设置为 3（默认值）。 */}
+                {/* 如果要移除阴影，请将 elevation={3} 改为 elevation={0} 或直接移除 elevation 属性。 */}
                 <Card elevation={3}
                       sx={{
                           width: '100%',
