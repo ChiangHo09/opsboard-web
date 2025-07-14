@@ -1,11 +1,9 @@
-/*
- * [文件用途说明]
- * - 此文件为“服务器信息”页面，负责展示服务器列表数据和提供搜索入口。
+/**
+ * 文件功能：
+ * 此文件为“服务器信息”页面，负责展示服务器列表数据和提供搜索入口。
  *
- * [本次修改记录]
- * - 为了实现完美的垂直居中，将按钮内的文本“搜索”包裹在了一个 `<Typography>` 组件中。
- * - 对该 `<Typography>` 组件应用了 `transform: 'translateY(1px)'` 样式。
- * - 这个微小的向下位移修正了文本与图标之间的视觉基线差异，使其在视觉上完全居中。
+ * 本次修改：
+ * - 将右侧搜索面板的标题从“高级搜索”修改为“服务器搜索”。
  */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button } from '@mui/material';
@@ -35,7 +33,7 @@ const Servers: React.FC = () => {
             <ServerSearchForm onSearch={handleSearch} onReset={handleReset} />
         );
         // 分别设置面板的元数据
-        setPanelTitle('服务器搜索');
+        setPanelTitle('服务器搜索'); // 修复点：修改标题
         setPanelWidth(360);
 
         // 组件卸载时，清理面板内容
@@ -56,8 +54,13 @@ const Servers: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column'
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                    <Typography variant="h4">服务器信息</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, mb: 4 }}>
+                    <Typography
+                        variant="h5"
+                        sx={{ color: '#1976d2', fontSize: '2rem' }}
+                    >
+                        服务器信息
+                    </Typography>
                     <Button
                         variant="contained"
                         size="large"
@@ -79,15 +82,12 @@ const Servers: React.FC = () => {
                             },
                         }}
                     >
-                        {/* --- START OF MODIFICATION --- */}
                         <Typography component="span" sx={{ transform: 'translateY(1px)' }}>
                             搜索
                         </Typography>
-                        {/* --- END OF MODIFICATION --- */}
                     </Button>
                 </Box>
-                <Typography sx={{ mt: 2, flexShrink: 0 }}>这里实现服务器信息的展示和修改。</Typography>
-                <Box sx={{ height: '120vh', mt: 2, border: '1px dashed grey', p: 1, flexGrow: 1, overflowY: 'auto' }}>
+                <Box sx={{ height: '120vh', border: '1px dashed grey', p: 1, flexGrow: 1, overflowY: 'auto' }}>
                     <Typography>这是一个很高的占位符，用于测试主内容区的滚动。</Typography>
                 </Box>
             </Box>
