@@ -4,6 +4,7 @@
  *
  * 本次修改：
  * - 将右侧搜索面板的标题从“高级搜索”修改为“服务器搜索”。
+ * - 【新增】在组件挂载时设置 `isPanelRelevant` 为 `true`，在卸载时设置为 `false`，并清理面板状态。
  */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button } from '@mui/material';
@@ -13,7 +14,7 @@ import ServerSearchForm, { type ServerSearchValues } from '../components/forms/S
 
 const Servers: React.FC = () => {
     // 从简化的 LayoutContext 获取所需方法
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth } = useLayout();
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayout(); // 获取 setIsPanelRelevant
 
     // 搜索处理函数现在接收一个类型安全的对象
     const handleSearch = useCallback((values: ServerSearchValues) => {
@@ -35,12 +36,16 @@ const Servers: React.FC = () => {
         // 分别设置面板的元数据
         setPanelTitle('服务器搜索'); // 修复点：修改标题
         setPanelWidth(360);
+        setIsPanelRelevant(true); // 【新增】标记此页面与面板相关
 
-        // 组件卸载时，清理面板内容
+        // 组件卸载时，清理面板内容、标题、宽度，并标记为不相关
         return () => {
             setPanelContent(null);
+            setPanelTitle('');
+            setPanelWidth(360); // 恢复默认宽度
+            setIsPanelRelevant(false); // 【新增】标记此页面与面板不相关
         };
-    }, [setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]);
+    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]); // 依赖项
 
     return (
         // 页面主体布局保持不变

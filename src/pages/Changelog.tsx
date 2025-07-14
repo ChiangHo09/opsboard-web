@@ -7,6 +7,7 @@
  * - 页面加载时，通过 `useEffect` 将独立的 `ChangelogSearchForm` 组件注入到右侧面板。
  * - 定义了 `handleSearch` 和 `handleReset` 回调函数，用于处理从搜索表单传回的事件。
  * - 更新了页面的标题布局，使其与其他页面（如“服务器信息”）的风格保持一致。
+ * - 【新增】在组件挂载时设置 `isPanelRelevant` 为 `true`，在卸载时设置为 `false`，并清理面板状态。
  */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button } from '@mui/material';
@@ -15,7 +16,7 @@ import { useLayout } from '../contexts/LayoutContext.tsx';
 import ChangelogSearchForm, { type ChangelogSearchValues } from '../components/forms/ChangelogSearchForm.tsx';
 
 const Changelog: React.FC = () => {
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth } = useLayout();
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayout(); // 获取所有相关方法
 
     const handleSearch = useCallback((values: ChangelogSearchValues) => {
         // 在实际应用中，这里会根据 values 对象构建 API 请求
@@ -37,11 +38,15 @@ const Changelog: React.FC = () => {
         setPanelContent(<ChangelogSearchForm onSearch={handleSearch} onReset={handleReset} />);
         setPanelTitle('日志搜索');
         setPanelWidth(360);
+        setIsPanelRelevant(true); // 【新增】标记此页面与面板相关
 
         return () => {
             setPanelContent(null);
+            setPanelTitle('');
+            setPanelWidth(360); // 恢复默认宽度
+            setIsPanelRelevant(false); // 【新增】标记此页面与面板不相关
         };
-    }, [setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]);
+    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]); // 依赖项
 
     return (
         <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>

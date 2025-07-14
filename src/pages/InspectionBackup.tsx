@@ -5,6 +5,7 @@
  *
  * [本次修改记录]
  * - 新建文件，作为“巡检备份”功能的主页面。
+ * - 【新增】在组件挂载时设置 `isPanelRelevant` 为 `true`，在卸载时设置为 `false`，并清理面板状态。
  */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button, TextField, Stack } from '@mui/material';
@@ -33,7 +34,7 @@ const InspectionSearchForm: React.FC<{ onSearch: (v: string) => void }> = ({ onS
 };
 
 const InspectionBackup: React.FC = () => {
-    const { togglePanel, setPanelContent, setPanelTitle } = useLayout();
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayout(); // 获取所有相关方法
 
     const handleSearch = useCallback((searchTerm: string) => {
         console.log('在巡检备份页面执行搜索:', searchTerm);
@@ -44,11 +45,16 @@ const InspectionBackup: React.FC = () => {
     useEffect(() => {
         setPanelContent(<InspectionSearchForm onSearch={handleSearch} />);
         setPanelTitle('巡检记录搜索');
+        setPanelWidth(360); // 确保设置宽度
+        setIsPanelRelevant(true); // 【新增】标记此页面与面板相关
 
         return () => {
             setPanelContent(null);
+            setPanelTitle('');
+            setPanelWidth(360); // 恢复默认宽度
+            setIsPanelRelevant(false); // 【新增】标记此页面与面板不相关
         };
-    }, [setPanelContent, setPanelTitle, handleSearch]);
+    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch]); // 依赖项
 
     return (
         <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>

@@ -1,3 +1,4 @@
+// START OF FILE LayoutContext.tsx
 /**
  * 文件功能：
  * 此文件定义了全局布局上下文（LayoutContext），用于管理整个应用的共享布局状态。
@@ -6,6 +7,7 @@
  * - 解决了导致无限渲染循环的致命bug。
  * - 使用了 `useCallback` Hook 来包裹 `togglePanel` 和 `closePanel` 函数。
  * - 这确保了这些函数在组件的生命周期内保持稳定，不会在每次重渲染时都创建新的实例，从而打破了与 `MainLayout` 中 `useEffect` 的无限依赖循环。
+ * - 【新增】增加了 `isPanelRelevant` 状态，用于指示当前页面是否与侧边面板相关，从而实现面板的智能关闭逻辑。
  */
 import React, { createContext, useState, useContext, useMemo, useCallback, type ReactNode } from 'react'; // 导入 React 核心功能和 Hooks。
 
@@ -19,6 +21,8 @@ interface LayoutContextType {
     setPanelTitle: (title: string) => void; // 设置面板标题的函数。
     panelWidth: number; // 面板宽度的数字。
     setPanelWidth: (width: number) => void; // 设置面板宽度的函数。
+    isPanelRelevant: boolean; // 【新增】指示当前页面是否与面板相关。
+    setIsPanelRelevant: (relevant: boolean) => void; // 【新增】设置面板相关性的函数。
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined); // 创建 LayoutContext，初始值为 undefined。
@@ -46,6 +50,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [panelContent, setPanelContent] = useState<ReactNode | null>(null); // 定义面板内容状态，初始为 null。
     const [panelTitle, setPanelTitle] = useState<string>(''); // 定义面板标题状态，初始为空字符串。
     const [panelWidth, setPanelWidth] = useState<number>(360); // 定义面板宽度状态，初始为 360。
+    const [isPanelRelevant, setIsPanelRelevant] = useState<boolean>(false); // 【新增】定义面板相关性状态，初始为 false。
 
     // 使用 useEffect 将 isPanelOpen 状态的变化同步到 localStorage。
     React.useEffect(() => {
@@ -79,8 +84,10 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         panelTitle,      // 面板标题。
         setPanelTitle,   // 设置面板标题函数。
         panelWidth,      // 面板宽度。
-        setPanelWidth    // 设置面板宽度函数。
-    }), [isPanelOpen, panelContent, panelTitle, panelWidth, togglePanel, closePanel]); // 依赖项包括所有在 value 对象中使用的状态和稳定的回调函数。
+        setPanelWidth,   // 设置面板宽度函数。
+        isPanelRelevant, // 【新增】面板相关性状态。
+        setIsPanelRelevant // 【新增】设置面板相关性函数。
+    }), [isPanelOpen, panelContent, panelTitle, panelWidth, togglePanel, closePanel, isPanelRelevant]); // 依赖项包括所有在 value 对象中使用的状态和稳定的回调函数。
 
     return (
         <LayoutContext.Provider value={value}> {/* 将缓存的上下文值传递给 Provider。 */}
@@ -103,3 +110,4 @@ export const useLayout = (): LayoutContextType => {
     }
     return context; // 返回上下文值。
 };
+// END OF FILE LayoutContext.tsx

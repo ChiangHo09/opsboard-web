@@ -1,3 +1,4 @@
+// START OF FILE MainLayout.tsx
 /**
  * 文件功能:
  * 此文件定义了应用的主UI布局（MainLayout），它包含了侧边栏、主内容区和搜索面板。
@@ -9,8 +10,13 @@
  * - 此修改彻底解决了“刷新后自动收起”和“重新打开后无限加载”的问题。
  * - 【问题修复】移除在路由变化时强制重置面板状态的 `useEffect`：解决了即使在有搜索功能的页面之间跳转，搜索面板也会被收起的问题。
  *   现在，面板的打开、关闭和内容设置完全由各个页面组件在其生命周期中自行管理，确保了更灵活和预期的行为。
+ * - 【新增修复】优化了搜索面板的自动关闭逻辑。
+ *   - 在 `LayoutContext` 中引入 `isPanelRelevant` 状态，由页面组件设置其是否与面板相关。
+ *   - `MainLayout` 中的 `useEffect` 监听路由变化、面板打开状态和 `isPanelRelevant`。
+ *   - 当面板打开且当前页面被标记为“不相关”时，会触发一个延迟关闭面板的逻辑。
+ *   - 这种延迟机制（`setTimeout`）旨在解决在两个相关页面之间快速跳转时，面板因短暂的 `isPanelRelevant` 状态变化而闪烁关闭的问题。它给新页面足够的时间来设置其相关性，从而避免不必要的关闭。
  */
-import { useState, type JSX } from 'react'; // 导入 React 的 useState 和 useEffect Hook 用于组件内部状态管理；导入 JSX 类型用于函数组件的返回类型。
+import { useState, type JSX, useEffect, useRef } from 'react'; // 导入 React 的 useState 和 useEffect Hook 用于组件内部状态管理；导入 JSX 类型用于函数组件的返回类型。
 import { Outlet, useLocation } from 'react-router-dom'; // 导入 Outlet 组件用于渲染嵌套路由的子元素；导入 useLocation Hook 用于获取当前路由信息。
 import { motion, AnimatePresence, type Variants } from 'framer-motion'; // 导入 motion 组件和 AnimatePresence 用于实现动画效果；导入 Variants 类型用于动画变体定义。
 import { Box, useMediaQuery, useTheme, IconButton, Typography, CircularProgress } from '@mui/material'; // 导入 MUI 的 Box, useMediaQuery, useTheme, IconButton, Typography, CircularProgress 组件和 Hook。
@@ -49,22 +55,56 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
         isPanelOpen,      // 右侧面板是否打开的状态。
         panelContent,     // 右侧面板中显示的内容（React 节点）。
         togglePanel,      // 切换右侧面板打开/关闭的函数。
+        closePanel,       // 关闭右侧面板的函数。
         panelTitle,       // 右侧面板的标题。
+        setPanelContent,  // 设置面板内容的函数。
+        setPanelTitle,    // 设置面板标题的函数。
         panelWidth,       // 右侧面板的宽度。
-        // setPanelContent,  // 之前用于强制清空面板内容，现已移除 MainLayout 的此职责。
-        // setPanelTitle,    // 之前用于强制清空面板标题，现已移除 MainLayout 的此职责。
+        isPanelRelevant,  // 【新增】当前页面是否与面板相关。
     } = useLayout(); // 使用自定义 Hook useLayout 获取布局上下文的值。
 
-    // 【问题修复】移除之前在路由变化时强制重置面板状态的 useEffect。
-    // 该 useEffect 导致了即使在有搜索功能的页面之间跳转，搜索面板也会被收起。
-    // 现在，面板的打开、关闭和内容设置完全由各个页面组件在其生命周期中自行管理。
-    // useEffect(() => {
-    //     if (isPanelOpen) {
-    //         setPanelContent(null);
-    //         setPanelTitle('');
-    //         togglePanel();
-    //     }
-    // }, [pathname]);
+    // 【新增】用于存储关闭面板的 setTimeout ID 的引用，以便在需要时清除。
+    const closePanelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // 【新增】useEffect 来处理面板的自动关闭逻辑。
+    // 当路由变化或面板相关性状态变化时触发。
+    useEffect(() => {
+        // 清除任何之前挂起的关闭面板定时器，以避免冲突或不必要的关闭。
+        if (closePanelTimeoutRef.current) {
+            clearTimeout(closePanelTimeoutRef.current);
+            closePanelTimeoutRef.current = null;
+        }
+
+        // 如果面板当前是打开的，并且当前页面被标记为“不相关” (isPanelRelevant 为 false)。
+        // 这种条件在从一个有搜索功能的页面跳转到没有搜索功能的页面时会满足。
+        // 也会在从一个有搜索功能的页面跳转到另一个有搜索功能的页面时短暂满足 (因为旧页面卸载时会设置 isPanelRelevant 为 false)。
+        if (isPanelOpen && !isPanelRelevant) {
+            // 设置一个短延迟来关闭面板。
+            // 这个延迟是为了给新页面（如果它也是一个有搜索功能的页面）足够的时间来挂载并设置 isPanelRelevant 为 true。
+            // 如果在新页面设置 isPanelRelevant 为 true 之前，这个定时器没有被清除，那么面板就会关闭。
+            closePanelTimeoutRef.current = setTimeout(() => {
+                // 在执行关闭操作前再次检查条件，确保在延迟期间状态没有改变。
+                if (isPanelOpen && !isPanelRelevant) {
+                    closePanel();          // 关闭面板。
+                    setPanelContent(null); // 清空面板内容。
+                    setPanelTitle('');     // 清空面板标题。
+                }
+            }, 50); // 50毫秒的延迟，可以根据实际情况调整。
+        }
+
+        // Effect 的清理函数：在组件卸载或 effect 重新运行时清除定时器。
+        return () => {
+            if (closePanelTimeoutRef.current) {
+                clearTimeout(closePanelTimeoutRef.current);
+            }
+        };
+    }, [pathname, isPanelOpen, isPanelRelevant, closePanel, setPanelContent, setPanelTitle]);
+    // 依赖项：
+    // - pathname: 路由变化时重新评估。
+    // - isPanelOpen: 面板打开状态变化时重新评估。
+    // - isPanelRelevant: 页面相关性状态变化时重新评估（由页面组件设置）。
+    // - closePanel, setPanelContent, setPanelTitle: 稳定函数引用。
+
 
     return (
         <Box sx={{ // 最外层 Box，定义整个布局的容器样式。
@@ -223,3 +263,4 @@ export default function MainLayout({ onFakeLogout }: { onFakeLogout: () => void 
         </LayoutProvider>
     );
 }
+// END OF FILE MainLayout.tsx
