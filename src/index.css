@@ -4,32 +4,33 @@
  * 对滚动条、表格等元素的统一视觉微调。
  *
  * 本次修改：
- * - 修复了一个 linter 警告：为 `code, pre` 元素的 font-family 规则添加了通用的 `monospace` 回退值。
- * - 此修改确保了在所有自定义代码字体都加载失败的情况下，浏览器仍然会使用一个等宽字体作为最后的“安全网”。
+ * - 将字体文件从 `public` 目录移动到 `src/fonts` 目录，并将其作为源码模块处理。
+ * - 更新了所有 `@font-face` 规则，将 `url()` 中的路径改为相对于当前 CSS 文件的相对路径 (`./fonts/...`)。
+ * - 此修改彻底解决了 IDE 路径报错和 Vite 路径警告之间的冲突，并利用了 Vite 的资源处理和缓存优化能力。
  */
 
-/* -------- 0. 本地字体定义 (支持离线) -------- */
+/* -------- 0. 本地字体定义 (从 src 目录加载) -------- */
 /* Roboto (常规、中等、粗体) */
 @font-face {
   font-family: 'Roboto';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/public/fonts/roboto-v48-latin-regular.woff2') format('woff2');
+  src: url('./fonts/roboto-v48-latin-regular.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Roboto';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/public/fonts/roboto-v48-latin-500.woff2') format('woff2');
+  src: url('./fonts/roboto-v48-latin-500.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Roboto';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/public/fonts/roboto-v48-latin-700.woff2') format('woff2');
+  src: url('./fonts/roboto-v48-latin-700.woff2') format('woff2');
 }
 
 /* Noto Sans SC (常规、中等、粗体) */
@@ -38,21 +39,21 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/public/fonts/noto-sans-sc-v38-latin-regular.woff2') format('woff2');
+  src: url('./fonts/noto-sans-sc-v38-latin-regular.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/public/fonts/noto-sans-sc-v38-latin-500.woff2') format('woff2');
+  src: url('./fonts/noto-sans-sc-v38-latin-500.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/public/fonts/noto-sans-sc-v38-latin-700.woff2') format('woff2');
+  src: url('./fonts/noto-sans-sc-v38-latin-700.woff2') format('woff2');
 }
 
 /* Roboto Mono (代码字体) */
@@ -61,7 +62,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/public/fonts/roboto-mono-v30-latin-regular.woff2') format('woff2');
+  src: url('./fonts/roboto-mono-v30-latin-regular.woff2') format('woff2');
 }
 
 
@@ -85,6 +86,7 @@ html, body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
+  /* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
   font-family: var(--md-font);
   background-color: #fafafa;
   -webkit-font-smoothing: antialiased;
@@ -133,7 +135,6 @@ a:hover {
 
 /* 7. 代码块与行内 code */
 code, pre {
-  /* 修复点：在字体列表末尾添加了通用回退值 `monospace` */
   font-family: 'Roboto Mono', ui-monospace, SFMono-Regular,
   'SF Mono', Menlo, Consolas, monospace;
 }
