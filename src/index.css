@@ -4,65 +4,81 @@
  * 对滚动条、表格等元素的统一视觉微调。
  *
  * 本次修改：
- * - 将字体文件从 `public` 目录移动到 `src/fonts` 目录，并将其作为源码模块处理。
- * - 更新了所有 `@font-face` 规则，将 `url()` 中的路径改为相对于当前 CSS 文件的相对路径 (`./fonts/...`)。
- * - 此修改彻底解决了 IDE 路径报错和 Vite 路径警告之间的冲突，并利用了 Vite 的资源处理和缓存优化能力。
+ * - 对字体文件进行了专业的取舍，仅保留 woff 和 woff2 格式，以在性能和兼容性之间取得最佳平衡。
+ * - 更新了 @font-face 规则，使其优先加载 .woff2，并以 .woff 作为回退选项，以兼容 IE9+ 等稍旧的浏览器。
+ * - 根据提供的文件，为 Roboto Mono 字体新增了字重为 500 的样式定义。
  */
 
-/* -------- 0. 本地字体定义 (从 src 目录加载) -------- */
-/* Roboto (常规、中等、粗体) */
+/* -------- 0. 本地字体定义 (最佳实践：woff2 + woff) -------- */
+
+/* Roboto */
 @font-face {
   font-family: 'Roboto';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('./fonts/roboto-v48-latin-regular.woff2') format('woff2');
+  src: url('./fonts/roboto-v48-latin-regular.woff2') format('woff2'),
+  url('./fonts/roboto-v48-latin-regular.woff') format('woff');
 }
 @font-face {
   font-family: 'Roboto';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('./fonts/roboto-v48-latin-500.woff2') format('woff2');
+  src: url('./fonts/roboto-v48-latin-500.woff2') format('woff2'),
+  url('./fonts/roboto-v48-latin-500.woff') format('woff');
 }
 @font-face {
   font-family: 'Roboto';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('./fonts/roboto-v48-latin-700.woff2') format('woff2');
+  src: url('./fonts/roboto-v48-latin-700.woff2') format('woff2'),
+  url('./fonts/roboto-v48-latin-700.woff') format('woff');
 }
 
-/* Noto Sans SC (常规、中等、粗体) */
+/* Noto Sans SC */
 @font-face {
   font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('./fonts/noto-sans-sc-v38-latin-regular.woff2') format('woff2');
+  src: url('./fonts/noto-sans-sc-v38-latin-regular.woff2') format('woff2'),
+  url('./fonts/noto-sans-sc-v38-latin-regular.woff') format('woff');
 }
 @font-face {
   font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('./fonts/noto-sans-sc-v38-latin-500.woff2') format('woff2');
+  src: url('./fonts/noto-sans-sc-v38-latin-500.woff2') format('woff2'),
+  url('./fonts/noto-sans-sc-v38-latin-500.woff') format('woff');
 }
 @font-face {
   font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('./fonts/noto-sans-sc-v38-latin-700.woff2') format('woff2');
+  src: url('./fonts/noto-sans-sc-v38-latin-700.woff2') format('woff2'),
+  url('./fonts/noto-sans-sc-v38-latin-700.woff') format('woff');
 }
 
-/* Roboto Mono (代码字体) */
+/* Roboto Mono */
 @font-face {
   font-family: 'Roboto Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('./fonts/roboto-mono-v30-latin-regular.woff2') format('woff2');
+  src: url('./fonts/roboto-mono-v30-latin-regular.woff2') format('woff2'),
+  url('./fonts/roboto-mono-v30-latin-regular.woff') format('woff');
+}
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/roboto-mono-v30-latin-500.woff2') format('woff2'),
+  url('./fonts/roboto-mono-v30-latin-500.woff') format('woff');
 }
 
 
@@ -81,7 +97,7 @@
   'Helvetica Neue', Arial, sans-serif;
 }
 
-/* -------- 2. 页面基础布局 -------- */
+/* -------- 2. 页面基础布局 (以下内容保持不变) -------- */
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -93,14 +109,12 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 3. 让图片、视频默认不超出容器 */
 img, video {
   max-width: 100%;
   height: auto;
   display: block;
 }
 
-/* 4. 表格：去掉原生边框，留出一致圆角 */
 table {
   border-collapse: collapse;
   width: 100%;
@@ -108,7 +122,6 @@ table {
   border-radius: var(--md-radius);
 }
 
-/* 5. Scrollbar 美化 */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -124,7 +137,6 @@ table {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* 6. 链接默认样式 */
 a {
   color: inherit;
   text-decoration: none;
@@ -133,7 +145,6 @@ a:hover {
   text-decoration: underline;
 }
 
-/* 7. 代码块与行内 code */
 code, pre {
   font-family: 'Roboto Mono', ui-monospace, SFMono-Regular,
   'SF Mono', Menlo, Consolas, monospace;
@@ -145,7 +156,6 @@ pre {
   overflow-x: auto;
 }
 
-/* 8. Disabled 状态统一淡化 */
 [disabled] {
   opacity: 0.45;
   cursor: not-allowed !important;
