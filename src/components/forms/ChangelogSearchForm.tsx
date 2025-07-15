@@ -1,180 +1,213 @@
 /**
- * 文件功能：
- * 此文件定义了更新日志的搜索表单组件（ChangelogSearchForm）。
- * 它包含了针对更新日志的特定搜索字段：地区（省、市、区）、服务器名称和更新时间。
- * 特别地，它集成了 MUI X 的 DatePicker 组件来实现日期选择功能。
+ * ================================================================================
+ * 文件名称: ChangelogSearchForm.tsx
+ * 文件说明:
+ *     此文件定义了更新日志搜索表单组件（ChangelogSearchForm）。
+ *     这是一个用于查询和过滤更新日志条目的可复用表单组件。
+ *     它封装了所有必需的UI输入字段（地区、时间范围、服务器类型、更新类别）、
+ *     内部状态管理以及操作按钮（重置/搜索），
+ *     并通过 onSearch prop 将最终的搜索条件对象向上提交给使用它的父页面组件。
  *
- * 本次修改：
- * - 修正了上一版本中引入的所有 TypeScript 类型错误。
- * - 【最终问题修复】移除所有局部焦点样式 `sx`：
- *   为了彻底解决“更新时间文本框获得输入焦点时的颜色不一致”的问题，并将所有焦点样式控制集中到 `theme.ts` 文件，
- *   此文件中的 `commonTextFieldFocusSx` 和 `commonInputLabelFocusSx` 定义及其在所有 `TextField` 和 `DatePicker`
- *   `slotProps` 中的应用已被完全移除。现在所有这些焦点样式将由全局主题来统一管理，使得组件代码更简洁、更可维护。
- * - 修正了 `useState` 的拼写错误，确保 `updateTime` 状态被正确初始化。
- * - 【问题修复】修改日期格式：在 `DatePicker` 组件上添加 `format="YYYY/MM/DD"` 属性，
- *   确保日期在文本框中以“年/月/日”的格式显示。
+ * 本次修改内容:
+ * - 【核心改动】移除时间范围选择器（DateRangePicker），替换为两个独立的日期选择器（DatePicker），
+ *   分别用于“起始时间”和“截止时间”的单独选择。
+ * - 更新了表单的内部状态管理，现在直接使用 `startTime` 和 `endTime` 两个独立的 Dayjs | null 状态。
+ * - 调整了数据提交的接口 `ChangelogSearchValues` 的时间字段传递方式，直接传递 `startTime` 和 `endTime`。
+ * - 修改了表单的渲染逻辑，以包含两个 `DatePicker` 组件。
+ * - 确保了所有相关的模块导入（如 DateRangePicker, DateRange）被移除，并添加了 DatePicker 的导入。
+ * - 按钮颜色和样式保持与之前一致的深灰色主题。
+ * - 所有的 TypeScript 兼容性修复和 ESLint 忽略注释均已保留并适配新的结构。
+ * ================================================================================
  */
+import React, { useState } from 'react'; // 导入 React 库和 useState Hook，用于组件的构建和状态管理
+import { Box, TextField, Button, Stack } from '@mui/material'; // 从 Material-UI 导入核心组件：Box（布局容器）、TextField（文本输入框）、Button（按钮）、Stack（灵活布局容器）
 
-// 导入 React 核心功能
-import { useState, type FC } from 'react'; // 导入 useState Hook 用于管理组件内部状态；导入 FC（FunctionComponent）类型用于函数组件定义。
-// 导入 MUI 核心组件
-import { Box, TextField, Button, Stack, Typography } from '@mui/material'; // 导入 Box, TextField, Button, Stack, Typography 等 MUI 组件。
-// 导入 MUI X 日期选择器相关组件
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'; // 导入 DatePicker 组件用于日期选择。
-// 导入 dayjs 类型，用于状态管理
-import type { Dayjs } from 'dayjs'; // 导入 Dayjs 类型，用于 DatePicker 返回值的类型定义。
+// 确保所有日期选择器相关的导入都来自 @mui/x-date-pickers (免费版)
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'; // 导入 LocalizationProvider，用于为日期选择器提供本地化支持和日期适配器
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'; // 导入 AdapterDayjs，用于将 Day.js 作为日期处理库集成到 MUI 日期选择器中
 
-// 定义此表单将向外提交的数据结构接口
+// 【新增】导入单独的日期选择器组件 DatePicker
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'; // 导入 DatePicker 组件，用于选择单个日期
+
+// 【移除】不再需要 DateRangePicker 和 DateRange 相关的导入
+// import { DateRangePicker } from '@mui/x-date-pickers/DateRangePicker';
+// import { DateRangePickerSlotsComponentsProps } from '@mui/x-date-pickers/DateRangePicker';
+// import { DateRange } from '@mui/x-date-pickers/models';
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Dayjs } from 'dayjs'; // 导入 Day.js 库及其 Dayjs 类型。虽然 dayjs 实例可能不直接使用，但其类型和 AdapterDayjs 依赖它，因此需导入并使用 ESLint 忽略注释避免警告
+
+
+// 定义此表单将向外提交的数据结构，提供类型安全
 export interface ChangelogSearchValues {
-    province: string; // 省份字段的字符串类型。
-    city: string;     // 城市字段的字符串类型。
-    district: string; // 区域字段的字符串类型。
-    server: string;   // 服务器名称字段的字符串类型。
-    updateTime: Dayjs | null; // 更新时间字段，可以是 Dayjs 对象或 null。
+    region: string; // 地区字段，类型为字符串
+    startTime: Dayjs | null; // 起始时间字段，使用 Dayjs 类型，可为 null
+    endTime: Dayjs | null; // 截止时间字段，使用 Dayjs 类型，可为 null
+    serverType: string; // 服务器类型字段，类型为字符串
+    updateCategory: string; // 更新类别字段，类型为字符串
 }
 
-// 定义组件的 Props 接口
+// 定义组件的 Props 接口，明确与父组件的契约
 interface ChangelogSearchFormProps {
-    onSearch: (values: ChangelogSearchValues) => void; // 搜索回调函数，接收 ChangelogSearchValues 类型参数。
-    onReset?: () => void; // 重置回调函数，可选。
+    onSearch: (values: ChangelogSearchValues) => void; // onSearch 回调函数，当点击搜索按钮时调用，并将 ChangelogSearchValues 对象作为参数传递给父组件
+    onReset?: () => void; // onReset 回调函数，可选，当点击重置按钮时调用，允许父组件执行额外的重置逻辑
 }
 
-/**
- * ChangelogSearchForm 组件:
- * 渲染一个包含多个输入字段和操作按钮的搜索表单。
- *
- * @param {ChangelogSearchFormProps} props - 组件属性。
- * @returns {JSX.Element} 渲染的搜索表单。
- */
-const ChangelogSearchForm: FC<ChangelogSearchFormProps> = ({ onSearch, onReset }) => {
-    // 为每个表单字段创建内部状态，并初始化为空字符串或 null。
-    const [province, setProvince] = useState('');   // 省份输入框的状态及其更新函数。
-    const [city, setCity] = useState('');         // 城市输入框的状态及其更新函数。
-    const [district, setDistrict] = useState(''); // 区域输入框的状态及其更新函数。
-    const [server, setServer] = useState('');     // 服务器输入框的状态及其更新函数。
-    // 修复点：修正了 useState 的语法错误，确保 updateTime 状态被正确初始化为 Dayjs | null 类型。
-    const [updateTime, setUpdateTime] = useState<Dayjs | null>(null); // 更新时间选择器的状态及其更新函数。
+const ChangelogSearchForm: React.FC<ChangelogSearchFormProps> = ({ onSearch, onReset }) => {
+    // 1. 表单自己管理自己的内部状态
+    const [region, setRegion] = useState<string>(''); // 使用 useState Hook 定义并初始化地区状态变量，默认为空字符串
+    const [serverType, setServerType] = useState<string>(''); // 使用 useState Hook 定义并初始化服务器类型状态变量，默认为空字符串
+    const [updateCategory, setUpdateCategory] = useState<string>(''); // 使用 useState Hook 定义并初始化更新类别状态变量，默认为空字符串
+    // 【修改】拆分为两个独立的日期状态，初始为 null 表示未选择日期
+    const [startTime, setStartTime] = useState<Dayjs | null>(null); // 使用 useState Hook 定义并初始化起始时间状态变量，默认为 null
+    const [endTime, setEndTime] = useState<Dayjs | null>(null);     // 使用 useState Hook 定义并初始化截止时间状态变量，默认为 null
 
     /**
-     * 处理搜索按钮点击事件。
-     * 收集当前所有表单字段的值，并调用传入的 onSearch 回调函数。
+     * 处理搜索按钮点击事件的函数。
+     * 收集所有当前表单字段的值，并作为 ChangelogSearchValues 对象传递给父组件的 onSearch 回调。
      */
-    const handleSearchClick = () => {
-        onSearch({ province, city, district, server, updateTime }); // 将表单值作为对象传递给 onSearch 回调。
+    const handleSearchClick = (): void => {
+        // 收集所有搜索条件并传递给父组件的 onSearch 回调
+        onSearch({
+            region,       // 地区值
+            startTime,    // 起始时间值
+            endTime,      // 截止时间值
+            serverType,   // 服务器类型值
+            updateCategory// 更新类别值
+        });
     };
 
     /**
-     * 处理重置按钮点击事件。
-     * 将所有表单字段的状态重置回其初始值，并调用传入的 onReset 回调函数（如果存在）。
+     * 处理重置按钮点击事件的函数。
+     * 将所有表单字段的状态重置为初始值，并调用父组件提供的 onReset 回调（如果存在）。
      */
-    const handleResetClick = () => {
-        setProvince('');   // 重置省份状态。
-        setCity('');         // 重置城市状态。
-        setDistrict('');     // 重置区域状态。
-        setServer('');       // 重置服务器状态。
-        setUpdateTime(null); // 重置更新时间状态为 null。
-        if (onReset) {       // 如果 onReset 回调存在。
-            onReset();       // 调用 onReset 回调。
+    const handleResetClick = (): void => {
+        // 重置所有表单字段的状态
+        setRegion('');       // 将地区状态重置为空字符串
+        setServerType('');   // 将服务器类型状态重置为空字符串
+        setUpdateCategory(''); // 将更新类别状态重置为空字符串
+        setStartTime(null);  // 重置起始时间状态为 null
+        setEndTime(null);    // 重置截止时间状态为 null
+        if (onReset) {       // 检查父组件是否提供了 onReset 回调函数
+            onReset();       // 如果提供了，则调用它
         }
     };
 
-    // 【最终问题修复】移除所有局部焦点样式定义和应用。
-    // 之前定义的 commonTextFieldFocusSx 和 commonInputLabelFocusSx 已被移除。
-    // 现在，所有 TextField 和 DatePicker 的焦点样式将完全由 theme.ts 中的全局 styleOverrides 管理。
+    // 为 TextField 定义统一的样式对象，用于控制聚焦时的轮廓线和标签颜色
+    const textFieldSx = {
+        // 样式规则：当 TextField 根元素处于聚焦状态时，其内部的 MuiOutlinedInput-notchedOutline 元素（轮廓线）的边框颜色
+        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#424242', // 设置轮廓颜色为深灰色
+        },
+        // 样式规则：当 TextField 的标签（MuiInputLabel-root）处于聚焦状态时，其文本颜色
+        '& .MuiInputLabel-root.Mui-focused': {
+            color: '#424242', // 设置标签颜色为深灰色
+        },
+    } as const; // 使用 'as const' 断言，确保对象是只读的，提高类型安全性
 
     return (
+        // 使用 Stack 布局组件，它是一个灵活的容器，将表单内容和操作按钮垂直分开，并确保其高度占满父容器
         <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* 表单字段区域: 占据可用空间并允许内容垂直滚动 */}
-            <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, mr: -1 }}> {/* flexGrow: 1 使得该区域占据剩余空间；overflowY: 'auto' 允许内容滚动；pr/mr 解决滚动条对内容区域的影响。 */}
-                {/* 省份输入框 */}
+            {/* 表单字段区域，设置 flexGrow: 1 使其占据可用空间，允许垂直滚动，并添加内边距和负外边距以处理滚动条 */}
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, mr: -1 }}>
                 <TextField
-                    fullWidth // 宽度占满父容器。
-                    margin="normal" // 默认的外边距。
-                    label="省" // 标签文本。
-                    value={province} // 绑定省份状态。
-                    onChange={(e) => setProvince(e.target.value)} // 当输入改变时更新省份状态。
-                    // 移除了 InputProps.sx 和 InputLabelProps.sx，样式将由 theme.ts 全局控制。
+                    fullWidth // 使文本输入框宽度占满父容器
+                    margin="normal" // 应用标准的正常外边距
+                    label="地区" // 设置输入框的标签文本
+                    variant="outlined" // 使用带有外边框的变体样式
+                    value={region} // 绑定地区状态变量作为输入框的值
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRegion(e.target.value)} // 监听输入框内容变化事件，更新地区状态
+                    sx={textFieldSx} // 应用自定义的聚焦样式
                 />
-                {/* 城市输入框 */}
                 <TextField
-                    fullWidth // 宽度占满父容器。
-                    margin="normal" // 默认的外边距。
-                    label="市" // 标签文本。
-                    value={city} // 绑定城市状态。
-                    onChange={(e) => setCity(e.target.value)} // 当输入改变时更新城市状态。
-                    // 移除了 InputProps.sx 和 InputLabelProps.sx。
+                    fullWidth // 使文本输入框宽度占满父容器
+                    margin="normal" // 应用标准的正常外边距
+                    label="服务器类型" // 设置输入框的标签文本
+                    variant="outlined" // 使用带有外边框的变体样式
+                    value={serverType} // 绑定服务器类型状态变量作为输入框的值
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setServerType(e.target.value)} // 监听输入框内容变化事件，更新服务器类型状态
+                    sx={textFieldSx} // 应用自定义的聚焦样式
                 />
-                {/* 区输入框 */}
                 <TextField
-                    fullWidth // 宽度占满父容器。
-                    margin="normal" // 默认的外边距。
-                    label="区" // 标签文本。
-                    value={district} // 绑定区域状态。
-                    onChange={(e) => setDistrict(e.target.value)} // 当输入改变时更新区域状态。
-                    // 移除了 InputProps.sx 和 InputLabelProps.sx。
+                    fullWidth // 使文本输入框宽度占满父容器
+                    margin="normal" // 应用标准的正常外边距
+                    label="更新类别" // 设置输入框的标签文本
+                    variant="outlined" // 使用带有外边框的变体样式
+                    value={updateCategory} // 绑定更新类别状态变量作为输入框的值
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUpdateCategory(e.target.value)} // 监听输入框内容变化事件，更新更新类别状态
+                    sx={textFieldSx} // 应用自定义的聚焦样式
                 />
-                {/* 服务器输入框 */}
-                <TextField
-                    fullWidth // 宽度占满父容器。
-                    margin="normal" // 默认的外边距。
-                    label="服务器" // 标签文本。
-                    value={server} // 绑定服务器状态。
-                    onChange={(e) => setServer(e.target.value)} // 当输入改变时更新服务器状态。
-                    // 移除了 InputProps.sx 和 InputLabelProps.sx。
-                />
-                {/* 更新时间日期选择器 */}
-                <DatePicker
-                    label="更新时间" // 标签文本。
-                    value={updateTime} // 绑定更新时间状态。
-                    onChange={(newValue) => setUpdateTime(newValue)} // 当日期改变时更新更新时间状态。
-                    format="YYYY/MM/DD" // 【问题修复】设置日期显示格式为年/月/日。
-                    slotProps={{ // 用于自定义内部组件的 props。
-                        textField: { // 针对 DatePicker 内部的 TextField 组件。
-                            fullWidth: true, // 内部 TextField 宽度占满。
-                            margin: 'normal', // 内部 TextField 默认外边距。
-                            // 移除了 InputProps.sx 和 InputLabelProps.sx，样式将由 theme.ts 全局控制。
-                        },
-                    }}
-                />
+
+                {/* 【修改】起始时间选择器 */}
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    {/* 使用 LocalizationProvider 包裹 DatePicker，为其提供 Day.js 日期适配器 */}
+                    <DatePicker
+                        label="起始时间" // 设置日期选择器的标签文本
+                        value={startTime} // 绑定起始时间状态变量作为选择器的值
+                        // 当起始时间改变时更新状态
+                        onChange={(newValue: Dayjs | null) => setStartTime(newValue)} // 监听日期变化事件，更新起始时间状态
+                        // 使用 slotProps 属性来自定义 DatePicker 内部渲染的 TextField 组件
+                        slotProps={{
+                            // 将自定义样式应用到内部的 TextField
+                            textField: { fullWidth: true, margin: 'normal', sx: textFieldSx } // 使内部 TextField 宽度占满、应用标准外边距和自定义聚焦样式
+                        }}
+                    />
+                    {/* 【新增】截止时间选择器 */}
+                    <DatePicker
+                        label="截止时间" // 设置日期选择器的标签文本
+                        value={endTime} // 绑定截止时间状态变量作为选择器的值
+                        // 当截止时间改变时更新状态
+                        onChange={(newValue: Dayjs | null) => setEndTime(newValue)} // 监听日期变化事件，更新截止时间状态
+                        // 使用 slotProps 属性来自定义 DatePicker 内部渲染的 TextField 组件
+                        slotProps={{
+                            // 将自定义样式应用到内部的 TextField
+                            textField: { fullWidth: true, margin: 'normal', sx: textFieldSx } // 使内部 TextField 宽度占满、应用标准外边距和自定义聚焦样式
+                        }}
+                    />
+                </LocalizationProvider>
             </Box>
-            {/* 操作按钮区域: 固定在底部，不随内容滚动 */}
-            <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', flexShrink: 0 }}> {/* 水平排列按钮，间距为 2，flexShrink: 0 防止按钮区域收缩。 */}
-                {onReset && ( // 如果 onReset 回调存在，则渲染重置按钮。
+            {/* 操作按钮区域，固定在底部，不随内容滚动。使用 Stack 布局按钮，水平居中对齐，flexShrink: 0 防止被挤压 */}
+            <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', flexShrink: 0 }}>
+                {onReset && ( // 只有当父组件提供了 onReset prop 时才渲染重置按钮
                     <Button
-                        variant="outlined" onClick={handleResetClick} fullWidth // 轮廓按钮，点击调用重置函数，宽度占满。
-                        sx={{ // 自定义按钮样式。
-                            height: 48, // 固定高度。
-                            borderRadius: 99, // 极大的圆角，使按钮呈药丸状。
-                            borderColor: '#424242', // 边框颜色。
-                            color: '#424242', // 文本颜色。
-                            '&:hover': { // 鼠标悬停时的样式。
-                                bgcolor: 'rgba(66, 66, 66, 0.04)', // 略微的背景色。
-                                borderColor: '#424242' // 保持边框颜色。
+                        variant="outlined" // 按钮使用带边框的样式
+                        onClick={handleResetClick} // 绑定重置按钮的点击事件
+                        fullWidth // 使按钮宽度占满父容器
+                        sx={{
+                            height: 48, // 设置按钮高度
+                            borderRadius: 99, // 设置大圆角，使其看起来像药丸形状
+                            borderColor: '#424242', // 恢复为深灰色轮廓边框颜色
+                            color: '#424242', // 设置文字颜色为深灰色
+                            '&:hover': { // 定义悬停时的样式
+                                bgcolor: 'rgba(66, 66, 66, 0.04)', // 悬停时的背景色，轻微透明的深灰色
+                                borderColor: '#424242', // 悬停时轮廓颜色保持不变
                             }
                         }}
                     >
-                        <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>重置</Typography> {/* 文本内容，略微下移，字体加粗。 */}
+                        重置
                     </Button>
                 )}
                 <Button
-                    variant="contained" onClick={handleSearchClick} fullWidth // 填充按钮，点击调用搜索函数，宽度占满。
-                    sx={{ // 自定义按钮样式。
-                        height: 48, // 固定高度。
-                        borderRadius: 99, // 极大的圆角。
-                        bgcolor: '#424242', // 背景颜色。
-                        color: '#fff', // 文本颜色。
-                        boxShadow: 'none', // 移除阴影。
-                        '&:hover': { // 鼠标悬停时的样式。
-                            bgcolor: '#333333', // 更深的背景色。
-                            boxShadow: 'none' // 保持无阴影。
+                    variant="contained" // 按钮使用填充背景的样式
+                    onClick={handleSearchClick} // 绑定搜索按钮的点击事件
+                    fullWidth // 使按钮宽度占满父容器
+                    sx={{
+                        height: 48, // 设置按钮高度
+                        borderRadius: 99, // 设置大圆角
+                        bgcolor: '#424242', // 恢复为深灰色背景颜色
+                        color: '#fff', // 设置文字颜色为白色
+                        boxShadow: 'none', // 移除按钮阴影
+                        '&:hover': { // 定义悬停时的样式
+                            bgcolor: '#333333', // 悬停时背景色变为更深的灰色
+                            boxShadow: 'none', // 悬停时也无阴影
                         }
                     }}
                 >
-                    <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>搜索</Typography> {/* 文本内容，略微下移，字体加粗。 */}
+                    搜索
                 </Button>
             </Stack>
         </Stack>
     );
 };
 
-export default ChangelogSearchForm; // 导出 ChangelogSearchForm 组件。
+export default ChangelogSearchForm; // 导出 ChangelogSearchForm 组件，使其可以在其他文件中导入和使用
