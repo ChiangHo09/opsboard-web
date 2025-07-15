@@ -1,3 +1,4 @@
+
 // START OF FILE MainLayout.tsx
 /**
  * 文件功能:
@@ -15,6 +16,10 @@
  *   - `MainLayout` 中的 `useEffect` 监听路由变化、面板打开状态和 `isPanelRelevant`。
  *   - 当面板打开且当前页面被标记为“不相关”时，会触发一个延迟关闭面板的逻辑。
  *   - 这种延迟机制（`setTimeout`）旨在解决在两个相关页面之间快速跳转时，面板因短暂的 `isPanelRelevant` 状态变化而闪烁关闭的问题。它给新页面足够的时间来设置其相关性，从而避免不必要的关闭。
+ * - 【动画增强】为右侧搜索面板的内部内容添加了页面切换动画效果。
+ *   - 引入 `panelContentAnimationKey` 状态，并在 `panelContent` 或 `panelTitle` 变化时更新此键，以触发 Framer Motion 的内容动画。
+ *   - 将此 `panelContentAnimationKey` 传递给 `RightSearchPanel` 组件。
+ *   - 对于移动端面板，其内部内容现在也被包裹在 `AnimatePresence` 和 `MotionBox` 中，并应用 `pageVariants` 和 `pageTransition`。
  */
 import { useState, type JSX, useEffect, useRef } from 'react'; // 导入 React 的 useState 和 useEffect Hook 用于组件内部状态管理；导入 JSX 类型用于函数组件的返回类型。
 import { Outlet, useLocation } from 'react-router-dom'; // 导入 Outlet 组件用于渲染嵌套路由的子元素；导入 useLocation Hook 用于获取当前路由信息。
@@ -30,6 +35,7 @@ const MotionBox = motion(Box); // 将 MUI 的 Box 组件转换为 Framer Motion 
 const MOBILE_TOP_BAR_HEIGHT = 56; // 定义移动设备顶部栏的高度常量，单位为像素。
 
 // 定义移动端面板的动画变体，控制其进入、存在和退出时的样式和过渡。
+// 注意：这个动画是针对整个移动端面板容器的，其内部内容的动画由 `pageVariants` 控制。
 const mobilePanelVariants: Variants = {
     initial: { opacity: 0, scale: 0.98, }, // 初始状态：完全透明，略微缩小。
     animate: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' }, }, // 动画状态：完全不透明，恢复原始大小，过渡时间0.2秒，缓出效果。
@@ -65,6 +71,31 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
 
     // 【新增】用于存储关闭面板的 setTimeout ID 的引用，以便在需要时清除。
     const closePanelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // 【新增】用于管理面板内部内容动画的 key。
+    // 当 panelContent 或 panelTitle 变化时，更新此 key，触发 Framer Motion 的 AnimatePresence 进行内容切换动画。
+    const [panelContentAnimationKey, setPanelContentAnimationKey] = useState<string | number>(0);
+    // 使用 useRef 来跟踪上一次的 panelContent 和 panelTitle，以便精确地检测内容变化。
+    const prevPanelContentRef = useRef<React.ReactNode | null>(null);
+    const prevPanelTitleRef = useRef<string>('');
+
+    // 【新增】useEffect 来监听面板内容变化，并更新 panelContentAnimationKey。
+    useEffect(() => {
+        // 如果面板当前是打开的，并且有内容。
+        if (isPanelOpen && panelContent !== null) {
+            // 比较当前 panelContent 和 panelTitle 是否与上一次渲染时不同。
+            // 如果不同，则生成一个新的 key，触发内容的进入动画。
+            if (panelContent !== prevPanelContentRef.current || panelTitle !== prevPanelTitleRef.current) {
+                setPanelContentAnimationKey(Date.now()); // 使用当前时间戳作为新的唯一 key。
+            }
+        }
+        // 当面板关闭时，AnimatePresence 会负责内容退出动画，不需要在这里重置 key。
+
+        // 更新 ref，存储当前的值供下一次渲染时比较。
+        prevPanelContentRef.current = panelContent;
+        prevPanelTitleRef.current = panelTitle;
+
+    }, [panelContent, panelTitle, isPanelOpen]); // 依赖项：当 panelContent, panelTitle, 或 isPanelOpen 变化时重新运行。
 
     // 【新增】useEffect 来处理面板的自动关闭逻辑。
     // 当路由变化或面板相关性状态变化时触发。
@@ -179,7 +210,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                     <AnimatePresence> {/* 用于在组件卸载时触发退出动画。 */}
                         {isMobile && isPanelOpen && ( // 仅在移动端且面板打开时渲染。
                             <MotionBox
-                                variants={mobilePanelVariants} // 应用移动端面板动画变体。
+                                variants={mobilePanelVariants} // 应用移动端面板动画变体（控制面板整体的透明度和缩放）。
                                 initial="initial" // 初始动画状态。
                                 animate="animate" // 进入动画状态。
                                 exit="exit" // 退出动画状态。
@@ -208,13 +239,53 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                                 <Box sx={{ // 移动端面板的内容区域样式。
                                     mt: 2, // 顶部外边距为 2 单位。
                                     flexGrow: 1, // 占据剩余垂直空间。
-                                    overflowY: 'hidden', // 垂直方向隐藏滚动条。
+                                    overflowY: 'hidden', // 垂直方向隐藏此容器的滚动条，内容通过内部 MotionBox 控制滚动。
                                     display: 'flex', // flex 布局。
                                     justifyContent: 'center', // 水平居中对齐。
-                                    alignItems: 'center' // 垂直居中对齐。
+                                    alignItems: 'center', // 垂直居中对齐。
                                 }}>
-                                    {/* 为移动端面板内容添加加载指示器 */}
-                                    {isPanelOpen && !panelContent ? <CircularProgress /> : panelContent} {/* 如果面板打开但内容未加载，显示加载指示器；否则显示面板内容。 */}
+                                    {/* 为移动端面板内容添加 AnimatePresence 和页面切换动画 */}
+                                    <AnimatePresence mode="wait"> {/* mode="wait" 确保前一个元素完全退出后新元素才进入。 */}
+                                        {isPanelOpen && !panelContent ? ( // 如果面板打开但内容未加载。
+                                            <MotionBox
+                                                key="loading-mobile-panel-content" // 为加载指示器设置唯一键。
+                                                variants={pageVariants} // 应用页面动画变体。
+                                                transition={pageTransition} // 应用页面动画过渡配置。
+                                                initial="initial" // 初始动画状态。
+                                                animate="animate" // 进入动画状态。
+                                                exit="exit" // 退出动画状态。
+                                                sx={{ // 加载指示器容器样式。
+                                                    width: '100%', // 宽度占满。
+                                                    height: '100%', // 高度占满。
+                                                    display: 'flex', // flex 布局。
+                                                    justifyContent: 'center', // 水平居中。
+                                                    alignItems: 'center' // 垂直居中。
+                                                }}
+                                            >
+                                                <CircularProgress /> {/* 显示加载指示器。 */}
+                                            </MotionBox>
+                                        ) : isPanelOpen && panelContent ? ( // 如果面板打开且内容已加载。
+                                            <MotionBox
+                                                key={panelContentAnimationKey} // 使用 `panelContentAnimationKey` 作为内容动画的 key。
+                                                variants={pageVariants} // 应用页面动画变体。
+                                                transition={pageTransition} // 应用页面动画过渡配置。
+                                                initial="initial" // 初始动画状态。
+                                                animate="animate" // 进入动画状态。
+                                                exit="exit" // 退出动画状态。
+                                                sx={{ // 实际内容容器样式。
+                                                    width: '100%', // 宽度占满。
+                                                    height: '100%', // 高度占满。
+                                                    boxSizing: 'border-box', // 盒子模型为 border-box。
+                                                    overflowY: 'auto', // 垂直方向允许滚动。
+                                                    overflowX: 'hidden', // 水平方向隐藏滚动条。
+                                                    display: 'flex', // flex 布局。
+                                                    flexDirection: 'column', // 垂直堆叠。
+                                                }}
+                                            >
+                                                {panelContent} {/* 渲染面板内容。 */}
+                                            </MotionBox>
+                                        ) : null /* 如果面板关闭或 isPanelOpen 为 false，则不渲染内容。 */}
+                                    </AnimatePresence>
                                 </Box>
                             </MotionBox>
                         )}
@@ -228,19 +299,12 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                         onClose={togglePanel} // 传递关闭面板的函数。
                         title={panelTitle} // 传递面板标题。
                         width={panelWidth} // 传递面板宽度。
+                        contentKey={panelContentAnimationKey} // 【新增】传递面板内容动画的 key 给 RightSearchPanel。
                     >
-                        {/* 为桌面端面板内容添加加载指示器 */}
-                        {isPanelOpen && !panelContent ? ( // 如果面板打开但内容未加载。
-                            <Box sx={{ // 加载指示器容器样式。
-                                width: '100%', // 宽度占满。
-                                height: '100%', // 高度占满。
-                                display: 'flex', // flex 布局。
-                                justifyContent: 'center', // 水平居中。
-                                alignItems: 'center' // 垂直居中。
-                            }}>
-                                <CircularProgress /> {/* 显示加载指示器。 */}
-                            </Box>
-                        ) : panelContent} {/* 否则显示面板内容。 */}
+                        {/* panelContent 是作为 children 传递给 RightSearchPanel 的。
+                            RightSearchPanel 内部会使用 AnimatePresence 和 pageVariants 处理 contentKey 对应的内容动画。
+                            加载指示器也由 RightSearchPanel 内部处理。 */}
+                        {panelContent} {/* 传递 panelContent 作为子内容。 */}
                     </RightSearchPanel>
                 )}
             </Box>
@@ -263,4 +327,3 @@ export default function MainLayout({ onFakeLogout }: { onFakeLogout: () => void 
         </LayoutProvider>
     );
 }
-// END OF FILE MainLayout.tsx
