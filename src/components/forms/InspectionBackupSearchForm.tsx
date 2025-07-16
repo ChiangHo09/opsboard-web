@@ -12,6 +12,8 @@
  * - 定义了新的搜索项：地区 (region)、起始时间 (startTime)、截止时间 (endTime)、
  *   服务器类型 (serverType)、操作类型 (operationType)。
  * - 【时间选择器】使用了两个独立的 DatePicker 组件来分别选择起始时间和截止时间。
+ * - 【问题修复】将所有日期选择器的时间格式从 `yyyy-MM-dd` 更正为 `YYYY-MM-DD`，
+ *   解决因 `dd` 被 Day.js 解释为“星期几”而非“月份中的日期”导致显示异常的问题。
  * - 【操作类型】使用了 Material-UI 的 Select 组件作为下拉菜单，包含“巡检”和“备份”两个固定选项。
  *   - 注意：下拉菜单选项目前是硬编码的占位符，未来可根据后端数据进行动态填充。
  * - 保持了统一的 TextField 聚焦样式和按钮样式。
@@ -189,6 +191,7 @@ const InspectionBackupSearchForm: FC<InspectionBackupSearchFormProps> = ({ onSea
                         label="起始时间" // 日期选择器的标签
                         value={startTime} // 绑定起始时间状态
                         onChange={(newValue: Dayjs | null) => setStartTime(newValue)} // 更新起始时间状态
+                        format="YYYY-MM-DD" // 【更正】设置日期显示格式为 年-月-日（大写 YYYY 和 DD）。
                         slotProps={{
                             // 将自定义样式应用到内部的 TextField
                             textField: { fullWidth: true, margin: 'normal', sx: textFieldSx } // 使内部 TextField 宽度占满、应用标准外边距和自定义聚焦样式
@@ -199,6 +202,7 @@ const InspectionBackupSearchForm: FC<InspectionBackupSearchFormProps> = ({ onSea
                         label="截止时间" // 日期选择器的标签
                         value={endTime} // 绑定截止时间状态
                         onChange={(newValue: Dayjs | null) => setEndTime(newValue)} // 更新截止时间状态
+                        format="YYYY-MM-DD" // 【更正】设置日期显示格式为 年-月-日（大写 YYYY 和 DD）。
                         slotProps={{
                             // 将自定义样式应用到内部的 TextField
                             textField: { fullWidth: true, margin: 'normal', sx: textFieldSx } // 使内部 TextField 宽度占满、应用标准外边距和自定义聚焦样式

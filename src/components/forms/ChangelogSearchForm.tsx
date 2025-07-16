@@ -16,6 +16,8 @@
  * - 修改了表单的渲染逻辑，以包含两个 `DatePicker` 组件。
  * - 确保了所有相关的模块导入（如 DateRangePicker, DateRange）被移除，并添加了 DatePicker 的导入。
  * - 按钮颜色和样式保持与之前一致的深灰色主题。
+ * - 【问题修复】将日期选择器的时间格式从 `yyyy-MM-dd` 更正为 `YYYY-MM-DD`，
+ *   解决因 `dd` 被 Day.js 解释为“星期几”而非“月份中的日期”导致显示异常的问题。
  * - 所有的 TypeScript 兼容性修复和 ESLint 忽略注释均已保留并适配新的结构。
  * ================================================================================
  */
@@ -144,9 +146,8 @@ const ChangelogSearchForm: React.FC<ChangelogSearchFormProps> = ({ onSearch, onR
                     <DatePicker
                         label="起始时间" // 设置日期选择器的标签文本
                         value={startTime} // 绑定起始时间状态变量作为选择器的值
-                        // 当起始时间改变时更新状态
                         onChange={(newValue: Dayjs | null) => setStartTime(newValue)} // 监听日期变化事件，更新起始时间状态
-                        // 使用 slotProps 属性来自定义 DatePicker 内部渲染的 TextField 组件
+                        format="YYYY-MM-DD" // 【更正】设置日期显示格式为 年-月-日（大写 YYYY 和 DD）。
                         slotProps={{
                             // 将自定义样式应用到内部的 TextField
                             textField: { fullWidth: true, margin: 'normal', sx: textFieldSx } // 使内部 TextField 宽度占满、应用标准外边距和自定义聚焦样式
@@ -156,9 +157,8 @@ const ChangelogSearchForm: React.FC<ChangelogSearchFormProps> = ({ onSearch, onR
                     <DatePicker
                         label="截止时间" // 设置日期选择器的标签文本
                         value={endTime} // 绑定截止时间状态变量作为选择器的值
-                        // 当截止时间改变时更新状态
                         onChange={(newValue: Dayjs | null) => setEndTime(newValue)} // 监听日期变化事件，更新截止时间状态
-                        // 使用 slotProps 属性来自定义 DatePicker 内部渲染的 TextField 组件
+                        format="YYYY-MM-DD" // 【更正】设置日期显示格式为 年-月-日（大写 YYYY 和 DD）。
                         slotProps={{
                             // 将自定义样式应用到内部的 TextField
                             textField: { fullWidth: true, margin: 'normal', sx: textFieldSx } // 使内部 TextField 宽度占满、应用标准外边距和自定义聚焦样式
