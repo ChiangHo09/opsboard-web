@@ -1,12 +1,10 @@
 /**
- * 文件功能：
- * 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航。
- * 它实现了响应式设计，能够在桌面端和移动端提供不同的布局和交互体验。
+ * 文件名：SideNav.tsx
+ * 描述：此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航。
  *
  * 本次修改：
- * - 再次调整了账户菜单中用户信息的左侧内边距（padding-left），以实现与下方“退出登录”按钮文本的精确视觉对齐。
- * - 从菜单中移除了分割线（Divider）及其 import，使设计更简洁。
- * - 调整了用户信箱 Box 的下边距（padding-bottom），以补偿移除分割线后损失的垂直间距。
+ * - 【最终修复】将侧边栏（Drawer）和移动端顶部栏的背景色（`bgcolor`）正确地绑定到了 `app.background` 主题颜色。
+ * - 此前该绑定遗漏，导致侧边栏颜色不随主题变化。本次修改彻底解决了此问题。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -35,13 +33,11 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ReactElement, MouseEvent, JSX } from 'react';
 
-/* ---------- 常量 ---------- */
 const W_COLLAPSED = 64;
 const W_EXPANDED = 220;
 const BTN_SIZE = 40;
 const GAP = 8;
 const ICON_SIZE = 22;
-const GRAY = '#424242';
 const TRANS_DUR = 0.28;
 
 const MOTION_EASING = [0.4, 0, 0.2, 1] as const;
@@ -53,7 +49,6 @@ const MOBILE_TOP_BAR_HEIGHT = 56;
 const MotionDrawer = motion(Drawer);
 const MotionButtonBase = motion(ButtonBase);
 
-/* ---------- 导航定义 ---------- */
 interface NavItem {
     label: string;
     path: string;
@@ -75,14 +70,12 @@ const bottomNavItems: NavItem[] = [
     { label: '设置', path: '/app/settings', icon: <SettingsIcon />, isMobileTopBarItem: true },
 ];
 
-/* ---------- Props ---------- */
 interface SideNavProps {
     open: boolean;
     onToggle: () => void;
     onFakeLogout: () => void;
 }
 
-/* ============================================================= */
 export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) {
     const { pathname } = useLocation();
     const nav = useNavigate();
@@ -92,12 +85,12 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-    const navItemIconSx = { fontSize: ICON_SIZE, color: GRAY, position: 'relative', top: '3px' };
-    const controlIconSx = { fontSize: ICON_SIZE, color: GRAY, position: 'relative', top: '1px' };
+    const navItemIconSx = { fontSize: ICON_SIZE, color: 'neutral.main', position: 'relative', top: '3px' };
+    const controlIconSx = { fontSize: ICON_SIZE, color: 'neutral.main', position: 'relative', top: '1px' };
 
     const tooltipSx = {
-        bgcolor: '#F0F4F9',
-        color: GRAY,
+        bgcolor: 'app.background',
+        color: 'neutral.main',
         borderRadius: 0.75,
         border: '1px solid rgba(0,0,0,0.12)',
         p: '4px 9px',
@@ -124,7 +117,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         bgcolor: selected ? 'rgba(0,0,0,0.12)' : 'transparent',
                         '@media (hover: hover)': {
                             '&:hover': {
-                                bgcolor: selected ? 'rgba(0,0,0,0.16)' : 'rgba(0,0,0,0.04)'
+                                bgcolor: selected ? 'rgba(0,0,0,0.16)' : theme.palette.action.hover
                             }
                         }
                     }}
@@ -193,7 +186,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         left: 0,
                         right: 0,
                         height: MOBILE_TOP_BAR_HEIGHT,
-                        bgcolor: '#F0F4F9',
+                        bgcolor: 'app.background', // 【修复】绑定主题颜色
                         zIndex: theme.zIndex.appBar + 1,
                         display: 'flex',
                         alignItems: 'center',
@@ -243,7 +236,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         flexShrink: 0,
                         '& .MuiDrawer-paper': {
                             width: W_EXPANDED,
-                            bgcolor: '#F0F4F9',
+                            bgcolor: 'app.background', // 【修复】绑定主题颜色
                             border: 'none',
                             boxSizing: 'border-box',
                             overflow: 'hidden',
@@ -264,7 +257,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                 alt="logo"
                                 sx={{ height: 28, width: 'auto', mr: 1.5 }}
                             />
-                            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: GRAY }}>
+                            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'neutral.main' }}>
                                 运维信息表
                             </Typography>
                         </Box>
@@ -297,7 +290,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         flexShrink: 0,
                         '& .MuiDrawer-paper': {
                             width: 'inherit',
-                            bgcolor: '#F0F4F9',
+                            bgcolor: 'app.background', // 【修复】绑定主题颜色
                             border: 'none',
                             display: 'flex',
                             flexDirection: 'column',
@@ -325,7 +318,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                         justifyContent: 'flex-start', p: 0, overflow: 'hidden',
                                         '@media (hover: hover)': {
                                             '&:hover': {
-                                                bgcolor: 'rgba(0,0,0,.04)',
+                                                bgcolor: 'action.hover',
                                             },
                                         },
                                     }}
@@ -385,7 +378,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                                             justifyContent: 'flex-start', p: 0, overflow: 'hidden',
                                             '@media (hover: hover)': {
                                                 '&:hover': {
-                                                    bgcolor: 'rgba(0,0,0,.04)',
+                                                    bgcolor: 'action.hover',
                                                 },
                                             },
                                         }}

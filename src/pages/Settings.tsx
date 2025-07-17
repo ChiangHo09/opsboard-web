@@ -1,9 +1,17 @@
-import React, { useEffect } from 'react'; // 导入 useEffect
+/**
+ * 文件名：Settings.tsx
+ * 描述：此文件定义了应用的“设置”页面。
+ *
+ * 本次修改：
+ * - 更新了页面标题的样式，使其与应用内其他页面的标题（如“服务器信息”）保持一致。
+ * - 将标题颜色绑定到全局主题的 `primary.main` 颜色，确保其能跟随主题变化。
+ */
+import React, { useEffect } from 'react';
 import { Box, Typography } from '@mui/material'
-import { useLayout } from '../contexts/LayoutContext.tsx'; // 导入 useLayout
+import { useLayout } from '../contexts/LayoutContext.tsx';
 
 const Settings: React.FC = () => {
-    const { setIsPanelRelevant } = useLayout(); // 获取 setIsPanelRelevant
+    const { setIsPanelRelevant } = useLayout();
 
     useEffect(() => {
         // 组件挂载时：标记当前页面与面板不相关
@@ -13,22 +21,28 @@ const Settings: React.FC = () => {
         return () => {
             setIsPanelRelevant(false);
         };
-    }, [setIsPanelRelevant]); // 依赖项
+    }, [setIsPanelRelevant]);
 
     return (
-        // 外层 Box: 不再需要 p:3，因为显示区域的边距现在由 MainLayout 中的白色背景 Box 提供。
         <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            {/* 内层 Box，用于控制内容的响应式宽度和居中，并添加内部上下边距 */}
             <Box sx={{
                 width: { xs: '90%', md: '80%' },
                 maxWidth: 1280,
                 mx: 'auto',
-                py: 4, // 为内容区域添加上下内边距
+                py: 4,
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column'
             }}>
-                <Typography variant="h4">设置 (Settings)</Typography>
+                <Typography
+                    variant="h5"
+                    sx={{
+                        color: 'primary.main',
+                        fontSize: '2rem'
+                    }}
+                >
+                    设置 (Settings)
+                </Typography>
                 <Typography sx={{ mt: 2 }}>这里实现一些系统设置内容（还没想好要设置啥）</Typography>
             </Box>
         </Box>

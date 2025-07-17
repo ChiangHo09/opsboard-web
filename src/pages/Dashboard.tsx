@@ -1,13 +1,9 @@
-/*
- * [文件用途说明]
- * - 此文件定义了应用的仪表盘（Dashboard）页面，是用户登录后看到的主界面。
- * - 它展示了欢迎信息和一组快捷操作按钮，用于导航到应用的其他核心功能区。
+/**
+ * 文件名：Dashboard.tsx
+ * 描述：此文件定义了应用的仪表盘（Dashboard）页面。
  *
- * [本次修改记录]
- * - 更新了快捷操作按钮的样式对象 `quickBtnSX`。
- * - 将按钮的背景色 `bgcolor` 和文字颜色 `color` 修改为与侧边栏一致的风格（浅灰背景，深灰文字），以增强整个应用的视觉统一性。
- * - 相应地更新了按钮的 `&:hover` 状态颜色。
- * - 【新增】在组件挂载时设置 `isPanelRelevant` 为 `false`，在卸载时设置为 `false`。
+ * 本次修改：
+ * - 将快捷操作按钮的背景色和悬停色指向了新的、语义更清晰的 `app.button.background` 和 `app.button.hover` 主题颜色。
  */
 import { Box, Typography, Button, Stack } from '@mui/material'
 import NoteAddIcon from '@mui/icons-material/NoteAdd'
@@ -15,22 +11,21 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import StorageIcon from '@mui/icons-material/Storage'
 import { useNavigate } from 'react-router-dom'
 import type { JSX } from 'react'
-import { useEffect } from 'react'; // 导入 useEffect
-import { useLayout } from '../contexts/LayoutContext.tsx'; // 导入 useLayout
+import { useEffect } from 'react';
+import { useLayout } from '../contexts/LayoutContext.tsx';
 
 export default function Dashboard() {
-    const nickname = 'chiangho'        // TODO: 从后端获取
+    const nickname = 'chiangho'
     const navigate = useNavigate()
-    const { setIsPanelRelevant } = useLayout(); // 获取 setIsPanelRelevant
+    const { setIsPanelRelevant } = useLayout();
 
-    /* --- START OF MODIFICATION --- */
     const quickBtnSX = {
         height: 44,
         minWidth: 160,
         px: 4,
         borderRadius: 30,
-        bgcolor: '#F0F4F9',      // 1. 背景色匹配侧边栏
-        color: '#424242',        // 2. 文字/图标颜色匹配侧边栏
+        bgcolor: 'app.button.background', // 使用新的按钮背景色
+        color: 'neutral.main',
         boxShadow: 0,
         textTransform: 'none',
         display: 'inline-flex',
@@ -38,7 +33,7 @@ export default function Dashboard() {
         justifyContent: 'center',
         columnGap: 1.5,
         '&:hover': {
-            bgcolor: '#E1E5E9',   // 3. 定义匹配的悬停颜色
+            bgcolor: 'app.button.hover', // 使用新的按钮悬停色
             boxShadow: 0
         },
         '& .MuiButton-startIcon': {
@@ -47,17 +42,13 @@ export default function Dashboard() {
             alignItems: 'center',
         },
     } as const
-    /* --- END OF MODIFICATION --- */
 
     useEffect(() => {
-        // 组件挂载时：标记当前页面与面板不相关
         setIsPanelRelevant(false);
-
-        // 组件卸载时：确保标记当前页面与面板不相关
         return () => {
             setIsPanelRelevant(false);
         };
-    }, [setIsPanelRelevant]); // 依赖项
+    }, [setIsPanelRelevant]);
 
     const label = (icon: JSX.Element, text: string) => (
         <>
@@ -92,7 +83,7 @@ export default function Dashboard() {
                 <Stack spacing={1} mb={6}>
                     <Typography
                         variant="h5"
-                        sx={{ color: '#1976d2', fontSize: '2rem' }}
+                        sx={{ color: 'primary.main', fontSize: '2rem' }}
                     >
                         运维信息表
                     </Typography>

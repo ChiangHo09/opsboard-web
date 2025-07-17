@@ -1,6 +1,6 @@
-/*****************************************************************
+/**
  * PageTransition —— Fade-Through 动画（绝对定位 + 内边距）
- *****************************************************************/
+ */
 import React, { useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Fade, useTheme } from '@mui/material'

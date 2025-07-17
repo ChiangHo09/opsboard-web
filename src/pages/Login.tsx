@@ -1,14 +1,14 @@
 /**
- * 文件功能：
- * 此文件定义了应用的登录页面，包含用户输入表单和品牌标识。
- * 它采用了响应式设计，以适应桌面和移动设备。
+ * 文件名：Login.tsx
+ * 描述：
+ *     此文件定义了应用的登录页面，包含用户输入表单和品牌标识。
+ *     它采用了响应式设计，以适应桌面和移动设备。
  *
  * 本次修改：
- * - 防止页面加载时输入框自动获得焦点。
- * - 引入了 `useRef` 和 `useEffect` Hooks。
- * - 为登录表单的 `Card` 组件添加了 `ref` 和 `tabIndex={-1}` 属性，使其可以被程序化地聚焦。
- * - 通过 `useEffect` 在组件挂载时将焦点设置到 `Card` 上，从而移开输入框的默认焦点。
- * - 在 `Card` 的 `sx` 样式中添加了 `outline: 'none'`，以移除聚焦时产生的默认轮廓线。
+ * - 【问题修复】根据用户要求，将登录页面的背景色与应用主背景色（侧边栏颜色）统一。
+ * - 将背景色从独立的蓝色修改为引用自主题的 `app.background`。
+ * - 相应地，将页面标题恢复为深色（`neutral.main`），并将 Logo 恢复为其原始颜色（移除了白色滤镜），以确保在浅色背景上的可读性。
+ * - 将登录按钮和输入框焦点颜色绑定到主题的 `primary.main` 颜色。
  */
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +16,7 @@ import {
     Box, Card, CardContent, TextField, Button,
     Typography, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles'; // 导入 useTheme Hook
 import LoginIcon from '@mui/icons-material/Login';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import HoneypotInfo from './HoneypotInfo';
@@ -30,9 +31,9 @@ export default function Login({ onFakeLogin }: LoginProps) {
     const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
     const navigate = useNavigate();
     const cardRef = useRef<HTMLDivElement>(null);
+    const theme = useTheme(); // 获取主题对象
 
     useEffect(() => {
-        // 将焦点设置到 Card 上，以防止 TextField 自动聚焦
         cardRef.current?.focus();
     }, []);
 
@@ -47,10 +48,10 @@ export default function Login({ onFakeLogin }: LoginProps) {
 
     const tfSX = {
         '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#1976d2',
+            borderColor: theme.palette.primary.main, // 使用主题的主色
         },
         '& .MuiInputLabel-root.Mui-focused': {
-            color: '#1976d2',
+            color: theme.palette.primary.main, // 使用主题的主色
         },
     } as const;
 
@@ -62,7 +63,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
                 flexDirection: { xs: 'column', md: 'row' },
                 alignItems: 'center',
                 justifyContent: { xs: 'space-evenly', md: 'center' },
-                bgcolor: '#f7f9fd',
+                bgcolor: 'app.background', // 【修改】使用主题的应用背景色
                 p: { xs: 2, md: 0 },
             }}
         >
@@ -92,13 +93,15 @@ export default function Login({ onFakeLogin }: LoginProps) {
                         sx={{
                             height: { xs: '4rem', sm: '5rem', md: 120 },
                             width: 'auto',
+                            // 【修改】移除滤镜，恢复 Logo 原始颜色
                         }}
                     />
                     <Typography
                         variant="h4"
                         sx={{
                             fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' },
-                            fontWeight: 500
+                            fontWeight: 500,
+                            color: 'neutral.main' // 【修改】恢复为深色标题
                         }}
                     >
                         运维信息表
@@ -119,11 +122,11 @@ export default function Login({ onFakeLogin }: LoginProps) {
                 <Card
                     ref={cardRef}
                     tabIndex={-1}
-                    elevation={3}
+                    elevation={0}
                     sx={{
                         width: '100%',
                         maxWidth: 360,
-                        outline: 'none', // 移除聚焦时的轮廓线
+                        outline: 'none',
                     }}
                 >
                     <CardContent>
@@ -139,9 +142,11 @@ export default function Login({ onFakeLogin }: LoginProps) {
                             />
                             <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
                                 <Button
-                                    fullWidth variant="contained" disableElevation
-                                    startIcon={<LoginIcon />} type="submit"
-                                    sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+                                    fullWidth
+                                    variant="contained"
+                                    color="primary" // 【修改】使用 primary color，更符合MUI规范
+                                    startIcon={<LoginIcon />}
+                                    type="submit"
                                 >
                                     登录
                                 </Button>

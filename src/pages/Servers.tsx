@@ -1,10 +1,9 @@
 /**
- * 文件功能：
- * 此文件为“服务器信息”页面，负责展示服务器列表数据和提供搜索入口。
+ * 文件名：Servers.tsx
+ * 描述：此文件为“服务器信息”页面，负责展示服务器列表数据和提供搜索入口。
  *
  * 本次修改：
- * - 将右侧搜索面板的标题从“高级搜索”修改为“服务器搜索”。
- * - 【新增】在组件挂载时设置 `isPanelRelevant` 为 `true`，在卸载时设置为 `false`，并清理面板状态。
+ * - 【问题修复】将页面右上角“搜索”按钮的背景色和悬停色指向了新的、语义更清晰的 `app.button.background` 和 `app.button.hover` 主题颜色，解决了按钮颜色对比度不足的问题。
  */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button } from '@mui/material';
@@ -13,42 +12,35 @@ import { useLayout } from '../contexts/LayoutContext.tsx';
 import ServerSearchForm, { type ServerSearchValues } from '../components/forms/ServerSearchForm';
 
 const Servers: React.FC = () => {
-    // 从简化的 LayoutContext 获取所需方法
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayout(); // 获取 setIsPanelRelevant
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayout();
 
-    // 搜索处理函数现在接收一个类型安全的对象
     const handleSearch = useCallback((values: ServerSearchValues) => {
         console.log('在 Servers 页面接收到搜索条件:', values);
         alert(`搜索: ${JSON.stringify(values)}`);
-        togglePanel(); // 搜索后可选择关闭面板
+        togglePanel();
     }, [togglePanel]);
 
     const handleReset = useCallback(() => {
         alert('重置表单');
     }, []);
 
-    // 使用 useEffect 将独立的表单组件设置到面板中
     useEffect(() => {
-        // 直接将一个完整的、带 props 的组件实例设置到面板内容中
         setPanelContent(
             <ServerSearchForm onSearch={handleSearch} onReset={handleReset} />
         );
-        // 分别设置面板的元数据
-        setPanelTitle('服务器搜索'); // 修复点：修改标题
+        setPanelTitle('服务器搜索');
         setPanelWidth(360);
-        setIsPanelRelevant(true); // 【新增】标记此页面与面板相关
+        setIsPanelRelevant(true);
 
-        // 组件卸载时，清理面板内容、标题、宽度，并标记为不相关
         return () => {
             setPanelContent(null);
             setPanelTitle('');
-            setPanelWidth(360); // 恢复默认宽度
-            setIsPanelRelevant(false); // 【新增】标记此页面与面板不相关
+            setPanelWidth(360);
+            setIsPanelRelevant(false);
         };
-    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]); // 依赖项
+    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]);
 
     return (
-        // 页面主体布局保持不变
         <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{
                 width: { xs: '90%', md: '80%' },
@@ -62,7 +54,7 @@ const Servers: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, mb: 4 }}>
                     <Typography
                         variant="h5"
-                        sx={{ color: '#1976d2', fontSize: '2rem' }}
+                        sx={{ color: 'primary.main', fontSize: '2rem' }}
                     >
                         服务器信息
                     </Typography>
@@ -74,15 +66,15 @@ const Servers: React.FC = () => {
                         sx={{
                             height: '42px',
                             borderRadius: '50px',
-                            bgcolor: '#F0F4F9',
-                            color: '#424242',
+                            bgcolor: 'app.button.background', // 使用新的按钮背景色
+                            color: 'neutral.main',
                             boxShadow: 'none',
                             textTransform: 'none',
                             fontSize: '15px',
                             fontWeight: 500,
                             px: 3,
                             '&:hover': {
-                                bgcolor: '#E1E5E9',
+                                bgcolor: 'app.button.hover', // 使用新的按钮悬停色
                                 boxShadow: 'none',
                             },
                         }}

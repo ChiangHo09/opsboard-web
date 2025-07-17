@@ -1,34 +1,39 @@
-import React, { useEffect } from 'react'; // 导入 useEffect
+/**
+ * 文件名：Tickets.tsx
+ * 描述：此文件定义了“工单”页面。
+ *
+ * 本次修改：
+ * - 【问题修复】为页面标题的 `Typography` 组件添加了 `sx={{ color: 'primary.main' }}` 属性，使其颜色能正确地跟随全局主题变化。
+ */
+import React, { useEffect } from 'react';
 import { Box, Typography } from '@mui/material'
-import { useLayout } from '../contexts/LayoutContext.tsx'; // 导入 useLayout
+import { useLayout } from '../contexts/LayoutContext.tsx';
 
 const Tickets: React.FC = () => {
-    const { setIsPanelRelevant } = useLayout(); // 获取 setIsPanelRelevant
+    const { setIsPanelRelevant } = useLayout();
 
     useEffect(() => {
-        // 组件挂载时：标记当前页面与面板不相关
         setIsPanelRelevant(false);
 
-        // 组件卸载时：确保标记当前页面与面板不相关
         return () => {
             setIsPanelRelevant(false);
         };
-    }, [setIsPanelRelevant]); // 依赖项
+    }, [setIsPanelRelevant]);
 
     return (
-        // 外层 Box: 不再需要 p:3，因为显示区域的边距现在由 MainLayout 中的白色背景 Box 提供。
         <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            {/* 内层 Box，用于控制内容的响应式宽度和居中，并添加内部上下边距 */}
             <Box sx={{
                 width: { xs: '90%', md: '80%' },
                 maxWidth: 1280,
                 mx: 'auto',
-                py: 4, // 为内容区域添加上下内边距
+                py: 4,
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column'
             }}>
-                <Typography variant="h4">工单 (Tickets)</Typography>
+                <Typography variant="h4" sx={{ color: 'primary.main' }}>
+                    工单 (Tickets)
+                </Typography>
                 <Typography sx={{ mt: 2 }}>这里实现一些快速制作工单的功能，通过更新记录直接生成工单</Typography>
             </Box>
         </Box>

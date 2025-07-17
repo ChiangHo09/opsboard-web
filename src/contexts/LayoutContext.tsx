@@ -1,4 +1,3 @@
-// START OF FILE LayoutContext.tsx
 /**
  * 文件功能：
  * 此文件定义了全局布局上下文（LayoutContext），用于管理整个应用的共享布局状态。
