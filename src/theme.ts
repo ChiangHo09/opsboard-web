@@ -6,10 +6,10 @@
  *     通过扩展MUI的调色板（palette）来实现。
  *
  * 本次修改：
- * - 【新增注释】为 `palette` 调色板中的每一个颜色部分都添加了详细的注释，清晰地说明了该颜色在 UI 中的具体用途。
+ * - 将主题的主色（`primary.main`）从亮蓝色（`#2962ff`）修改为更沉稳的深蓝色（`#1976d2`），以降低标题的亮度。
  */
 import { createTheme } from '@mui/material/styles'
-import { red, brown } from '@mui/material/colors'
+import { red } from '@mui/material/colors'
 import { zhCN } from '@mui/material/locale';
 
 import type { ComponentsOverrides } from '@mui/material/styles';
@@ -72,33 +72,32 @@ declare module '@mui/material/styles' {
 const palette = {
     mode: 'light' as const,
 
-    // 核心品牌颜色
-    primary: { main: brown[500] },      // 主要品牌色。用于页面标题、主按钮、链接等强调元素。
-    secondary: { main: '#ff6d00' },     // 次要品牌色。用于次要操作或突出显示的元素。
-    error: { main: red.A400 },          // 错误状态颜色。用于表单验证、错误提示等。
+    // 【修改】核心品牌颜色恢复为深蓝色
+    primary: { main: '#1976d2' },
+    secondary: { main: '#ff6d00' },
+    error: { main: red.A400 },
 
     // 中性色调（灰色系）
     neutral: {
-        main: '#424242',                // 主要中性色。用于大多数常规文本、图标、输入框边框等。
-        light: '#F0F4F9',               // 浅中性色。（当前保留，但主要由 app.background 替代）
-        dark: '#333333',                // 深中性色。用于深色按钮（如搜索表单中的“搜索”按钮）的悬停状态。
-        contrastText: '#ffffff',        // 在 `main` (#424242) 颜色上的对比文字颜色（白色）。
+        main: '#424242',
+        light: '#F0F4F9',
+        dark: '#333333',
+        contrastText: '#ffffff',
     },
 
-    // 应用级通用颜色（跟随主题变化）
+    // 应用级通用颜色恢复为灰色系
     app: {
-        background: brown[50],          // 应用主背景色。用于侧边栏和主工作区的“边框”背景。
-        hover: brown[100],              // 在主背景上的悬停色。
-        // 应用内的次要按钮颜色
+        background: '#F0F4F9',
+        hover: '#E1E5E9',
         button: {
-            background: brown[100],     // 次要按钮背景色。用于页面右上角的“搜索”按钮和仪表盘快捷按钮。
-            hover: brown[200],          // 次要按钮的悬停背景色。
+            background: '#F0F4F9',
+            hover: '#E1E5E9',
         }
     },
 
     // 自定义/特殊颜色
     custom: {
-        hoverOpacity: 'rgba(66, 66, 66, 0.04)', // 用于 Outlined 按钮的透明悬停背景色。
+        hoverOpacity: 'rgba(66, 66, 66, 0.04)',
     }
 }
 
@@ -137,7 +136,7 @@ const theme = createTheme({
         MuiPickersOutlinedInput: {
             styleOverrides: {
                 root: ({ theme }) => ({
-                    '&.Mui-focused.MuiPickersOutlinedInput-root .MuiPickersOutlinedInput-notchedOutline': {
+                    '&.Mui-focused.MuiPickersOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
                         borderColor: theme.palette.neutral.main,
                         borderWidth: '1px'
                     },
