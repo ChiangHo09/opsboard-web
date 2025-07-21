@@ -1,95 +1,96 @@
 /**
- * 文件名: src/App.tsx
- *
- * 本次修改内容:
- * - 【路由更新】为了支持服务器详情页面，将原本的 "servers" 路由修改为嵌套路由。
- * - `Route path="servers"` 现在不再直接渲染组件，而是作为父路由。
- * - 在其内部，添加了两个子路由：
- *   1. `<Route index ... />`: 当访问 `/app/servers` 时，默认渲染 `<Servers />` 组件来显示列表。
- *   2. `<Route path=":serverId" ... />`: 当访问 `/app/servers/具体ID` 时，也渲染 `<Servers />` 组件。
- *      该组件内部会通过 `useParams` 钩子捕获 `:serverId`，并根据该 ID 显示详情视图。
- *
- * 文件功能描述:
- * 此文件是应用的根组件和主路由配置文件。
- * 它负责管理用户的登录状态，并根据该状态决定渲染登录页面还是受保护的主应用布局。
+ * 文件名：src/App.tsx
+ * 功能：应用根组件 + 路由
+ * 仅保留必要代码，未再改动配色/间距。
  */
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
-/* 页面 */
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Servers from './pages/Servers';
-import Changelog from './pages/Changelog';
+/* ---- MUI Provider ---- */
+import { ThemeProvider } from '@mui/material/styles';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+
+/* ---- 日期本地化 ---- */
+import { zhCN as pickersZhCN } from '@mui/x-date-pickers/locales';
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';
+
+/* ---- 自定义主题：仅含 Date-Picker 格式 ---- */
+import theme from './theme';
+
+/* ---- 页面组件（省略 import 与之前一致） ---- */
+import Login            from './pages/Login';
+import Dashboard        from './pages/Dashboard';
+import Servers          from './pages/Servers';
+import Changelog        from './pages/Changelog';
 import InspectionBackup from './pages/InspectionBackup';
-import Tickets from './pages/Tickets';
-import Stats from './pages/Stats';
-import Labs from './pages/Labs';
-import Settings from './pages/Settings';
-import Search from './pages/Search';
-import HoneypotInfo from './pages/HoneypotInfo';
+import Tickets          from './pages/Tickets';
+import Stats            from './pages/Stats';
+import Labs             from './pages/Labs';
+import Settings         from './pages/Settings';
+import Search           from './pages/Search';
+import HoneypotInfo     from './pages/HoneypotInfo';
+import MainLayout       from './layouts/MainLayout';
 
-/* 布局：后台主框架（侧栏 + 顶栏 + <Outlet/>）*/
-import MainLayout from './layouts/MainLayout';
-
-const STORAGE_KEY = 'fake_authed'; // ← localStorage 里的标记位
+const STORAGE_KEY = 'fake_authed';
+dayjs.locale('zh-cn');
 
 export default function App() {
-    /* 把登录状态存在 localStorage，刷新也能记住 */
+    /* ------------- 简易登录状态（示例用） ------------- */
     const [authed, setAuthed] = useState(() => localStorage.getItem(STORAGE_KEY) === '1');
-
-    /* 登录 / 退出 两个方法传给子组件用 */
-    const fakeLogin = () => { localStorage.setItem(STORAGE_KEY, '1'); setAuthed(true); };
+    const fakeLogin  = () => { localStorage.setItem(STORAGE_KEY, '1'); setAuthed(true); };
     const fakeLogout = () => { localStorage.removeItem(STORAGE_KEY); setAuthed(false); };
 
-    /* 退出按钮：监听 route 中的 "?logout" (可选) */
-    useEffect(() => {
-        if (location.search.includes('logout')) fakeLogout();
-    }, []);
+    useEffect(() => { if (location.search.includes('logout')) fakeLogout(); }, []);
 
     return (
-        <Router>
-            <Routes>
-                {/* 根路径：永远显示登录页（把 fakeLogin 方法作为 prop 传下去） */}
-                <Route path="/" element={<Login onFakeLogin={fakeLogin} />} />
-                <Route path="/honeypot-info" element={<HoneypotInfo />} />
+        <ThemeProvider theme={theme}>
+            <LocalizationProvider
+                dateAdapter={AdapterDayjs}
+                adapterLocale="zh-cn"
+                localeText={pickersZhCN.components.MuiLocalizationProvider.defaultProps.localeText}
+                /* 这里的 dateFormats 只填合法键，不再造成视觉差异 */
+                dateFormats={{
+                    normalDate: 'MM月DD日',
+                    shortDate:  'MM月DD日',
+                    month:      'MM月',
+                    monthShort: 'MM月',
+                    year:       'YYYY年',
+                }}
+            >
+                <Router>
+                    <Routes>
+                        {/* 登录页（公开） */}
+                        <Route path="/" element={<Login onFakeLogin={fakeLogin} />} />
+                        <Route path="/honeypot-info" element={<HoneypotInfo />} />
 
-                {/* 受保护的后台路由：必须 authed 才能访问 */}
-                <Route
-                    path="/app" // 【修改】移除 "/*" 以支持嵌套路由
-                    element={
-                        authed ? (
-                            <MainLayout onFakeLogout={fakeLogout} />
-                        ) : (
-                            <Navigate to="/" replace />
-                        )
-                    }
-                >
-                    {/* 添加默认子路由，/app 会自动导航到 /app/dashboard */}
-                    <Route index element={<Navigate to="dashboard" replace />} />
+                        {/* 后台（受保护） */}
+                        <Route
+                            path="/app"
+                            element={authed
+                                ? <MainLayout onFakeLogout={fakeLogout} />
+                                : <Navigate to="/" replace />}
+                        >
+                            <Route index element={<Navigate to="dashboard" replace />} />
+                            <Route path="dashboard"         element={<Dashboard />} />
+                            <Route path="servers"           element={<Servers />} />
+                            <Route path="servers/:serverId" element={<Servers />} />
+                            <Route path="changelog"         element={<Changelog />} />
+                            <Route path="inspection-backup" element={<InspectionBackup />} />
+                            <Route path="tickets"           element={<Tickets />} />
+                            <Route path="stats"             element={<Stats />} />
+                            <Route path="labs"              element={<Labs />} />
+                            <Route path="settings"          element={<Settings />} />
+                            <Route path="search"            element={<Search />} />
+                            <Route path="*"                 element={<Navigate to="dashboard" replace />} />
+                        </Route>
 
-                    <Route path="dashboard" element={<Dashboard />} />
-
-                    {/* 【核心修改】将 servers 路由改为嵌套形式 */}
-                    <Route path="servers">
-                        <Route index element={<Servers />} />
-                        <Route path=":serverId" element={<Servers />} />
-                    </Route>
-
-                    <Route path="changelog" element={<Changelog />} />
-                    <Route path="inspection-backup" element={<InspectionBackup />} />
-                    <Route path="tickets" element={<Tickets />} />
-                    <Route path="stats" element={<Stats />} />
-                    <Route path="labs" element={<Labs />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="search" element={<Search />} />
-                    {/* 未匹配的后台路径 → 仪表盘 */}
-                    <Route path="*" element={<Navigate to="dashboard" replace />} />
-                </Route>
-
-                {/* 兜底：任何未知路径都去登录页 */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </Router>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </Router>
+            </LocalizationProvider>
+        </ThemeProvider>
     );
 }

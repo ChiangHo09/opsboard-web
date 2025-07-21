@@ -1,36 +1,26 @@
 /**
- * 文件名：InspectionBackupSearchForm.tsx
- * 描述：此文件定义了“巡检备份”功能的搜索表单组件。
+ * 文件名: src/components/forms/InspectionBackupSearchForm.tsx
  *
- * 本次修改：
- * - 【核心简化】移除了本地的 `textFieldSx` 样式对象。因为相关的焦点样式（边框和标签颜色）现在已通过 `theme.ts` 在全局统一配置，不再需要局部覆盖。
- * - 【颜色常量化】更新了底部操作按钮的样式，使其颜色值从硬编码改为引用自全局主题（`theme.palette`），以实现颜色的统一管理。
+ * 本次修改内容:
+ * - 【全局配置】移除了此组件内部的 `LocalizationProvider` 及其相关导入。
+ * - 该功能现已提升至 `MainLayout.tsx` 进行全局统一配置，此组件会自动继承中文本地化设置。
+ *
+ * 文件功能描述:
+ * 此文件定义了“巡检备份”功能的搜索表单组件。
  */
-import React, { useState, type FC } from 'react';
+import { useState, type FC } from 'react';
 import {
-    Box,
-    TextField,
-    Button,
-    Stack,
-    InputLabel,
-    MenuItem,
-    FormControl,
-    Select,
-    Typography
+    Box, TextField, Button, Stack, InputLabel, MenuItem, FormControl, Select, Typography
 } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+// 【修改】移除 LocalizationProvider 相关导入
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Dayjs } from 'dayjs';
+// 【修改】移除 dayjs locale 导入
 
 export interface InspectionBackupSearchValues {
-    region: string;
-    startTime: Dayjs | null;
-    endTime: Dayjs | null;
-    serverType: string;
-    operationType: string;
-    updateCategory: string;
+    region: string; startTime: Dayjs | null; endTime: Dayjs | null; serverType: string; operationType: string; updateCategory: string;
 }
 
 interface InspectionBackupSearchFormProps {
@@ -46,141 +36,39 @@ const InspectionBackupSearchForm: FC<InspectionBackupSearchFormProps> = ({ onSea
     const [operationType, setOperationType] = useState<string>('');
     const [updateCategory, setUpdateCategory] = useState<string>('');
 
-    const handleSearchClick = (): void => {
-        onSearch({
-            region,
-            startTime,
-            endTime,
-            serverType,
-            operationType,
-            updateCategory
-        });
-    };
-
+    const handleSearchClick = (): void => { onSearch({ region, startTime, endTime, serverType, operationType, updateCategory }); };
     const handleResetClick = (): void => {
-        setRegion('');
-        setStartTime(null);
-        setEndTime(null);
-        setServerType('');
-        setOperationType('');
-        setUpdateCategory('');
-        if (onReset) {
-            onReset();
-        }
+        setRegion(''); setStartTime(null); setEndTime(null); setServerType(''); setOperationType(''); setUpdateCategory('');
+        if (onReset) onReset();
     };
-
-    // 【移除】不再需要本地的 textFieldSx，样式已在 theme.ts 中全局定义
 
     return (
         <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, mr: -1 }}>
-                <TextField
-                    fullWidth
-                    margin="normal"
-                    label="地区"
-                    variant="outlined"
-                    value={region}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRegion(e.target.value)}
-                />
-                <TextField
-                    fullWidth
-                    margin="normal"
-                    label="服务器类型"
-                    variant="outlined"
-                    value={serverType}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setServerType(e.target.value)}
-                />
-                <TextField
-                    fullWidth
-                    margin="normal"
-                    label="更新类别"
-                    variant="outlined"
-                    value={updateCategory}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUpdateCategory(e.target.value)}
-                />
-
+                <TextField fullWidth margin="normal" label="地区" variant="outlined" value={region} onChange={(e) => setRegion(e.target.value)} />
+                <TextField fullWidth margin="normal" label="服务器类型" variant="outlined" value={serverType} onChange={(e) => setServerType(e.target.value)} />
+                <TextField fullWidth margin="normal" label="更新类别" variant="outlined" value={updateCategory} onChange={(e) => setUpdateCategory(e.target.value)} />
                 <FormControl fullWidth margin="normal" variant="outlined">
                     <InputLabel id="operation-type-label">操作类型</InputLabel>
-                    <Select
-                        labelId="operation-type-label"
-                        id="operation-type-select"
-                        value={operationType}
-                        label="操作类型"
-                        onChange={(e) => setOperationType(e.target.value as string)}
-                    >
+                    <Select labelId="operation-type-label" id="operation-type-select" value={operationType} label="操作类型" onChange={(e) => setOperationType(e.target.value as string)}>
                         <MenuItem value=""><em>选择操作类型</em></MenuItem>
-                        <MenuItem value="inspection">
-                            <Typography component="span" sx={{ transform: 'translateY(1px)' }}>巡检</Typography>
-                        </MenuItem>
-                        <MenuItem value="backup">
-                            <Typography component="span" sx={{ transform: 'translateY(1px)' }}>备份</Typography>
-                        </MenuItem>
+                        <MenuItem value="inspection"><Typography component="span" sx={{ transform: 'translateY(1px)' }}>巡检</Typography></MenuItem>
+                        <MenuItem value="backup"><Typography component="span" sx={{ transform: 'translateY(1px)' }}>备份</Typography></MenuItem>
                     </Select>
                 </FormControl>
 
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                        label="起始时间"
-                        value={startTime}
-                        onChange={(newValue: Dayjs | null) => setStartTime(newValue)}
-                        format="YYYY-MM-DD"
-                        slotProps={{
-                            textField: { fullWidth: true, margin: 'normal' }
-                        }}
-                    />
-                    <DatePicker
-                        label="截止时间"
-                        value={endTime}
-                        onChange={(newValue: Dayjs | null) => setEndTime(newValue)}
-                        format="YYYY-MM-DD"
-                        slotProps={{
-                            textField: { fullWidth: true, margin: 'normal' }
-                        }}
-                    />
-                </LocalizationProvider>
+                {/* 【修改】移除 LocalizationProvider 包裹 */}
+                <DatePicker label="起始时间" value={startTime} onChange={(newValue) => setStartTime(newValue)} format="YYYY-MM-DD" slotProps={{ textField: { fullWidth: true, margin: 'normal' } }} />
+                <DatePicker label="截止时间" value={endTime} onChange={(newValue) => setEndTime(newValue)} format="YYYY-MM-DD" slotProps={{ textField: { fullWidth: true, margin: 'normal' } }} />
             </Box>
-
             <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', flexShrink: 0 }}>
                 {onReset && (
-                    <Button
-                        variant="outlined"
-                        onClick={handleResetClick}
-                        fullWidth
-                        sx={{
-                            height: 48,
-                            borderRadius: 99,
-                            borderColor: 'neutral.main', // 使用主题颜色
-                            color: 'neutral.main',       // 使用主题颜色
-                            '&:hover': {
-                                bgcolor: 'custom.hoverOpacity', // 使用主题颜色
-                                borderColor: 'neutral.main',    // 使用主题颜色
-                            }
-                        }}
-                    >
-                        <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>
-                            重置
-                        </Typography>
+                    <Button variant="outlined" onClick={handleResetClick} fullWidth sx={{ height: 48, borderRadius: 99, borderColor: 'neutral.main', color: 'neutral.main', '&:hover': { bgcolor: 'custom.hoverOpacity', borderColor: 'neutral.main' } }}>
+                        <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>重置</Typography>
                     </Button>
                 )}
-                <Button
-                    variant="contained"
-                    onClick={handleSearchClick}
-                    fullWidth
-                    sx={{
-                        height: 48,
-                        borderRadius: 99,
-                        bgcolor: 'neutral.main',            // 使用主题颜色
-                        color: 'neutral.contrastText',      // 使用主题颜色
-                        boxShadow: 'none',
-                        '&:hover': {
-                            bgcolor: 'neutral.dark',        // 使用主题颜色
-                            boxShadow: 'none',
-                        }
-                    }}
-                >
-                    <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>
-                        搜索
-                    </Typography>
+                <Button variant="contained" onClick={handleSearchClick} fullWidth sx={{ height: 48, borderRadius: 99, bgcolor: 'neutral.main', color: 'neutral.contrastText', boxShadow: 'none', '&:hover': { bgcolor: 'neutral.dark', boxShadow: 'none' } }}>
+                    <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>搜索</Typography>
                 </Button>
             </Stack>
         </Stack>
