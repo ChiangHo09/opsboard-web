@@ -2,28 +2,32 @@
  * 文件名: src/components/modals/ServerDetailContent.tsx
  *
  * 本次修改内容:
- * - 这是一个全新的文件。
- * - 定义了 `ServerDetailContent` 组件，它只负责渲染服务器详情弹窗的 *内部* 内容。
- * - 该组件是无状态的，仅根据传入的 `serverId` prop 来显示信息。
- * - 这种分离使得通用 `Modal` 组件可以复用，而具体业务内容则封装在此组件中。
+ * - 【视觉微调】调整了弹窗标题的垂直位置，以配合关闭按钮的移动，实现视觉对齐。
+ * - 移除了之前为移动端视图添加的 `mt` (margin-top) 属性。
+ * - 为标题 `Typography` 的 `sx` 属性增加了 `pt: '2px'`，
+ *   通过微调内边距使其在视觉上与右上角的关闭按钮顶部平齐。
  *
  * 文件功能描述:
  * 此文件提供了在通用模态框中显示的服务器详情内容的具体实现。
  */
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { useLayout } from '../../contexts/LayoutContext';
 
 interface ServerDetailContentProps {
     serverId: string;
 }
 
 const ServerDetailContent: React.FC<ServerDetailContentProps> = ({ serverId }) => {
-    const { isMobile } = useLayout();
-
     return (
         <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Typography variant="h5" sx={{ mb: 2, mt: isMobile ? 4 : 0 }}>
+            <Typography
+                variant="h5"
+                sx={{
+                    mb: 2,
+                    pt: '2px',
+                    // 【核心修复】移除不再需要的移动端上边距
+                }}
+            >
                 服务器详情: {serverId}
             </Typography>
             <Box sx={{ flexGrow: 1, border: '1px dashed grey', p: 2, overflow: 'auto' }}>

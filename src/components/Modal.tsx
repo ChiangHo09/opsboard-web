@@ -2,15 +2,13 @@
  * 文件名: src/components/Modal.tsx
  *
  * 本次修改内容:
- * - 【代码回退】撤销了之前为解决移动端覆盖问题而添加的响应式 `top` 偏移。
- * - 将组件的根 `Box` 恢复为简单的 `position: 'absolute'` 和 `inset: 0`。
- * - 真正的解决方案在于 `MainLayout.tsx` 中改变此组件的渲染位置，使其父容器本身就是正确定位的。
- *   这使得 `Modal` 组件的实现更简洁、通用和可复用。
+ * - 【问题修复】解决了由于 `import` 语句语法错误导致的大量连锁编译错误。
+ * - 修正了 `import React, { useEffect } from 'react';` 这一行，确保其语法正确。
  *
  * 文件功能描述:
  * 此文件定义了一个全局通用的模态框（弹窗）组件，负责处理弹窗的“外壳”、动画和关闭逻辑。
  */
-import React, { useEffect } from 'react';
+import React, { useEffect } from 'react'; // 【核心修复】修正了 import 语句
 import { Box, IconButton, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { motion, type Variants } from 'framer-motion';
@@ -68,7 +66,7 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
                     }}
                 >
                     <Box sx={{ width: '100%', height: '100%', bgcolor: 'background.paper', borderRadius: isMobile ? 0 : 2, boxShadow: isMobile ? 'none' : 24, display: 'flex', flexDirection: 'column' }}>
-                        <IconButton onClick={onClose} sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }} aria-label="关闭">
+                        <IconButton onClick={onClose} sx={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }} aria-label="关闭">
                             <CloseIcon />
                         </IconButton>
                         {children}

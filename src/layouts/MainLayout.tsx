@@ -2,11 +2,11 @@
  * 文件名: src/layouts/MainLayout.tsx
  *
  * 本次修改内容:
- * - 【核心修复】解决了弹窗在移动设备上仍然覆盖顶部导航栏的问题。
- * - **将 `<Modal>` 组件的渲染位置移动到了正确的内容容器内**，即包裹 `<Outlet />` 的那个 `Box`。
- * - 这个内部 `Box` 的位置是受其父容器的 `padding-top` 影响的，因此是正确的。
- * - 将 `<Modal>` 放在这里，其 `position: 'absolute'` 和 `inset: 0` 会使其完美地填充这个已经正确定位的容器，
- *   从而确保在移动端不会覆盖顶栏。
+ * - 【视觉修复】解决了弹窗的背景模糊效果无法覆盖右侧搜索面板的问题。
+ * - **将 `<Modal>` 组件的渲染位置再次提升**，从左侧内容区的 `Box` 内部移动到了 `component="main"` 的 `Box` 内部。
+ * - `component="main"` 的 `Box` 是左侧内容区和右侧搜索面板的共同父级。
+ * - 这一修改使得 `Modal` 的绝对定位能够覆盖整个主工作区，从而在弹窗打开时，
+ *   其背景遮罩层和模糊效果可以同时覆盖主内容和已打开的搜索面板。
  *
  * 文件功能描述:
  * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
@@ -129,10 +129,20 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                             overflowX: 'hidden',
                             display: 'flex',
                             flexDirection: 'column',
-                            p: { xs: 2, md: 0 }
+                            p: { xs: 2, md: 0 },
+                            position: 'relative', // 【核心修复】添加定位上下文
                         }}
                     >
                         <Outlet />
+
+                        {/* 【核心修复】将 Modal 的渲染位置移到这里 */}
+                        <AnimatePresence>
+                            {isModalOpen && onModalClose && (
+                                <Modal onClose={onModalClose}>
+                                    {modalContent}
+                                </Modal>
+                            )}
+                        </AnimatePresence>
                     </MotionBox>
                     <AnimatePresence>
                         {isMobile && isPanelOpen && (
@@ -187,15 +197,6 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                                     </AnimatePresence>
                                 </Box>
                             </MotionBox>
-                        )}
-                    </AnimatePresence>
-
-                    {/* 【核心修改】将 Modal 的渲染位置移到这里 */}
-                    <AnimatePresence>
-                        {isModalOpen && onModalClose && (
-                            <Modal onClose={onModalClose}>
-                                {modalContent}
-                            </Modal>
                         )}
                     </AnimatePresence>
                 </Box>
