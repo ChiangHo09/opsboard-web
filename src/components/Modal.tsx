@@ -2,8 +2,10 @@
  * 文件名: src/components/Modal.tsx
  *
  * 本次修改内容:
- * - 【布局修复】将模态框根元素的定位方式从 `position: 'fixed'` 修改为 `position: 'absolute'`。
- * - 这一修改是为了配合 `MainLayout` 的调整，确保弹窗只覆盖主内容区，而不是整个视口。
+ * - 【代码回退】撤销了之前为解决移动端覆盖问题而添加的响应式 `top` 偏移。
+ * - 将组件的根 `Box` 恢复为简单的 `position: 'absolute'` 和 `inset: 0`。
+ * - 真正的解决方案在于 `MainLayout.tsx` 中改变此组件的渲染位置，使其父容器本身就是正确定位的。
+ *   这使得 `Modal` 组件的实现更简洁、通用和可复用。
  *
  * 文件功能描述:
  * 此文件定义了一个全局通用的模态框（弹窗）组件，负责处理弹窗的“外壳”、动画和关闭逻辑。
@@ -14,7 +16,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import { motion, type Variants } from 'framer-motion';
 import { useLayout } from '../contexts/LayoutContext';
 
-// ... (variants 保持不变)
 const backdropVariants: Variants = { visible: { opacity: 1 }, hidden: { opacity: 0 } };
 const modalContentVariants: Variants = { hidden: { opacity: 0, scale: 0.95 }, visible: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' } }, exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15, ease: 'easeIn' } } };
 
@@ -36,7 +37,7 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
     }, [onClose]);
 
     return (
-        <Box sx={{ position: 'absolute', inset: 0, zIndex: 1200 }}> {/* 【修改】position: absolute */}
+        <Box sx={{ position: 'absolute', inset: 0, zIndex: 1200 }}>
             <motion.div
                 key="backdrop"
                 variants={backdropVariants}

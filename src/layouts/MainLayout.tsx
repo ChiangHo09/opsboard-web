@@ -2,9 +2,11 @@
  * 文件名: src/layouts/MainLayout.tsx
  *
  * 本次修改内容:
- * - 【代码回退】移除了之前错误添加的 `LocalizationProvider` 及其相关导入。
- * - 日期选择器的全局本地化配置现已提升至应用的根组件 `App.tsx` 中，
- *   此文件不再需要处理该逻辑。
+ * - 【核心修复】解决了弹窗在移动设备上仍然覆盖顶部导航栏的问题。
+ * - **将 `<Modal>` 组件的渲染位置移动到了正确的内容容器内**，即包裹 `<Outlet />` 的那个 `Box`。
+ * - 这个内部 `Box` 的位置是受其父容器的 `padding-top` 影响的，因此是正确的。
+ * - 将 `<Modal>` 放在这里，其 `position: 'absolute'` 和 `inset: 0` 会使其完美地填充这个已经正确定位的容器，
+ *   从而确保在移动端不会覆盖顶栏。
  *
  * 文件功能描述:
  * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
@@ -187,6 +189,15 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                             </MotionBox>
                         )}
                     </AnimatePresence>
+
+                    {/* 【核心修改】将 Modal 的渲染位置移到这里 */}
+                    <AnimatePresence>
+                        {isModalOpen && onModalClose && (
+                            <Modal onClose={onModalClose}>
+                                {modalContent}
+                            </Modal>
+                        )}
+                    </AnimatePresence>
                 </Box>
                 {!isMobile && (
                     <RightSearchPanel
@@ -199,13 +210,6 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                         {panelContent}
                     </RightSearchPanel>
                 )}
-                <AnimatePresence>
-                    {isModalOpen && onModalClose && (
-                        <Modal onClose={onModalClose}>
-                            {modalContent}
-                        </Modal>
-                    )}
-                </AnimatePresence>
             </Box>
         </Box>
     );
