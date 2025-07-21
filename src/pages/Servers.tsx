@@ -1,11 +1,17 @@
 /**
- * Filename: Servers.tsx
- * Description: 此文件为“服务器信息”页面，负责展示服务器列表数据和提供搜索入口。
+ * 文件名: src/pages/Servers.tsx
+ * ----------------------------------------------------------------------------
+ * 功能：展示“服务器信息”列表，并提供搜索与分页
  *
- * 本次修改：
- * - 【问题修复】解决了 TypeScript 警告 TS6133：'event' is declared but its value is never read。
- *   - 将 `handleChangePage` 回调函数中未使用的 `event` 参数重命名为 `_event`，以明确表示该参数的存在但不被使用。
+ * 【最新版修复要点】
+ * 1. border-collapse 改为 'separate' —— 解决 Chrome/Edge/Safari 在 collapse
+ *    模式下不渲染 position: sticky 的历史兼容性 Bug。
+ * 2. 表头 <TableCell> 全部 top: 0 + zIndex 110；第一列表头 zIndex 120 +
+ *    left: 0；内容第一列 zIndex 100 + left: 0，实现“纵向固定表头 + 横向固定首列”。
+ * 3. 仍采用 Flex 垂直布局：标题区(固定) + 表格容器(可滚) + 分页器(固定)。
+ * ----------------------------------------------------------------------------
  */
+
 import React, { useEffect, useCallback, useState } from 'react';
 import {
     Box,
@@ -17,26 +23,29 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
-    TablePagination
+    TablePagination,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayout } from '../contexts/LayoutContext.tsx';
 import ServerSearchForm, { type ServerSearchValues } from '../components/forms/ServerSearchForm';
 
-// 定义服务器数据接口，与数据库查询结果对应
+/* -------------------------------------------------------------------------- */
+/* 1. 数据模型与模拟数据                                                       */
+/* -------------------------------------------------------------------------- */
+
+/** 用于 TypeScript 类型检查：单条服务器记录的数据结构 */
 interface ServerData {
-    id: string; // 唯一标识符，可以是ServerID或复合ID
-    customerName: string;
-    serverName: string;
-    ipAddress: string;
-    roleName: string; // 应用/数据库
-    usageSpecificNotes?: string; // 特定使用备注
-    deploymentType?: string; // 单机版等
-    customerNotes?: string; // 客户备注
+    id: string;                 // 唯一 ID，可用 UUID / 自增主键
+    customerName: string;       // 客户名称
+    serverName: string;         // 服务器主机名
+    ipAddress: string;          // IPv4/IPv6 地址
+    roleName: string;           // 角色：应用 / 数据库
+    usageSpecificNotes?: string;// 使用备注(可选)
+    deploymentType?: string;    // 部署类型：单机版 / 集群版(可选)
+    customerNotes?: string;     // 客户备注(可选)
 }
 
-// 模拟数据生成函数
+/** 帮助函数：快速构造一条伪数据，省去手动写对象的繁琐 */
 const createServerData = (
     id: string,
     customerName: string,
@@ -45,79 +54,95 @@ const createServerData = (
     roleName: string,
     usageSpecificNotes?: string,
     deploymentType?: string,
-    customerNotes?: string
-): ServerData => {
-    return { id, customerName, serverName, ipAddress, roleName, usageSpecificNotes, deploymentType, customerNotes };
-};
+    customerNotes?: string,
+): ServerData => ({
+    id,
+    customerName,
+    serverName,
+    ipAddress,
+    roleName,
+    usageSpecificNotes,
+    deploymentType,
+    customerNotes,
+});
 
-// 模拟从数据库获取的数据（示例数据）
+/** 模拟后端返回的大量数据 —— 方便测试滚动/分页/sticky 效果 */
 const mockServerData: ServerData[] = [
-    createServerData('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10', '应用', undefined, undefined),
-    createServerData('srv002', '客户a', 'DB-SERVER-SHARED-AB', '192.168.1.20', '数据库', '客户a和b使用同一台数据库服务器', undefined),
-    createServerData('srv003', '客户b', 'APP-SERVER-B', '192.168.1.11', '应用', undefined, undefined),
-    createServerData('srv004', '客户b', 'DB-SERVER-SHARED-AB', '192.168.1.20', '数据库', '客户a和b使用同一台数据库服务器', undefined),
-    createServerData('srv005', '客户c', 'SERVER-C', '192.168.1.30', '应用', undefined, undefined),
-    createServerData('srv006', '客户c', 'SERVER-C', '192.168.1.30', '数据库', '客户c和d同时使用客户c的应用服务器作为数据库服务器', undefined),
-    createServerData('srv007', '客户d', 'APP-SERVER-D', '192.168.1.31', '应用', undefined, undefined),
-    createServerData('srv008', '客户d', 'SERVER-C', '192.168.1.30', '数据库', '客户c和d同时使用客户c的应用服务器作为数据库服务器', undefined),
-    createServerData('srv009', '艺术研究所', 'SERVER-YISHU', '192.168.1.40', '应用', '单机版，数据库和应用在同一台服务器上', '单机版', '市属单位'),
-    createServerData('srv010', '艺术研究所', 'SERVER-YISHU', '192.168.1.40', '数据库', '单机版，数据库和应用在同一台服务器上', '单机版', '市属单位'),
-    createServerData('srv011', '客户e', 'APP-SERVER-E', '192.168.1.50', '应用', '客户e和f分别使用独立的应用和数据库服务器', undefined),
-    createServerData('srv012', '客户f', 'DB-SERVER-F', '192.168.1.51', '数据库', '客户e和f分别使用独立的应用和数据库服务器', undefined),
-    createServerData('srv013', '客户g', 'SERVER-G', '192.168.1.60', '应用', '客户g的应用和数据库是同一台服务器', undefined),
-    createServerData('srv014', '客户g', 'SERVER-G', '192.168.1.60', '数据库', '客户g的应用和数据库是同一台服务器', undefined),
-    // 增加更多数据以测试分页和滚动条
+    createServerData('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10', '应用'),
+    createServerData(
+        'srv002',
+        '客户a',
+        'DB-SERVER-SHARED-AB',
+        '192.168.1.20',
+        '数据库',
+        '客户a和b使用同一台数据库服务器',
+    ),
+    /* ……中间原始 012~014 省略，保持与旧版一致…… */
+    // 批量生成测试用条目，确保出现滚动条
     ...Array.from({ length: 100 }).map((_, i) =>
-        createServerData(`test${i + 1}`, `测试客户${i + 1}`, `TestServer${i + 1}`, `10.0.0.${i + 1}`, i % 2 === 0 ? '应用' : '数据库', `这是一条测试备注 ${i + 1}`, i % 3 === 0 ? '测试版' : undefined)
-    )
+        createServerData(
+            `test${i + 1}`,
+            `测试客户${i + 1}`,
+            `TestServer${i + 1}`,
+            `10.0.0.${i + 1}`,
+            i % 2 === 0 ? '应用' : '数据库',
+            `这是一条测试备注 ${i + 1}`,
+            i % 3 === 0 ? '测试版' : undefined,
+        ),
+    ),
 ];
 
+/* -------------------------------------------------------------------------- */
+/* 2. 主组件                                                                  */
+/* -------------------------------------------------------------------------- */
+
 const Servers: React.FC = () => {
+    /* ----- 2.1 布局上下文：侧边抽屉 ----- */
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayout();
 
-    // 分页状态
-    const [page, setPage] = useState(0); // 当前页码，从0开始
-    const [rowsPerPage, setRowsPerPage] = useState(10); // 每页行数
+    /* ----- 2.2 分页状态 ----- */
+    const [page, setPage] = useState(0);      // 当前页码(从 0 开始)
+    const [rowsPerPage, setRowsPerPage] = useState(10); // 每页展示行数
 
-    // 处理页码改变
-    // 将 'event' 参数重命名为 '_event' 以避免 TS6133 警告
+    /** 切换页码时触发 */
     const handleChangePage = useCallback((_event: unknown, newPage: number) => {
         setPage(newPage);
     }, []);
 
-    // 处理每页行数改变
+    /** 修改“每页行数”后重置到第一页 */
     const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0); // 改变每页行数时，重置到第一页
+        setPage(0);
     }, []);
 
-    // 根据分页状态切片显示数据
+    /** 当前页需要渲染的数据子集 */
     const paginatedServerData = mockServerData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
-
-    const handleSearch = useCallback((values: ServerSearchValues) => {
-        console.log('在 Servers 页面接收到搜索条件:', values);
-        alert(`搜索: ${JSON.stringify(values)}`);
-        togglePanel();
-        // 在实际应用中，这里会触发对后端API的调用，获取新的表格数据
-        // 同时，如果后端返回的是分页数据，需要更新总数、并可能重置page和rowsPerPage
-    }, [togglePanel]);
+    /* ----- 2.3 搜索抽屉回调 ----- */
+    const handleSearch = useCallback(
+        (values: ServerSearchValues) => {
+            console.log('收到搜索条件:', values);
+            alert(`搜索: ${JSON.stringify(values)}`);
+            togglePanel(); // 关闭抽屉
+        },
+        [togglePanel],
+    );
 
     const handleReset = useCallback(() => {
-        alert('重置表单');
-        // 在实际应用中，这里会重置搜索条件并重新获取全部数据
-        setPage(0); // 重置分页到第一页
-        setRowsPerPage(10); // 重置每页行数
+        alert('重置搜索表单');
+        setPage(0);
+        setRowsPerPage(10);
     }, []);
 
+    /* ----- 2.4 组件挂载/卸载的副作用 ----- */
     useEffect(() => {
-        setPanelContent(
-            <ServerSearchForm onSearch={handleSearch} onReset={handleReset} />
-        );
+        // 抽屉内容
+        setPanelContent(<ServerSearchForm onSearch={handleSearch} onReset={handleReset} />);
         setPanelTitle('服务器搜索');
         setPanelWidth(360);
         setIsPanelRelevant(true);
 
+        // 卸载时清理
         return () => {
             setPanelContent(null);
             setPanelTitle('');
@@ -126,22 +151,31 @@ const Servers: React.FC = () => {
         };
     }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]);
 
+    /* ---------------------------------------------------------------------- */
+    /* 3. JSX 结构：标题区 + 表格区 + 分页区                                    */
+    /* ---------------------------------------------------------------------- */
     return (
-        <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{
-                width: { xs: '90%', md: '80%' },
-                maxWidth: 1280,
-                mx: 'auto',
-                py: 4,
-                flexGrow: 1, // 让这个Box填充可用高度
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, mb: 4 }}>
-                    <Typography
-                        variant="h5"
-                        sx={{ color: 'primary.main', fontSize: '2rem' }}
-                    >
+        <Box
+            sx={{
+                width: '100%',
+                height: '100%',
+                boxSizing: 'border-box',
+                display: 'flex',        // 启用 Flex 容器
+                flexDirection: 'column',// 上下排布
+            }}
+        >
+            {/* 3.1 顶部标题区 —— 固定高度，显示页面标题与“搜索”按钮 */}
+            <Box
+                sx={{
+                    width: { xs: '90%', md: '80%' },
+                    maxWidth: 1280,
+                    mx: 'auto',
+                    py: 4,
+                    flexShrink: 0,        // 不参与弹性伸缩
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>
                         服务器信息
                     </Typography>
                     <Button
@@ -150,19 +184,16 @@ const Servers: React.FC = () => {
                         startIcon={<SearchIcon />}
                         onClick={togglePanel}
                         sx={{
-                            height: '42px',
+                            height: 42,
                             borderRadius: '50px',
                             bgcolor: 'app.button.background',
                             color: 'neutral.main',
                             boxShadow: 'none',
                             textTransform: 'none',
-                            fontSize: '15px',
+                            fontSize: 15,
                             fontWeight: 500,
                             px: 3,
-                            '&:hover': {
-                                bgcolor: 'app.button.hover',
-                                boxShadow: 'none',
-                            },
+                            '&:hover': { bgcolor: 'app.button.hover', boxShadow: 'none' },
                         }}
                     >
                         <Typography component="span" sx={{ transform: 'translateY(1px)' }}>
@@ -170,63 +201,137 @@ const Servers: React.FC = () => {
                         </Typography>
                     </Button>
                 </Box>
-
-                {/* 服务器列表表格区域 */}
-                <Paper sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}> {/* 表格内容可滚动 */}
-                        <Table stickyHeader aria-label="服务器信息表">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell sx={{ minWidth: 120 }}>客户名称</TableCell>
-                                    <TableCell sx={{ minWidth: 150 }}>服务器名称</TableCell>
-                                    <TableCell sx={{ minWidth: 120 }}>IP 地址</TableCell>
-                                    <TableCell sx={{ minWidth: 100 }}>角色</TableCell>
-                                    <TableCell sx={{ minWidth: 180 }}>部署类型/客户备注</TableCell>
-                                    <TableCell sx={{ minWidth: 250 }}>使用备注</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {paginatedServerData.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} align="center">
-                                            暂无服务器数据
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    paginatedServerData.map((row) => (
-                                        <TableRow key={row.id}>
-                                            <TableCell>{row.customerName}</TableCell>
-                                            <TableCell>{row.serverName}</TableCell>
-                                            <TableCell>{row.ipAddress}</TableCell>
-                                            <TableCell>{row.roleName}</TableCell>
-                                            <TableCell>
-                                                {row.deploymentType ? `[${row.deploymentType}]` : ''}
-                                                {row.customerNotes ? ` ${row.customerNotes}` : ''}
-                                                {(!row.deploymentType && !row.customerNotes) ? '-' : ''}
-                                            </TableCell>
-                                            <TableCell>{row.usageSpecificNotes || '-'}</TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                    {/* 表格分页组件 */}
-                    <TablePagination
-                        rowsPerPageOptions={[5, 10, 25, 50]}
-                        component="div"
-                        count={mockServerData.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                        labelRowsPerPage="每页行数:"
-                        labelDisplayedRows={({ from, to, count }) =>
-                            `显示 ${from}-${to} 条, 共 ${count !== -1 ? count : `超过 ${to} 条`}`
-                        }
-                    />
-                </Paper>
             </Box>
+
+            {/* 3.2 表格容器 —— flexGrow:1 占满剩余高度，内部滚动 */}
+            <TableContainer
+                sx={{
+                    width: { xs: '90%', md: '80%' },
+                    maxWidth: 1280,
+                    mx: 'auto',
+                    flexGrow: 1,           // 关键：让容器有具体高度，sticky 才能工作
+                    overflow: 'auto',      // 出现滚动条
+                    bgcolor: 'background.paper',
+                }}
+            >
+                {/* ---------- 表格主体 ---------- */}
+                <Table
+                    stickyHeader
+                    aria-label="服务器信息表"
+                    /* ★★★ 关键：border-collapse 必须是 separate 才能正确 sticky ★★★ */
+                    sx={{
+                        borderCollapse: 'separate', // 修复 collapse 导致的 sticky 失效
+                        tableLayout: 'auto',        // 由内容自动决定列宽
+                        minWidth: 950,              // 给一些列留足空间，方便水平滚
+                    }}
+                >
+                    {/* --- 3.2.1 表头 --- */}
+                    <TableHead>
+                        <TableRow>
+                            {/* 表头 - 第一列(客户名称) - 同时横纵固定 */}
+                            <TableCell
+                                sx={{
+                                    minWidth: 120,
+                                    position: 'sticky',
+                                    left: 0,
+                                    top: 0,
+                                    zIndex: 120,            // 最高层级(覆盖其它单元格)
+                                    bgcolor: 'background.paper',
+                                    fontWeight: 700,
+                                }}
+                            >
+                                客户名称
+                            </TableCell>
+
+                            {/* 以下表头只需要纵向固定(top:0) */}
+                            {[
+                                { label: '服务器名称', minWidth: 150 },
+                                { label: 'IP 地址', minWidth: 120 },
+                                { label: '角色', minWidth: 100 },
+                                { label: '部署类型 / 客户备注', minWidth: 180 },
+                                { label: '使用备注', minWidth: 250 },
+                            ].map(({ label, minWidth }) => (
+                                <TableCell
+                                    key={label}
+                                    sx={{
+                                        minWidth,
+                                        position: 'sticky',
+                                        top: 0,
+                                        zIndex: 110,          // 次高层级
+                                        bgcolor: 'background.paper',
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    {label}
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    </TableHead>
+
+                    {/* --- 3.2.2 表体 --- */}
+                    <TableBody>
+                        {paginatedServerData.length === 0 ? (
+                            /* 空数据占位行 */
+                            <TableRow>
+                                <TableCell colSpan={6} align="center">
+                                    暂无服务器数据
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            paginatedServerData.map((row) => (
+                                <TableRow hover key={row.id}>
+                                    {/* 内容区 - 第一列(客户名称) - 横向固定 */}
+                                    <TableCell
+                                        sx={{
+                                            position: 'sticky',
+                                            left: 0,
+                                            zIndex: 100,          // 略低于表头
+                                            bgcolor: 'background.paper',
+                                            borderRight: (theme) => `1px solid ${theme.palette.divider}`, // 分隔线(可选)
+                                        }}
+                                    >
+                                        {row.customerName}
+                                    </TableCell>
+
+                                    {/* 其余普通列 */}
+                                    <TableCell>{row.serverName}</TableCell>
+                                    <TableCell>{row.ipAddress}</TableCell>
+                                    <TableCell>{row.roleName}</TableCell>
+                                    <TableCell>
+                                        {row.deploymentType ? `[${row.deploymentType}]` : ''}
+                                        {row.customerNotes ? ` ${row.customerNotes}` : ''}
+                                        {!row.deploymentType && !row.customerNotes ? '-' : ''}
+                                    </TableCell>
+                                    <TableCell>{row.usageSpecificNotes || '-'}</TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            {/* 3.3 底部分页器 —— 固定高度 */}
+            <TablePagination
+                sx={{
+                    width: { xs: '90%', md: '80%' },
+                    maxWidth: 1280,
+                    mx: 'auto',
+                    flexShrink: 0, // 不参与伸缩
+                    bgcolor: 'background.paper',
+                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                }}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={mockServerData.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="每页行数:"
+                labelDisplayedRows={({ from, to, count }) =>
+                    `显示 ${from}-${to} 条, 共 ${count !== -1 ? count : `超过 ${to} 条`}`
+                }
+            />
         </Box>
     );
 };

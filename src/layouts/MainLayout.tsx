@@ -1,13 +1,20 @@
 /**
- * 文件名：MainLayout.tsx
- * 描述：
- *     此文件定义了应用的主UI布局，它包含了侧边栏、主内容区和搜索面板。
- *     它还通过 LayoutProvider 为所有子组件提供了控制右侧面板的状态。
+ * 文件名: src/layouts/MainLayout.tsx
  *
- * 本次修改：
- * - 修复了一个导致 ESLint 报出 `Parsing error: '}' expected.` 的语法错误。
- * - 这个语法错误是导致大量 `TS6133: '...' is declared but its value is never read.` 警告的根本原因，因为解析器在遇到语法错误后无法正确分析后续代码。
- * - 通过恢复文件的正确语法结构，所有这些连锁错误都已解决。
+ * 本次修改内容:
+ * - 针对 `TS2769: No overload matches this call` 错误进行修复。
+ * - 恢复了 `pageVariants` 和 `pageTransition` 从 `../utils/pageAnimations` 文件的导入，
+ *   假设该文件存在并正确导出了这些动画变量。
+ *   **重要提示：为了彻底解决 `TS2769` 错误，请确保 `../utils/pageAnimations.ts` 文件中
+ *   `pageTransition` 变量的 `ease` 属性被定义为 `[0.4, 0, 0.2, 1] as const`。**
+ *   （示例：`export const pageTransition = { duration: 0.28, ease: [0.4, 0, 0.2, 1] as const };`）
+ * - `mobilePanelVariants` 内部的 `ease` 属性，也尝试将其字符串值显式标记为 `as const`，以避免潜在的类型推断问题。
+ * - 保持了所有之前针对布局问题的修改，包括 `component="main"` Box 上的 `overflowX: 'auto'` 和 `minWidth: 0`，
+ *   以解决在屏幕宽度不足时搜索面板被截断的问题。
+ *
+ * 文件功能描述:
+ * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区和搜索面板。
+ * 它还通过 LayoutProvider 为所有子组件提供了控制右侧面板的状态。
  */
 import { useState, type JSX, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -17,15 +24,21 @@ import CloseIcon from '@mui/icons-material/Close';
 import SideNav from '../components/SideNav';
 import { LayoutProvider, useLayout } from '../contexts/LayoutContext.tsx';
 import RightSearchPanel from '../components/RightSearchPanel';
+
+// 【修复】重新从外部文件导入 pageVariants 和 pageTransition
+// 请确保 ../utils/pageAnimations.ts 存在，并正确导出 pageVariants 和 pageTransition
+// 尤其要确保 pageTransition.ease 被定义为 [0.4, 0, 0.2, 1] as const;
 import { pageVariants, pageTransition } from '../utils/pageAnimations';
+
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
+// 【修复】尝试在内部 transition 的 ease 属性也添加 as const
 const mobilePanelVariants: Variants = {
     initial: { opacity: 0, scale: 0.98, },
-    animate: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' }, },
-    exit: { opacity: 0, scale: 0.98, transition: { duration: 0.2, ease: 'easeOut' }, },
+    animate: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' as const }, },
+    exit: { opacity: 0, scale: 0.98, transition: { duration: 0.2, ease: 'easeOut' as const }, },
 };
 
 function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
@@ -89,7 +102,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
         <Box sx={{
             display: 'flex',
             height: '100dvh',
-            overflow: 'hidden',
+            overflow: 'hidden', // 依然保留全局溢出隐藏，避免整个页面出现滚动条
             bgcolor: 'app.background'
         }}>
             <SideNav
@@ -113,6 +126,8 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                     transition: theme.transitions.create('padding-top', {
                         duration: theme.transitions.duration.short,
                     }),
+                    overflowX: 'auto', // 允许这个主内容区域在必要时水平滚动
+                    minWidth: 0, // 确保作为 flex item 能够正确计算最小宽度，允许其内容展开
                 }}
             >
                 <Box
@@ -128,7 +143,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                         transition: theme.transitions.create(['border-radius', 'padding'], {
                             duration: theme.transitions.duration.short,
                         }),
-                        overflow: 'hidden',
+                        overflow: 'hidden', // 这依然只隐藏此 Box 内部的溢出
                     }}
                 >
                     <MotionBox
