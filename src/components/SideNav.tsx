@@ -1,10 +1,13 @@
 /**
- * 文件名：SideNav.tsx
- * 描述：此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航。
+ * 文件名: src/components/SideNav.tsx
  *
- * 本次修改：
- * - 【最终修复】将侧边栏（Drawer）和移动端顶部栏的背景色（`bgcolor`）正确地绑定到了 `app.background` 主题颜色。
- * - 此前该绑定遗漏，导致侧边栏颜色不随主题变化。本次修改彻底解决了此问题。
+ * 本次修改内容:
+ * - 【解耦】移除了在 `SideNav` 组件内本地的移动设备视图判断逻辑。
+ * - 改为从 `useLayout` 上下文钩子中直接获取 `isMobile` 状态，实现了逻辑的集中化管理。
+ * - `useTheme` hook 仍然保留，因为它被用于多个 `sx` 属性中（如 Tooltip 样式、hover 背景色等）。
+ *
+ * 文件功能描述:
+ * 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -14,7 +17,7 @@ import {
     Menu,
     MenuItem,
     IconButton,
-    useMediaQuery, useTheme
+    useTheme, // 【修改】移除了 useMediaQuery
 } from '@mui/material';
 import {
     ViewStreamRounded as ViewStreamRoundedIcon,
@@ -32,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ReactElement, MouseEvent, JSX } from 'react';
+import { useLayout } from '../contexts/LayoutContext'; // 【新增】导入 useLayout
 
 const W_COLLAPSED = 64;
 const W_EXPANDED = 220;
@@ -80,7 +84,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
     const { pathname } = useLocation();
     const nav = useNavigate();
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const { isMobile } = useLayout(); // 【修改】从 context 获取 isMobile
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -186,7 +190,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         left: 0,
                         right: 0,
                         height: MOBILE_TOP_BAR_HEIGHT,
-                        bgcolor: 'app.background', // 【修复】绑定主题颜色
+                        bgcolor: 'app.background',
                         zIndex: theme.zIndex.appBar + 1,
                         display: 'flex',
                         alignItems: 'center',
@@ -236,7 +240,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         flexShrink: 0,
                         '& .MuiDrawer-paper': {
                             width: W_EXPANDED,
-                            bgcolor: 'app.background', // 【修复】绑定主题颜色
+                            bgcolor: 'app.background',
                             border: 'none',
                             boxSizing: 'border-box',
                             overflow: 'hidden',
@@ -290,7 +294,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                         flexShrink: 0,
                         '& .MuiDrawer-paper': {
                             width: 'inherit',
-                            bgcolor: 'app.background', // 【修复】绑定主题颜色
+                            bgcolor: 'app.background',
                             border: 'none',
                             display: 'flex',
                             flexDirection: 'column',
