@@ -2,11 +2,13 @@
  * 文件名: src/layouts/MainLayout.tsx
  *
  * 本次修改内容:
- * - 【视觉修复】解决了弹窗的背景模糊效果无法覆盖右侧搜索面板的问题。
- * - **将 `<Modal>` 组件的渲染位置再次提升**，从左侧内容区的 `Box` 内部移动到了 `component="main"` 的 `Box` 内部。
- * - `component="main"` 的 `Box` 是左侧内容区和右侧搜索面板的共同父级。
- * - 这一修改使得 `Modal` 的绝对定位能够覆盖整个主工作区，从而在弹窗打开时，
- *   其背景遮罩层和模糊效果可以同时覆盖主内容和已打开的搜索面板。
+ * - 【布局终极修复】同时解决了桌面端和移动端弹窗的布局问题。
+ * - **动态渲染位置**: 现在使用 `isMobile` 状态来动态决定 `<Modal>` 组件的渲染位置。
+ *   - **桌面端 (`!isMobile`)**: `Modal` 被渲染在 `component="main"` 的 `Box` 内部，
+ *     作为左侧内容区和右侧搜索面板的兄弟元素。这使得弹窗的背景遮罩层可以同时覆盖两者。
+ *   - **移动端 (`isMobile`)**: `Modal` 被渲染在包裹 `<Outlet />` 的 `MotionBox` 内部，
+ *     确保其位置在顶部导航栏下方，不会覆盖顶栏。
+ * - 这个解决方案通过条件渲染，完美地兼顾了两种视图下的不同布局要求。
  *
  * 文件功能描述:
  * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
@@ -80,6 +82,17 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
         };
     }, [pathname, isPanelOpen, isPanelRelevant, closePanel, setPanelContent, setPanelTitle]);
 
+    // 定义一个可重用的 Modal JSX 块
+    const modalComponent = (
+        <AnimatePresence>
+            {isModalOpen && onModalClose && (
+                <Modal onClose={onModalClose}>
+                    {modalContent}
+                </Modal>
+            )}
+        </AnimatePresence>
+    );
+
     return (
         <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'app.background' }}>
             <SideNav open={sideNavOpen} onToggle={() => setSideNavOpen(o => !o)} onFakeLogout={onFakeLogout} />
@@ -130,19 +143,13 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                             display: 'flex',
                             flexDirection: 'column',
                             p: { xs: 2, md: 0 },
-                            position: 'relative', // 【核心修复】添加定位上下文
+                            position: 'relative',
                         }}
                     >
                         <Outlet />
 
-                        {/* 【核心修复】将 Modal 的渲染位置移到这里 */}
-                        <AnimatePresence>
-                            {isModalOpen && onModalClose && (
-                                <Modal onClose={onModalClose}>
-                                    {modalContent}
-                                </Modal>
-                            )}
-                        </AnimatePresence>
+                        {/* 【核心修改】只在移动端时，将 Modal 渲染在这里 */}
+                        {isMobile && modalComponent}
                     </MotionBox>
                     <AnimatePresence>
                         {isMobile && isPanelOpen && (
@@ -211,6 +218,9 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                         {panelContent}
                     </RightSearchPanel>
                 )}
+
+                {/* 【核心修改】只在桌面端时，将 Modal 渲染在这里 */}
+                {!isMobile && modalComponent}
             </Box>
         </Box>
     );
