@@ -2,39 +2,32 @@
  * 文件名: src/pages/Tickets.tsx
  *
  * 本次修改内容:
- * - 【布局对齐】为了适应 `MainLayout` 最新的“父级控制滚动”模型，彻底简化了此页面的布局。
- * - 移除了所有 `height`, `display: 'flex'`, 和 `flexGrow` 等强制布局属性。
- * - 页面现在回归到简单的、由内容驱动高度的自然文档流，将滚动控制权完全交还给父级布局。
+ * - 【布局简化】移除了传递给 `PageLayout` 的 `sx` 属性。
+ * - 垂直内边距现在由 `PageLayout` 组件内部统一处理。
  *
  * 文件功能描述:
  * 此文件定义了“工单”页面。
  */
 import React, { useEffect } from 'react';
-import { Box, Typography } from '@mui/material'
+import { Typography } from '@mui/material';
 import { useLayout } from '../contexts/LayoutContext.tsx';
+import PageLayout from '../layouts/PageLayout';
 
 const Tickets: React.FC = () => {
     const { setIsPanelRelevant } = useLayout();
 
     useEffect(() => {
         setIsPanelRelevant(false);
-        return () => {
-            setIsPanelRelevant(false);
-        };
+        return () => { setIsPanelRelevant(false); };
     }, [setIsPanelRelevant]);
 
     return (
-        <Box sx={{
-            width: { xs: '90%', md: '80%' },
-            maxWidth: 1280,
-            mx: 'auto',
-            py: 4,
-        }}>
+        <PageLayout>
             <Typography variant="h4" sx={{ color: 'primary.main' }}>
                 工单 (Tickets)
             </Typography>
             <Typography sx={{ mt: 2 }}>这里实现一些快速制作工单的功能，通过更新记录直接生成工单</Typography>
-        </Box>
+        </PageLayout>
     );
 };
 
