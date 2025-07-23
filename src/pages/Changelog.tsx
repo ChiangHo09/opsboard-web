@@ -2,12 +2,11 @@
  * 文件名: src/pages/Changelog.tsx
  *
  * 本次修改内容:
- * - 【无限循环修复】解决了可能导致页面白屏和搜索面板内容闪烁的无限重渲染循环问题。
- * - **移除了不稳定的 `...layout` 对象**: 不再使用剩余操作符来收集 context 的属性。
- * - **明确解构依赖**: 从 `useLayout` 中明确地解构出 `useEffect` 所需的每一个函数
- *   （`setPanelContent`, `setPanelTitle`, `setPanelWidth`, `setIsPanelRelevant`）。
- * - **稳定依赖数组**: 将这些从 context 中获取的、被 `useCallback` 包裹的稳定函数
- *   直接放入 `useEffect` 的依赖数组中，从而打破了重渲染的循环。
+ * - 【视觉对齐】调整了页面布局的垂直间距，使其与 `Settings.tsx` 等其他简单页面保持一致。
+ * - 移除了根 `Box` 上的 `gap: 2` 属性。
+ * - 将标题区的 `pt: 1` 修改为 `py: 4`，增加了上下内边距。
+ * - 为分页区的 `Box` 添加了 `pb: 4`，增加了底部内边距。
+ * - 这一修改确保了 Grid 布局的稳定性，同时实现了视觉上的统一。
  *
  * 文件功能描述:
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
@@ -15,8 +14,8 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-    Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, TablePagination, useTheme
+    Box, Typography, Button, Table, TableBody, TableCell,
+    TableContainer, TableHead, TableRow, TablePagination, useTheme
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayout } from '../contexts/LayoutContext.tsx';
@@ -24,19 +23,16 @@ import ChangelogSearchForm, { type ChangelogSearchValues } from '../components/f
 import ChangelogDetailContent from '../components/modals/ChangelogDetailContent.tsx';
 import TooltipCell from '../components/ui/TooltipCell';
 
-// ... (数据模型和模拟数据保持不变)
-interface ChangelogData { id: string; customerName: string; updateTime: string; updateType: string; updateContent: string; }
-const createLogData = (id: string, customerName: string, updateTime: string, updateType: string, updateContent: string): ChangelogData => ({ id, customerName, updateTime, updateType, updateContent });
-const mockLogData: ChangelogData[] = [ createLogData('log001', '客户a', '2025-07-21 10:30', '功能更新', '新增了用户导出功能...'), createLogData('log002', '客户b', '2025-07-20 15:00', '安全修复', '修复了一个潜在的XSS漏洞。'), ...Array.from({ length: 50 }).map((_, i) => createLogData(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug修复' : '常规维护', `这是第 ${i + 4} 条模拟更新日志...`)), ];
+/* 模拟数据 */
+interface Row { id: string; customerName: string; updateTime: string; updateType: string; updateContent: string; }
+const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({ id, customerName: c, updateTime: t, updateType: typ, updateContent: ct });
+const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本：' + 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ' + 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. ' + 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ' + 'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
+const rows: Row[] = [ create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({ length: 50 }).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)), ];
 
-
+/* 组件 */
 const Changelog: React.FC = () => {
-    // 【核心修复】明确解构所有需要的函数
-    const {
-        setIsModalOpen, setModalConfig, isMobile, togglePanel,
-        setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant
-    } = useLayout();
-    const theme = useTheme();
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, isMobile, setIsModalOpen, setModalConfig } = useLayout();
+    const theme    = useTheme();
     const navigate = useNavigate();
     const { logId } = useParams<{ logId: string }>();
 
@@ -50,40 +46,38 @@ const Changelog: React.FC = () => {
         } else {
             setIsModalOpen(false);
         }
-    }, [logId, setIsModalOpen, setModalConfig, navigate]);
+    }, [logId, navigate, setIsModalOpen, setModalConfig]);
 
-    const handleSearch = useCallback((values: ChangelogSearchValues) => { const searchInfo = { ...values, startTime: values.startTime?.format('YYYY-MM-DD'), endTime: values.endTime?.format('YYYY-MM-DD') }; alert(`搜索: ${JSON.stringify(searchInfo)}`); togglePanel(); }, [togglePanel]);
-    const handleReset = useCallback(() => { alert('重置表单'); }, []);
+    const onSearch = useCallback((v: ChangelogSearchValues) => {
+        alert(`搜索: ${JSON.stringify({ ...v, startTime: v.startTime?.format('YYYY-MM-DD'), endTime:   v.endTime?.format('YYYY-MM-DD'), })}`);
+        togglePanel();
+    }, [togglePanel]);
+    const onReset = useCallback(() => alert('重置表单'), []);
 
-    // 【核心修复】将稳定的函数直接放入依赖数组
     useEffect(() => {
-        setPanelContent(<ChangelogSearchForm onSearch={handleSearch} onReset={handleReset} />);
+        setPanelContent(<ChangelogSearchForm onSearch={onSearch} onReset={onReset} />);
         setPanelTitle('日志搜索');
         setPanelWidth(360);
         setIsPanelRelevant(true);
-        return () => {
-            setPanelContent(null);
-            setPanelTitle('');
-            setPanelWidth(360);
-            setIsPanelRelevant(false);
-        };
-    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]);
+        return () => { setPanelContent(null); setPanelTitle(''); setIsPanelRelevant(false); };
+    }, [onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant]);
 
-    const handleChangePage = useCallback((_event: unknown, newPage: number) => { setPage(newPage); }, []);
-    const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); }, []);
-    const paginatedLogData = mockLogData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const handleChangePage = (_: unknown, p: number) => setPage(p);
+    const handleChangeRows = (e: React.ChangeEvent<HTMLInputElement>) => { setRowsPerPage(+e.target.value); setPage(0); };
+    const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     return (
-        <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ width: { xs: '90%', md: '80%' }, maxWidth: 1280, mx: 'auto', py: 4, flexShrink: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>更新日志</Typography>
-                    <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={togglePanel} sx={{ height: '42px', borderRadius: '50px', bgcolor: 'app.button.background', color: 'neutral.main', boxShadow: 'none', textTransform: 'none', fontSize: '15px', fontWeight: 500, px: 3, '&:hover': { bgcolor: 'app.button.hover', boxShadow: 'none' } }}>
-                        <Typography component="span" sx={{ transform: 'translateY(1px)' }}>搜索</Typography>
-                    </Button>
-                </Box>
+        <Box sx={{ display: 'grid', gridTemplateRows: 'auto 1fr auto', height: '100%', minHeight: 0 }}>
+            {/* ① 标题区 */}
+            <Box sx={{ width: { xs: '90%', md: '80%' }, mx: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 4 }}>
+                <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>更新日志</Typography>
+                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={togglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' }, }}>
+                    <Typography component="span" sx={{ transform: 'translateY(1px)' }}>搜索</Typography>
+                </Button>
             </Box>
-            <TableContainer sx={{ width: { xs: '90%', md: '80%' }, maxWidth: 1280, mx: 'auto', flexGrow: 1, overflow: 'auto', bgcolor: 'background.paper' }}>
+
+            {/* ② 表格区 */}
+            <TableContainer sx={{ width: { xs: '90%', md: '80%' }, mx: 'auto', overflow: 'auto', minHeight: 0, bgcolor: 'background.paper' }}>
                 <Table stickyHeader aria-label="更新日志表" sx={{ borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed' }}>
                     <TableHead>
                         <TableRow>
@@ -100,16 +94,16 @@ const Changelog: React.FC = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {paginatedLogData.map((row) => (
-                            <TableRow key={row.id} onClick={() => navigate(`/app/changelog/${row.id}`)} sx={{ cursor: 'pointer', '&:hover > .MuiTableCell-root': { backgroundColor: theme.palette.action.hover } }}>
+                        {pageRows.map(r => (
+                            <TableRow key={r.id} onClick={() => navigate(`/app/changelog/${r.id}`)} sx={{ cursor: 'pointer', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
                                 {isMobile ? (
-                                    <><TableCell>{row.customerName}</TableCell><TableCell>{row.updateTime}</TableCell><TableCell>{row.updateContent}</TableCell></>
+                                    <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
                                 ) : (
                                     <>
-                                        <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100 }}>{row.customerName}</TooltipCell>
-                                        <TooltipCell>{row.updateTime}</TooltipCell>
-                                        <TooltipCell>{row.updateType}</TooltipCell>
-                                        <TooltipCell>{row.updateContent}</TooltipCell>
+                                        <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100 }}>{r.customerName}</TooltipCell>
+                                        <TooltipCell>{r.updateTime}</TooltipCell>
+                                        <TooltipCell>{r.updateType}</TooltipCell>
+                                        <TooltipCell>{r.updateContent}</TooltipCell>
                                     </>
                                 )}
                             </TableRow>
@@ -117,18 +111,21 @@ const Changelog: React.FC = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
-            <TablePagination
-                sx={{ width: { xs: '90%', md: '80%' }, maxWidth: 1280, mx: 'auto', flexShrink: 0, bgcolor: 'background.paper', borderTop: (theme) => `1px solid ${theme.palette.divider}` }}
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={mockLogData.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                labelRowsPerPage="每页行数:"
-                labelDisplayedRows={({ from, to, count }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
-            />
+
+            {/* ③ 分页区 */}
+            <Box sx={{ width: { xs: '90%', md: '80%' }, mx: 'auto', pb: 4 }}>
+                <TablePagination
+                    rowsPerPageOptions={[10, 25, 50]}
+                    component="div"
+                    count={rows.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRows}
+                    labelRowsPerPage="每页行数:"
+                    labelDisplayedRows={({ from, to, count }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                />
+            </Box>
         </Box>
     );
 };

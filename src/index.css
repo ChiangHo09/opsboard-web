@@ -1,63 +1,66 @@
-/**
- * 文件路径：src/index.css
- * ----------------------------------------------------------------------------
- * 功能：全局基础样式表
- * 重点修正：
- *   1. 移除 table 上的 `overflow: hidden`，改为 `overflow: visible`，
- *      并统一使用 `border-collapse: separate` + `border-spacing: 0`，
- *      以保证 sticky 表头 / 首列 正常工作。
- *   2. `html, body, #root` 的 `overflow` 从 `hidden` 改成 `visible`，
- *      避免切断 “粘性定位(sticky)” 的滚动上下文。
- *   3. 合并原文件中重复的 table 选择器，防止日后维护困惑。
- * ----------------------------------------------------------------------------
- */
+/******************************************************************
+ *  文件路径：src/index.css
+ *  说明：
+ *    · 全局基础样式——字体、颜色设计令牌、滚动条美化等都集中于此。
+ *    · ★本次关键修复★
+ *        1) 将 html/body/#root 的 overflow 调整为 hidden，
+ *           并添加 overscroll-behavior: contain，彻底锁死最外层滚动。
+ *        2) 其余 table / scrollbar / code-block 规则维持原状，保证 sticky 生效。
+ ******************************************************************/
 
-/* ---------------- 0. 本地字体定义 (woff2 + woff) ---------------- */
-
+/* ───────────────── 0. 字体文件引入 ───────────────── */
+/* 下面每个 @font-face 的 src 两个 URL：
+ *   · 第 1 个为 woff2（现代浏览器优先）；
+ *   · 第 2 个为 woff（兼容旧版）。
+ * 每行属性右侧均有中文注释说明其作用。*/
 @font-face {
-  font-family: 'Roboto';            /* 字体名称：Roboto Regular */
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;               /* 浏览器可先渲染备用字体，下载完毕再替换为 Roboto */
+  font-family: 'Roboto';                    /* 字体名称：Roboto Regular */
+  font-style: normal;                       /* 正常体（非斜体） */
+  font-weight: 400;                         /* 字重 400 */
+  font-display: swap;                       /* 浏览器先用系统字体，加载完再替换 */
   src: url('./fonts/roboto-v48-latin-regular.woff2') format('woff2'),
   url('./fonts/roboto-v48-latin-regular.woff')  format('woff');
 }
+
 @font-face {
-  font-family: 'Roboto';            /* Roboto Medium (500) */
+  font-family: 'Roboto';
   font-style: normal;
-  font-weight: 500;
+  font-weight: 500;                         /* Medium */
   font-display: swap;
   src: url('./fonts/roboto-v48-latin-500.woff2') format('woff2'),
   url('./fonts/roboto-v48-latin-500.woff')  format('woff');
 }
+
 @font-face {
-  font-family: 'Roboto';            /* Roboto Bold (700) */
+  font-family: 'Roboto';
   font-style: normal;
-  font-weight: 700;
+  font-weight: 700;                         /* Bold */
   font-display: swap;
   src: url('./fonts/roboto-v48-latin-700.woff2') format('woff2'),
   url('./fonts/roboto-v48-latin-700.woff')  format('woff');
 }
 
-/* Noto Sans SC */
+/* Noto Sans SC（思源黑体简体中文）——与 Roboto 组合实现中英混排 */
 @font-face {
-  font-family: 'Noto Sans SC';      /* 黑体中文 Regular */
+  font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
   src: url('./fonts/noto-sans-sc-v38-latin-regular.woff2') format('woff2'),
   url('./fonts/noto-sans-sc-v38-latin-regular.woff')  format('woff');
 }
+
 @font-face {
-  font-family: 'Noto Sans SC';      /* Medium */
+  font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
   src: url('./fonts/noto-sans-sc-v38-latin-500.woff2') format('woff2'),
   url('./fonts/noto-sans-sc-v38-latin-500.woff')  format('woff');
 }
+
 @font-face {
-  font-family: 'Noto Sans SC';      /* Bold */
+  font-family: 'Noto Sans SC';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -65,17 +68,18 @@
   url('./fonts/noto-sans-sc-v38-latin-700.woff')  format('woff');
 }
 
-/* Roboto Mono */
+/* Roboto Mono：代码块 / 等宽数字 */
 @font-face {
-  font-family: 'Roboto Mono';       /* 等宽字体 Regular */
+  font-family: 'Roboto Mono';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
   src: url('./fonts/roboto-mono-v30-latin-regular.woff2') format('woff2'),
   url('./fonts/roboto-mono-v30-latin-regular.woff')  format('woff');
 }
+
 @font-face {
-  font-family: 'Roboto Mono';       /* Medium */
+  font-family: 'Roboto Mono';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
@@ -83,36 +87,36 @@
   url('./fonts/roboto-mono-v30-latin-500.woff')  format('woff');
 }
 
-/* ---------------- 1. 设计令牌：颜色、圆角、字体 ------------------ */
+/* ───────────────── 1. 设计令牌（CSS Variables） ───────────────── */
 :root {
-  /* 1.1 颜色变量 */
-  --md-primary:   #2962ff;   /* 品牌主色 */
-  --md-secondary: #ff6d00;   /* 品牌辅色 */
-  --md-error:     #d32f2f;   /* 错误色 */
+  /* 1.1 颜色变量（示例，仅列主色 / 副色 / 错误色） */
+  --md-primary:   #2962ff;                 /* 品牌主色（蓝） */
+  --md-secondary: #ff6d00;                 /* 品牌副色（橙） */
+  --md-error:     #d32f2f;                 /* 错误色（红） */
 
   /* 1.2 圆角 */
-  --md-radius:    12px;      /* 全局圆角 */
+  --md-radius:    12px;                    /* 全局统一圆角 */
 
-  /* 1.3 字体变量：优先使用本地字体 fallback 到系统字体 */
+  /* 1.3 字体栈：先本地字体，后回退系统字体 */
   --md-font: 'Roboto', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei',
   'Helvetica Neue', Arial, sans-serif;
 }
 
-/* ---------------- 2. 页面基础布局 ------------------------------ */
+/* ───────────────── 2. 页面基础布局 ───────────────── */
 html,
 body,
 #root {
-  height: 100%;               /* 必须撑满，子元素才能使用百分比高度 */
-  margin: 0;
-  overflow: visible;          /* ✅ 必须可滚动，以支持 sticky */
-  /* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
-  font-family: var(--md-font);
-  background-color: #fafafa;  /* 全局浅灰背景 */
-  -webkit-font-smoothing: antialiased; /* 抗锯齿优化 */
-  -moz-osx-font-smoothing: grayscale;
+  height: 100%;                            /* 占满视口，为子元素百分比高度提供参照 */
+  margin: 0;                               /* 清除默认外边距 */
+  overflow: hidden;                        /* ★锁死最外层滚动条★ */
+  overscroll-behavior: contain;            /* ★阻止惯性拖动将页面整体拉动★ */
+  font-family: var(--md-font);             /* 使用上方自定义字体栈 */
+  background-color: #fafafa;               /* 全局浅灰底 */
+  -webkit-font-smoothing: antialiased;     /* Mac / Chrome 抗锯齿 */
+  -moz-osx-font-smoothing: grayscale;      /* Firefox 抗锯齿 */
 }
 
-/* 媒体元素 */
+/* 媒体元素默认占满容器宽度 */
 img,
 video {
   max-width: 100%;
@@ -120,59 +124,62 @@ video {
   display: block;
 }
 
-/* ---------------- 3. 表格统一视觉  ------------------------------ */
+/* ───────────────── 3. 表格统一视觉 ───────────────── */
 /* 说明：
- *  - `border-collapse: separate`   ⇒ 让 position: sticky 生效
- *  - `border-spacing: 0`           ⇒ 去掉单元格缝隙，模拟 collapse 效果
- *  - `overflow: visible`           ⇒ 允许 sticky 单元格向外“溢出”父容器
- */
+ *   · border-collapse: separate —— 让 position: sticky 能生效。
+ *   · border-spacing: 0          —— 去单元格缝隙，接近 collapsed 效果。
+ *   · overflow: visible          —— 允许 sticky 单元格超出表格容器。 */
 table {
-  width: 100%;
-  border-collapse: separate;  /* ✅ sticky 关键点 */
-  border-spacing: 0;          /* 没有单元格间隙 */
-  overflow: visible;          /* ✅ 绝不能 hidden */
-  border-radius: var(--md-radius);
+  width: 100%;                            /* 100% 宽保证充满父级 */
+  border-collapse: separate;              /* ✅Sticky 依赖 */
+  border-spacing: 0;                      /* 无缝隙 */
+  overflow: visible;                      /* ✅必须 visible */
+  border-radius: var(--md-radius);        /* 统一圆角 */
 }
 
-/* ---------------- 4. 滚动条美化 (WebKit) ------------------------ */
+/* ───────────────── 4. WebKit 滚动条美化 ───────────────── */
 ::-webkit-scrollbar {
-  width: 8px;    /* 竖向滚动条宽度 */
-  height: 8px;   /* 横向滚动条高度 */
-}
-::-webkit-scrollbar-track {
-  background: transparent;    /* 轨道透明 */
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2); /* 滑块颜色 */
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  width: 8px;                             /* 竖向滚动条宽 */
+  height: 8px;                            /* 横向滚动条高 */
 }
 
-/* ---------------- 5. 文本 / 链接 / 代码块 ----------------------- */
+::-webkit-scrollbar-track {
+  background: transparent;                /* 轨道透明 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);         /* 滑块主体 */
+  border-radius: 4px;                     /* 圆角 */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);         /* 悬停加深 */
+}
+
+/* ───────────────── 5. 文本 / 代码块样式 ───────────────── */
 a {
-  color: inherit;
-  text-decoration: none;
+  color: inherit;                         /* 链接默认跟随父级颜色 */
+  text-decoration: none;                  /* 去掉下划线 */
 }
 a:hover {
-  text-decoration: underline;
+  text-decoration: underline;             /* 悬停时再显示下划线 */
 }
 
 code,
 pre {
   font-family: 'Roboto Mono', ui-monospace, SFMono-Regular,
-  'SF Mono', Menlo, Consolas, monospace;
-}
-pre {
-  background: #f6f6f6;
-  padding: 1rem;
-  border-radius: var(--md-radius);
-  overflow-x: auto;          /* 代码块横向滚动 */
+  'SF Mono', Menlo, Consolas, monospace;  /* 等宽字体 */
 }
 
-/* 禁用态统一样式 */
+pre {
+  background: #f6f6f6;                    /* 代码块灰底 */
+  padding: 1rem;                          /* 内边距 16px */
+  border-radius: var(--md-radius);
+  overflow-x: auto;                       /* 横向滚动显示长行 */
+}
+
+/* 禁用元素统一样式（按钮 / 输入框） */
 [disabled] {
-  opacity: 0.45;
-  cursor: not-allowed !important;
+  opacity: 0.45;                          /* 半透明 */
+  cursor: not-allowed !important;         /* 禁止点击 */
 }
