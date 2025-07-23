@@ -2,9 +2,9 @@
  * 文件名: src/pages/InspectionBackup.tsx
  *
  * 本次修改内容:
- * - 【布局修复】恢复了页面的左右间距和居中对齐，使其内容不再紧贴浏览器边缘。
- * - 为页面的根 `Box` 重新添加了 `width`, `maxWidth`, 和 `mx: 'auto'` 样式，
- *   使其布局与其他页面（如 Servers, Changelog）保持视觉一致性。
+ * - 【布局统一】更新了页面根 `Box` 的样式，使其与其他内容页面（如 Servers）的布局完全一致。
+ * - 采用了 `width: { xs: '90%', md: '80%' }`, `maxWidth: 1280`, 和 `mx: 'auto'`
+ *   来实现响应式的、居中的内容区域。
  *
  * 文件功能描述:
  * 此文件是“巡检备份”功能的主页面。
@@ -52,7 +52,7 @@ const InspectionBackup: React.FC = () => {
 
 
     return (
-        // 【核心修复】为根 Box 添加宽度和居中样式
+        // 【核心修复】应用统一的居中和宽度限制样式
         <Box sx={{
             width: { xs: '90%', md: '80%' },
             maxWidth: 1280,

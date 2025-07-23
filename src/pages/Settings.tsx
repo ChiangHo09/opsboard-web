@@ -2,9 +2,9 @@
  * 文件名: src/pages/Settings.tsx
  *
  * 本次修改内容:
- * - 【布局对齐】为了适应 `MainLayout` 最新的“父级控制滚动”模型，彻底简化了此页面的布局。
- * - 移除了所有 `height`, `display: 'flex'`, 和 `flexGrow` 等强制布局属性。
- * - 页面现在回归到简单的、由内容驱动高度的自然文档流，将滚动控制权完全交还给父级布局。
+ * - 【布局统一】更新了页面根 `Box` 的样式，使其与其他内容页面（如 Servers）的布局完全一致。
+ * - 采用了 `width: { xs: '90%', md: '80%' }`, `maxWidth: 1280`, 和 `mx: 'auto'`
+ *   来实现响应式的、居中的内容区域。
  *
  * 文件功能描述:
  * 此文件定义了应用的“设置”页面。
@@ -24,9 +24,11 @@ const Settings: React.FC = () => {
     }, [setIsPanelRelevant]);
 
     return (
+        // 【核心修复】应用统一的居中和宽度限制样式
         <Box sx={{
-            width: '100%', // 宽度占满父容器
-            // 不再需要 height, display:flex, flexGrow
+            width: { xs: '90%', md: '80%' },
+            maxWidth: 1280,
+            mx: 'auto',
         }}>
             <Typography
                 variant="h5"
