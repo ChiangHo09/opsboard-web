@@ -5,10 +5,10 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【核心问题修复】为 <TableRow> 组件的 sx 属性添加了 `position: 'relative'`。
- *   - 此修改解决了在新 DataTable 布局下，点击行无法触发 navigate 事件的问题，恢复了详情弹窗功能。
- *   - 原因是 DataTable 的 grid 布局和 TableContainer 的滚动上下文影响了 TableRow 的事件捕获，`position: 'relative'` 提升了 TableRow 的层叠上下文，使其能正确接收点击事件。
- * - 【Hover 效果修复】显著加长了 `LONG_TEXT` 常量的内容，确保在宽屏下也能触发 TooltipCell 的文本溢出判断，从而恢复了 hover 时的 Tooltip 提示效果。
+ * - 【新增功能】实现了从其他页面跳转过来时，高亮显示指定条目的功能。
+ * - 1. **自动分页**: 新增一个 `useEffect` 钩子。当页面加载且 URL 中带有 `logId` 时，它会自动计算该条目所在的页码并跳转，确保用户能看到目标条目。
+ * - 2. **高亮显示**: 在渲染表格行时，通过判断当前行 ID 是否与 URL 中的 `logId` 匹配，为匹配的 `<TableRow>` 动态添加高亮背景色 (`theme.palette.action.selected`)。
+ * - 3. **优化 Hover 效果**: 调整了行的 `sx` 属性，确保高亮行的 hover 效果不会覆盖其高亮状态，提升了视觉一致性。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -26,7 +26,6 @@ import DataTable from '../components/ui/DataTable';
 
 interface Row { id: string; customerName: string; updateTime: string; updateType: string; updateContent: string; }
 const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({ id, customerName: c, updateTime: t, updateType: typ, updateContent: ct });
-// 加长文本，确保在各种分辨率下都能触发溢出
 const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本，需要足够多的内容才能在宽屏的50%列宽中产生溢出效果。我们再加一点，再加一点，现在应该足够长了。';
 const rows: Row[] = [ create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({ length: 50 }).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)), ];
 
@@ -39,6 +38,18 @@ const Changelog: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
+    // ✅ 效果1: 自动分页到指定条目
+    useEffect(() => {
+        if (logId) {
+            const itemIndex = rows.findIndex(row => row.id === logId);
+            if (itemIndex !== -1) {
+                const targetPage = Math.floor(itemIndex / rowsPerPage);
+                setPage(targetPage);
+            }
+        }
+    }, [logId, rowsPerPage]);
+
+    // 处理模态框的逻辑
     useEffect(() => {
         if (logId) { setIsModalOpen(true); setModalConfig({ content: <ChangelogDetailContent logId={logId} />, onClose: () => navigate('/app/changelog') }); }
         else { setIsModalOpen(false); }
@@ -91,21 +102,36 @@ const Changelog: React.FC = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {pageRows.map(r => (
-                                // 添加 position: 'relative' 来修复点击事件
-                                <TableRow key={r.id} onClick={() => navigate(`/app/changelog/${r.id}`)} sx={{ cursor: 'pointer', position: 'relative', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
-                                    {isMobile ? (
-                                        <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
-                                    ) : (
-                                        <>
-                                            <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100 }}>{r.customerName}</TooltipCell>
-                                            <TooltipCell>{r.updateTime}</TooltipCell>
-                                            <TooltipCell>{r.updateType}</TooltipCell>
-                                            <TooltipCell>{r.updateContent}</TooltipCell>
-                                        </>
-                                    )}
-                                </TableRow>
-                            ))}
+                            {pageRows.map(r => {
+                                // ✅ 效果2: 判断当前行是否需要高亮
+                                const isHighlighted = r.id === logId;
+                                return (
+                                    <TableRow
+                                        key={r.id}
+                                        onClick={() => navigate(`/app/changelog/${r.id}`)}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            position: 'relative',
+                                            // ✅ 效果3: 应用高亮样式，并优化 hover 状态
+                                            bgcolor: isHighlighted ? theme.palette.action.selected : 'transparent',
+                                            '&:hover > .MuiTableCell-root': {
+                                                background: isHighlighted ? theme.palette.action.selected : theme.palette.action.hover,
+                                            },
+                                        }}
+                                    >
+                                        {isMobile ? (
+                                            <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
+                                        ) : (
+                                            <>
+                                                <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100 }}>{r.customerName}</TooltipCell>
+                                                <TooltipCell>{r.updateTime}</TooltipCell>
+                                                <TooltipCell>{r.updateType}</TooltipCell>
+                                                <TooltipCell>{r.updateContent}</TooltipCell>
+                                            </>
+                                        )}
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </DataTable>
