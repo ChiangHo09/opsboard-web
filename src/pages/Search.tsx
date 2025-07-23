@@ -1,10 +1,13 @@
 /**
- * 文件名：Search.tsx
- * 描述：此文件定义了应用的“全局搜索”页面。
+ * 文件名: src/pages/Search.tsx
  *
- * 本次修改：
- * - 更新了页面标题的样式，将硬编码的颜色值（`#1976d2`）修改为引用自全局主题的 `primary.main` 颜色。
- * - 这确保了标题颜色能跟随应用主题的变化，保持视觉统一性。
+ * 本次修改内容:
+ * - 【布局对齐】为了适应 `MainLayout` 最新的“父级控制滚动”模型，彻底简化了此页面的布局。
+ * - 移除了所有 `height`, `display: 'flex'`, 和 `flexGrow` 等强制布局属性。
+ * - 页面现在回归到简单的、由内容驱动高度的自然文档流，将滚动控制权完全交还给父级布局。
+ *
+ * 文件功能描述:
+ * 此文件定义了应用的“全局搜索”页面。
  */
 import React, { useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
@@ -21,29 +24,24 @@ const Search: React.FC = () => {
     }, [setIsPanelRelevant]);
 
     return (
-        <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{
-                width: { xs: '90%', md: '80%' },
-                maxWidth: 1280,
-                mx: 'auto',
-                py: 4,
-                flexGrow: 1,
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, mb: 4 }}>
-                    <Typography
-                        variant="h5"
-                        sx={{
-                            color: 'primary.main', // 使用主题颜色
-                            fontSize: '2rem'
-                        }}
-                    >
-                        全局搜索 (Search)
-                    </Typography>
-                </Box>
-                <Typography sx={{ mt: 2 }}>这里实现搜索框与结果…</Typography>
+        <Box sx={{
+            width: { xs: '90%', md: '80%' },
+            maxWidth: 1280,
+            mx: 'auto',
+            py: 4,
+        }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+                <Typography
+                    variant="h5"
+                    sx={{
+                        color: 'primary.main',
+                        fontSize: '2rem'
+                    }}
+                >
+                    全局搜索 (Search)
+                </Typography>
             </Box>
+            <Typography sx={{ mt: 2 }}>这里实现搜索框与结果…</Typography>
         </Box>
     );
 };

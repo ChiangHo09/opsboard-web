@@ -1,9 +1,13 @@
 /**
- * 文件名：Tickets.tsx
- * 描述：此文件定义了“工单”页面。
+ * 文件名: src/pages/Tickets.tsx
  *
- * 本次修改：
- * - 【问题修复】为页面标题的 `Typography` 组件添加了 `sx={{ color: 'primary.main' }}` 属性，使其颜色能正确地跟随全局主题变化。
+ * 本次修改内容:
+ * - 【布局对齐】为了适应 `MainLayout` 最新的“父级控制滚动”模型，彻底简化了此页面的布局。
+ * - 移除了所有 `height`, `display: 'flex'`, 和 `flexGrow` 等强制布局属性。
+ * - 页面现在回归到简单的、由内容驱动高度的自然文档流，将滚动控制权完全交还给父级布局。
+ *
+ * 文件功能描述:
+ * 此文件定义了“工单”页面。
  */
 import React, { useEffect } from 'react';
 import { Box, Typography } from '@mui/material'
@@ -14,28 +18,22 @@ const Tickets: React.FC = () => {
 
     useEffect(() => {
         setIsPanelRelevant(false);
-
         return () => {
             setIsPanelRelevant(false);
         };
     }, [setIsPanelRelevant]);
 
     return (
-        <Box sx={{ width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{
-                width: { xs: '90%', md: '80%' },
-                maxWidth: 1280,
-                mx: 'auto',
-                py: 4,
-                flexGrow: 1,
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <Typography variant="h4" sx={{ color: 'primary.main' }}>
-                    工单 (Tickets)
-                </Typography>
-                <Typography sx={{ mt: 2 }}>这里实现一些快速制作工单的功能，通过更新记录直接生成工单</Typography>
-            </Box>
+        <Box sx={{
+            width: { xs: '90%', md: '80%' },
+            maxWidth: 1280,
+            mx: 'auto',
+            py: 4,
+        }}>
+            <Typography variant="h4" sx={{ color: 'primary.main' }}>
+                工单 (Tickets)
+            </Typography>
+            <Typography sx={{ mt: 2 }}>这里实现一些快速制作工单的功能，通过更新记录直接生成工单</Typography>
         </Box>
     );
 };
