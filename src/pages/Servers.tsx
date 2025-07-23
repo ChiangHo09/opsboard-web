@@ -1,15 +1,13 @@
-/**
+/*
  * 文件名: src/pages/Servers.tsx
  *
- * 本次修改内容:
- * - 【布局重构】使用了新建的、可重用的 `DataTable` 组件来渲染表格和分页器。
- * - **代码简化**: 移除了本地的 `Paper`, `TableContainer`, 和 `TablePagination` 组件，
- *   以及相关的 Grid 布局 `Box`。
- * - **职责分离**: 页面现在只负责准备 `Table` 组件和分页数据，
- *   而将如何布局（包括固定分页器）的复杂逻辑完全交给了 `DataTable` 组件。
- *
- * 文件功能描述:
+ * 代码功能:
  * 此文件负责定义并渲染应用的“服务器信息”页面。它包含服务器数据的获取与展示、分页控制、与侧边搜索面板的交互逻辑，以及一个支持行列冻结和内容截断的高级数据表格。
+ *
+ * 本次修改内容:
+ * - 【核心问题修复】为 <TableRow> 组件的 sx 属性添加了 `position: 'relative'`。
+ *   - 此修改解决了在新 DataTable 布局下，点击行无法触发 navigate 事件的问题，恢复了详情弹窗功能。
+ *   - 原因是 DataTable 的 grid 布局和 TableContainer 的滚动上下文影响了 TableRow 的事件捕获，`position: 'relative'` 提升了 TableRow 的层叠上下文，使其能正确接收点击事件。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -23,11 +21,11 @@ import ServerSearchForm, { type ServerSearchValues } from '../components/forms/S
 import ServerDetailContent from '../components/modals/ServerDetailContent';
 import TooltipCell from '../components/ui/TooltipCell';
 import PageLayout from '../layouts/PageLayout';
-import DataTable from '../components/ui/DataTable'; // 【新增】导入新组件
+import DataTable from '../components/ui/DataTable';
 
 interface Row { id: string; customerName: string; serverName: string; ip: string; role: string; note?: string; dep?: string; custNote?: string; }
 const create = (id: string, c: string, s: string, ip: string, role: string, note?: string, dep?: string, cn?: string): Row => ({ id, customerName: c, serverName: s, ip, role, note, dep, custNote: cn });
-const LONG_NOTE = '这是一段非常非常长的使用备注...';
+const LONG_NOTE = '这是一段非常非常长的使用备注，用于测试在表格单元格中的文本溢出和 Tooltip 显示效果。我们需要确保这段文本足够长，以便在不同屏幕宽度下都能被截断。';
 const rows: Row[] = [ create('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10', '应用', LONG_NOTE), create('srv002', '客户a', 'DB-SERVER-AB', '192.168.1.20', '数据库', LONG_NOTE, '共享', '客户 a/b 共用'), ...Array.from({ length: 100 }).map((_, i) => create(`test${i + 1}`, `测试客户${i + 1}`, `TestServer${i + 1}`, `10.0.0.${i + 1}`, i % 2 === 0 ? '应用' : '数据库', `（第 ${i + 1} 条）${LONG_NOTE}`, i % 3 === 0 ? '测试版' : undefined)), ];
 
 const Servers: React.FC = () => {
@@ -64,7 +62,6 @@ const Servers: React.FC = () => {
                 </Button>
             </Box>
 
-            {/* 【核心修改】使用 DataTable 组件 */}
             <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
@@ -95,7 +92,8 @@ const Servers: React.FC = () => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                <TableRow key={r.id} onClick={() => navigate(`/app/servers/${r.id}`)} sx={{ cursor: 'pointer', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
+                                // ✅ 添加 position: 'relative' 来修复点击事件
+                                <TableRow key={r.id} onClick={() => navigate(`/app/servers/${r.id}`)} sx={{ cursor: 'pointer', position: 'relative', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
                                     {isMobile ? (
                                         <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.serverName}</TooltipCell><TooltipCell>{r.role}</TooltipCell></>
                                     ) : (

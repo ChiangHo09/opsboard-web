@@ -1,15 +1,14 @@
-/**
+/*
  * 文件名: src/pages/Changelog.tsx
  *
- * 本次修改内容:
- * - 【布局重构】使用了新建的、可重用的 `DataTable` 组件来渲染表格和分页器。
- * - **代码简化**: 移除了本地的 `Paper`, `TableContainer`, 和 `TablePagination` 组件，
- *   以及相关的 Grid 布局 `Box`。
- * - **职责分离**: 页面现在只负责准备 `Table` 组件和分页数据，
- *   而将如何布局（包括固定分页器）的复杂逻辑完全交给了 `DataTable` 组件。
- *
- * 文件功能描述:
+ * 代码功能:
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
+ *
+ * 本次修改内容:
+ * - 【核心问题修复】为 <TableRow> 组件的 sx 属性添加了 `position: 'relative'`。
+ *   - 此修改解决了在新 DataTable 布局下，点击行无法触发 navigate 事件的问题，恢复了详情弹窗功能。
+ *   - 原因是 DataTable 的 grid 布局和 TableContainer 的滚动上下文影响了 TableRow 的事件捕获，`position: 'relative'` 提升了 TableRow 的层叠上下文，使其能正确接收点击事件。
+ * - 【Hover 效果修复】显著加长了 `LONG_TEXT` 常量的内容，确保在宽屏下也能触发 TooltipCell 的文本溢出判断，从而恢复了 hover 时的 Tooltip 提示效果。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -23,11 +22,12 @@ import ChangelogSearchForm, { type ChangelogSearchValues } from '../components/f
 import ChangelogDetailContent from '../components/modals/ChangelogDetailContent.tsx';
 import TooltipCell from '../components/ui/TooltipCell';
 import PageLayout from '../layouts/PageLayout';
-import DataTable from '../components/ui/DataTable'; // 【新增】导入新组件
+import DataTable from '../components/ui/DataTable';
 
 interface Row { id: string; customerName: string; updateTime: string; updateType: string; updateContent: string; }
 const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({ id, customerName: c, updateTime: t, updateType: typ, updateContent: ct });
-const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本...';
+// 加长文本，确保在各种分辨率下都能触发溢出
+const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本，需要足够多的内容才能在宽屏的50%列宽中产生溢出效果。我们再加一点，再加一点，现在应该足够长了。';
 const rows: Row[] = [ create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({ length: 50 }).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)), ];
 
 const Changelog: React.FC = () => {
@@ -64,7 +64,6 @@ const Changelog: React.FC = () => {
                 </Button>
             </Box>
 
-            {/* 【核心修改】使用 DataTable 组件 */}
             <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
@@ -93,7 +92,8 @@ const Changelog: React.FC = () => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                <TableRow key={r.id} onClick={() => navigate(`/app/changelog/${r.id}`)} sx={{ cursor: 'pointer', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
+                                // 添加 position: 'relative' 来修复点击事件
+                                <TableRow key={r.id} onClick={() => navigate(`/app/changelog/${r.id}`)} sx={{ cursor: 'pointer', position: 'relative', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
                                     {isMobile ? (
                                         <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
                                     ) : (
