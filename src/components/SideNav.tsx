@@ -1,16 +1,14 @@
-/**
+/*
  * 文件名: src/components/SideNav.tsx
  *
- * 本次修改内容:
- * - 【样式解耦 & 修复】采用了正确的全局样式应用方式，确保 Tooltip 样式统一。
- * - **移除了本地的 `tooltipSx` 对象**，实现了完全的样式解耦。
- * - 将 `Tooltip` 的 `slotProps={{ tooltip: { sx: ... } }}` 修改为
- *   **`slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}`**。
- * - 这个修改确保了全局的 `tooltip-sidenav` 类被正确应用到弹出的 Tooltip 元素上，
- *   从而使其样式与 `TooltipCell` 完全一致。
+ * 代码功能:
+ * 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航，支持展开、折叠以及移动端适配。
  *
- * 文件功能描述:
- * 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航。
+ * 本次修改内容:
+ * - 【核心问题修复】解决了 TS2746 错误，即一个组件期望单个子元素但收到了多个。
+ * - 问题原因：MUI 的 <Menu> 组件期望其直接子元素是 <MenuItem>，但代码中提供了一个 <Box> 和一个 <MenuItem> 作为并列的子元素。
+ * - 解决方案：将账户信息头部（原来的 <Box>）包裹在一个 `disabled` 的 <MenuItem> 中，使其在结构上符合 <Menu> 的要求，同时保持其不可点击的特性。
+ * - 通过 sx 属性覆盖了禁用状态下的透明度，以确保头部文本正常显示。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -98,7 +96,7 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                     <Tooltip
                         title={!open && !isMobile ? item.label : ''}
                         placement="right"
-                        slotProps={{ tooltip: { className: 'tooltip-sidenav' } }} // 【核心修复】
+                        slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}
                     >
                         <Box sx={{ width: BTN_SIZE, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Box component="span" sx={navItemIconSx}>{item.icon}</Box>
@@ -118,9 +116,40 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
         );
     };
 
-    // ... (其他代码保持不变)
+    // ✅ 修复 TS2746 错误
+    const accountMenu = (
+        <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            slotProps={{ paper: { sx: { ml: 1, p: 1, width: 220 } } }}
+        >
+            {/* 将头部信息包裹在禁用的 MenuItem 中 */}
+            <MenuItem
+                disabled
+                sx={{
+                    opacity: '1 !important', // 覆盖禁用状态的透明度
+                    py: 1,
+                    px: 2,
+                }}
+            >
+                <Box>
+                    <Typography fontWeight="bold">chiangho</Typography>
+                    <Typography variant="caption" color="text.secondary">user@example.com</Typography>
+                </Box>
+            </MenuItem>
+            <MenuItem
+                onClick={() => { setAnchorEl(null); onFakeLogout(); }}
+                sx={{ color: 'error.main', borderRadius: 1.5, mx: 1, mt: 1 }}
+            >
+                <LogoutIcon fontSize="small" sx={{ mr: 1.5 }} />
+                退出登录
+            </MenuItem>
+        </Menu>
+    );
 
-    const accountMenu = ( <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)} anchorOrigin={{ vertical: 'top', horizontal: 'right' }} transformOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { ml: 1, p: 1 } } }}> <Box sx={{ pt: 1, pb: 1, pr: 2, pl: 4, minWidth: 200 }}> <Typography fontWeight="bold">chiangho</Typography> <Typography variant="caption" color="text.secondary">user@example.com</Typography> </Box> <MenuItem onClick={() => { setAnchorEl(null); onFakeLogout(); }} sx={{ color: 'error.main', borderRadius: 1.5 }}> <LogoutIcon fontSize="small" sx={{ mr: 1 }} /> 退出登录 </MenuItem> </Menu> );
     if (isMobile) {
         return ( <React.Fragment> <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, height: MOBILE_TOP_BAR_HEIGHT, bgcolor: 'app.background', zIndex: theme.zIndex.appBar + 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, boxShadow: 'none' }}> <IconButton onClick={() => setMobileDrawerOpen(true)} aria-label="open drawer"> <ViewStreamRoundedIcon sx={controlIconSx} /> </IconButton> <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}> {bottomNavItems.filter(item => item.isMobileTopBarItem).map(item => ( <IconButton key={item.path} onClick={() => nav(item.path)} aria-label={item.label}> <Tooltip title={item.label} placement="bottom" slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}> <Box component="span" sx={controlIconSx}>{item.icon}</Box> </Tooltip> </IconButton> ))} <IconButton onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setAnchorEl(e.currentTarget); }} aria-label="account"> <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(0,0,0,.05)' }}> <AccountIcon sx={controlIconSx} /> </Avatar> </IconButton> </Box> </Box> <MotionDrawer variant="temporary" open={mobileDrawerOpen} onClose={() => setMobileDrawerOpen(false)} ModalProps={{ keepMounted: true }} animate={{ width: mobileDrawerOpen ? W_EXPANDED : 0 }} transition={{ duration: TRANS_DUR, ease: MOTION_EASING }} sx={{ flexShrink: 0, '& .MuiDrawer-paper': { width: W_EXPANDED, bgcolor: 'app.background', border: 'none', boxSizing: 'border-box', overflow: 'hidden' } }}> <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}> <Box sx={{ display: 'flex', alignItems: 'center', height: MOBILE_TOP_BAR_HEIGHT, boxSizing: 'border-box', p: 2 }}> <Box component="img" src="/favicon.svg" alt="logo" sx={{ height: 28, width: 'auto', mr: 1.5 }} /> <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'neutral.main' }}>运维信息表</Typography> </Box> <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden', pt: `${GAP}px`, pb: `${GAP}px` }}> <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}> {mainNavItems.map(item => renderNavButton(item, () => setMobileDrawerOpen(false)))} </List> </Box> <Box sx={{ py: `${GAP}px` }}> <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}> {bottomNavItems.filter(item => !item.isMobileTopBarItem).map(item => renderNavButton(item, () => setMobileDrawerOpen(false)))} </List> </Box> </Box> </MotionDrawer> {accountMenu} </React.Fragment> );
     } else {

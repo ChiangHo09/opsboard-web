@@ -1,17 +1,15 @@
-/**
+/*
  * 文件名: src/App.tsx
  *
- * 本次修改内容:
- * - 【代码对齐 & 问题修复】根据您提供的原始代码结构，进行了最终的修正。
- * - **修复 ESLint 错误**: 彻底移除了不符合 ES Module 规范的 `require()` 语法。
- *   `import 'dayjs/locale/zh-cn'` 和 `dayjs.locale('zh-cn')` 已经是正确的全局本地化方式。
- * - **修复 TS2345 错误**: 移除了之前错误添加的 `dayjs.locale()` 调用中的 `null` 参数，该参数不符合类型定义。
- * - **遵循原始设计**: `LocalizationProvider` 的配置现在完全遵循您提供的代码，
- *   日期格式化 (dateFormats) 的职责交由传入的自定义 `theme` 对象处理，此处不再配置。
- *
- * 文件功能描述:
+ * 代码功能:
  * 此文件是应用的根组件和主路由配置文件。
  * 它负责管理用户的登录状态，并根据该状态决定渲染登录页面还是受保护的主应用布局。
+ *
+ * 本次修改内容:
+ * - 【核心问题修复】解决了从列表页点击进入详情时，弹窗不出现的问题。
+ * - 问题原因：之前的路由配置中，`index` 和 `:param` 两个子路由都渲染了同一个组件，导致路由切换时组件被完全卸载和重新挂载，使得弹窗状态更新失败。
+ * - 解决方案：采用“布局路由”模式。父路由（例如 `path="servers"`）负责渲染组件本身，而子路由（例如 `path=":serverId"`）仅用于匹配 URL 参数，但其 `element` 设置为 `null`。
+ * - 这样可以确保在 URL 变化时，页面组件实例保持挂载状态，不会被重新创建，从而让 `useEffect` 能够正确地更新弹窗状态。
  */
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -79,16 +77,15 @@ export default function App() {
                             <Route index element={<Navigate to="dashboard" replace />} />
                             <Route path="dashboard"         element={<Dashboard />} />
 
-                            {/* 更新 servers 路由以支持详情页 */}
-                            <Route path="servers">
-                                <Route index element={<Servers />} />
-                                <Route path=":serverId" element={<Servers />} />
+                            {/* 【修复】将 Servers 组件作为布局路由，确保它不会在子路由切换时重新挂载 */}
+                            <Route path="servers" element={<Servers />}>
+                                {/* 子路由只负责匹配 URL 参数，不渲染任何内容 */}
+                                <Route path=":serverId" element={null} />
                             </Route>
 
-                            {/* 更新 changelog 路由以支持详情页 */}
-                            <Route path="changelog">
-                                <Route index element={<Changelog />} />
-                                <Route path=":logId" element={<Changelog />} />
+                            {/* 【修复】对 Changelog 应用相同的修复模式 */}
+                            <Route path="changelog" element={<Changelog />}>
+                                <Route path=":logId" element={null} />
                             </Route>
 
                             <Route path="inspection-backup" element={<InspectionBackup />} />
