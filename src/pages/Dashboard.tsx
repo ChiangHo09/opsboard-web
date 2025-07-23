@@ -2,15 +2,16 @@
  * 文件名: src/pages/Dashboard.tsx
  *
  * 本次修改内容:
- * - 【视觉终极修复】采用 `transform: translateY` 的方式，精确地将卡片内的图标下移，
- *   实现了最终的视觉对齐效果，同时保持文本位置不变。
- * - **精确图标定位**:
- *   - 在调用 `StatCard` 组件时，直接为传递的 `icon` JSX 元素添加了
- *     `sx={{ transform: 'translateY(4px)' }}` 样式。
- *   - `transform` 属性会在不影响布局流的情况下对元素进行视觉平移，
- *     这确保了只有图标被下移，而文本和其他所有元素的位置都保持稳定。
- * - **恢复稳定布局**: `StatCard` 组件的内部结构恢复到之前使用 Flexbox 实现的、
- *   健壮的整体垂直居中布局，为图标的微调提供了稳定的基础。
+ * - 【布局修复】优化了“快速统计信息”卡片组的布局逻辑。
+ * - **替换 Stack 为 Box**:
+ *   - 将用于包裹三个统计卡片的 `<Stack>` 组件替换为一个配置了 `display: 'flex'` 的 `<Box>` 组件。
+ * - **启用 Flexbox 换行**:
+ *   - 在新的 `<Box>` 容器上使用 `flexWrap: 'wrap'` 属性，允许卡片在空间不足时自动换行。
+ * - **实现均匀间距**:
+ *   - 使用 `gap` 属性来为卡片之间创建统一且可靠的间距，解决了等距问题。
+ * - **实现单项拉伸**:
+ *   - 为每个卡片的包装器 `<Box>` 设置了 `flex: '1 1 160px'`。
+ *   - 这确保了当卡片组换行且最后一行只有一个卡片时，该卡片会自动利用 `flex-grow: 1` 的特性，伸展以填满整个可用宽度，完全符合要求。
  *
  * 文件功能描述:
  * 此文件定义了应用的仪表盘（Dashboard）页面，现在它采用了更宽敞、更均衡、视觉对齐、
@@ -83,7 +84,7 @@ export default function Dashboard() {
             </Box>
 
             <Box sx={{ flexGrow: 1, overflowY: 'auto', pb: 4 }}>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 4, md: 8 }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 4, md: 6 }}>
                     {/* 左栏 */}
                     <Box sx={{ width: { xs: '100%', md: '50%' } }}>
                         <Stack spacing={4}>
@@ -97,18 +98,17 @@ export default function Dashboard() {
                             </Box>
                             <Box>
                                 <Typography variant="h6" mb={2}>快速统计信息</Typography>
-                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
-                                    <Box sx={{ flex: 1 }}>
-                                        {/* 【核心修复】直接在图标上添加 transform 样式 */}
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                                    <Box sx={{ flex: '1 1 160px' }}>
                                         <StatCard onClick={() => navigate('/app/servers')} icon={<DnsIcon color="primary" sx={{ fontSize: 40, transform: 'translateY(4px)' }} />} title="服务器总数" value="102" />
                                     </Box>
-                                    <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ flex: '1 1 160px' }}>
                                         <StatCard onClick={() => navigate('/app/changelog')} icon={<UpdateIcon color="secondary" sx={{ fontSize: 40, transform: 'translateY(4px)' }} />} title="本周更新" value="12次" />
                                     </Box>
-                                    <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ flex: '1 1 160px' }}>
                                         <StatCard onClick={() => navigate('/app/tickets')} icon={<AssignmentTurnedInIcon color="error" sx={{ fontSize: 40, transform: 'translateY(4px)' }} />} title="待处理工单" value="3个" />
                                     </Box>
-                                </Stack>
+                                </Box>
                             </Box>
                         </Stack>
                     </Box>
