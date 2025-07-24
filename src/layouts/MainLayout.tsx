@@ -5,11 +5,12 @@
  * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
  *
  * 本次修改内容:
- * - 【懒加载支持】将 React.Suspense 组件集成到了布局内部。
+ * - 【懒加载动画修复】解决了懒加载页面在加载完毕后，没有执行进入动画（直接闪现）的问题。
+ * - **问题定位**: 原代码中，`<Suspense>` 组件位于 `<AnimatePresence>` 动画组件的内部。这导致 AnimatePresence 将“加载指示器”作为新页面进行了动画，而真正的页面内容加载完毕后只能生硬地替换掉加载器。
  * - **解决方案**:
- *   1.  在原来渲染 `<Outlet />` 的位置，使用 `<Suspense>` 组件将其包裹起来。
- *   2.  为 `<Suspense>` 提供了一个 `fallback` 属性，用于在懒加载的子路由组件代码下载完成前，显示一个居中的加载指示器。
- * - **最终效果**: 此修改使得 `MainLayout` 能够原生支持懒加载的子路由，同时将懒加载的实现细节内聚在布局组件内部，保持了 `App.tsx` 路由配置的简洁性。
+ *   1.  调整了组件的嵌套结构，将 `<Suspense>` 组件移动到了 `<AnimatePresence>` 的【外层】。
+ *   2.  这意味着，React 会首先等待懒加载组件的代码完全下载完毕（在此期间显示 Suspense 的 fallback），然后才允许 AnimatePresence 开始处理新旧页面组件之间的“进入”和“退出”动画。
+ * - **最终效果**: 现在，页面切换时，用户会先看到加载指示器。一旦新页面准备就绪，加载器会消失，同时旧页面开始执行退出动画，新页面则平滑地执行我们预设的进入动画，整个过程流畅且符合预期。
  */
 import { useState, useEffect, type JSX, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -71,7 +72,6 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
         }
     }, [pathname, isPanelOpen, isPanelRelevant, closePanel, setPanelContent, setPanelTitle]);
 
-
     const modalJSX = (
         <AnimatePresence>
             {isModalOpen && onModalClose && (
@@ -131,37 +131,40 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                         minHeight: 0,
                     }}
                 >
-                    <MotionBox
-                        key={basePath}
-                        variants={pageVariants}
-                        transition={pageTransition}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        sx={{
-                            width: '100%',
-                            flex: '1 1 auto',
-                            minHeight: 0,
-                            boxSizing: 'border-box',
-                            overflowY: 'auto',
-                            overflowX: 'hidden',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            p: { xs: 2, md: 0 },
-                            position: 'relative',
-                        }}
+                    {/* 【核心修复】将 Suspense 移动到 AnimatePresence 的外层 */}
+                    <Suspense
+                        fallback={
+                            <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                <CircularProgress />
+                            </Box>
+                        }
                     >
-                        <Suspense
-                            fallback={
-                                <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                    <CircularProgress />
-                                </Box>
-                            }
-                        >
-                            <Outlet />
-                        </Suspense>
-                        {isMobile && modalJSX}
-                    </MotionBox>
+                        <AnimatePresence mode="wait">
+                            <MotionBox
+                                key={basePath}
+                                variants={pageVariants}
+                                transition={pageTransition}
+                                initial="initial"
+                                animate="animate"
+                                exit="exit"
+                                sx={{
+                                    width: '100%',
+                                    flex: '1 1 auto',
+                                    minHeight: 0,
+                                    boxSizing: 'border-box',
+                                    overflowY: 'auto',
+                                    overflowX: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    p: { xs: 2, md: 0 },
+                                    position: 'relative',
+                                }}
+                            >
+                                <Outlet />
+                                {isMobile && modalJSX}
+                            </MotionBox>
+                        </AnimatePresence>
+                    </Suspense>
                     <AnimatePresence>
                         {isMobile && isPanelOpen && (
                             <MotionBox
@@ -179,73 +182,20 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                                     flexDirection: 'column',
                                 }}
                             >
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        mb: 2,
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <Typography variant="h6" noWrap>
-                                        {panelTitle}
-                                    </Typography>
-                                    <IconButton
-                                        size="small"
-                                        onClick={togglePanel}
-                                        aria-label="close search panel"
-                                    >
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0, }}>
+                                    <Typography variant="h6" noWrap>{panelTitle}</Typography>
+                                    <IconButton size="small" onClick={togglePanel} aria-label="close search panel">
                                         <CloseIcon />
                                     </IconButton>
                                 </Box>
-                                <Box
-                                    sx={{
-                                        mt: 2,
-                                        flexGrow: 1,
-                                        overflowY: 'hidden',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                    }}
-                                >
+                                <Box sx={{ mt: 2, flexGrow: 1, overflowY: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', }}>
                                     <AnimatePresence mode="wait">
                                         {isPanelOpen && !panelContent ? (
-                                            <MotionBox
-                                                key="loading-mobile-panel-content"
-                                                variants={pageVariants}
-                                                transition={pageTransition}
-                                                initial="initial"
-                                                animate="animate"
-                                                exit="exit"
-                                                sx={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center',
-                                                }}
-                                            >
+                                            <MotionBox key="loading-mobile-panel-content" variants={pageVariants} transition={pageTransition} initial="initial" animate="animate" exit="exit" sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', }}>
                                                 <CircularProgress />
                                             </MotionBox>
                                         ) : isPanelOpen && panelContent ? (
-                                            <MotionBox
-                                                key={basePath}
-                                                variants={pageVariants}
-                                                transition={pageTransition}
-                                                initial="initial"
-                                                animate="animate"
-                                                exit="exit"
-                                                sx={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    boxSizing: 'border-box',
-                                                    overflowY: 'auto',
-                                                    overflowX: 'hidden',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                }}
-                                            >
+                                            <MotionBox key={basePath} variants={pageVariants} transition={pageTransition} initial="initial" animate="animate" exit="exit" sx={{ width: '100%', height: '100%', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', }}>
                                                 {panelContent}
                                             </MotionBox>
                                         ) : null}
