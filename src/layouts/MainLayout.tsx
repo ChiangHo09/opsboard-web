@@ -6,11 +6,14 @@
  * 它还管理着这些布局组件之间的交互逻辑，如面板的开关、动画和响应式行为。
  *
  * 本次修改内容:
- * - 【类型修复】以最严格和明确的方式修复了 TypeScript 编译错误 TS2345。
- * - 问题原因: 在自动收起面板的 useEffect 中，其清理函数的类型被推断为可能返回 null，与 EffectCallback 的要求不符。
- * - 最终解决方案: 重构了该 useEffect 的逻辑。现在，仅当需要设置定时器时，才返回一个明确的清理函数 `() => clearTimeout(t)`。该清理函数本身总是返回 `void`。在不需要定时器的情况下，effect 函数隐式返回 `undefined`。这两种情况都完全符合 React 对 EffectCallback 的类型要求，从而彻底解决了类型不匹配的问题。
+ * - 【动画闪烁与同步终极修复】通过统一动画源，彻底解决了侧边面板内容切换时“先闪烁内容再播放动画”的问题。
+ * - **问题定位**: 原代码通过`useEffect`和`useState`手动管理面板的动画Key(`panelContentAnimationKey`)，导致内容更新与Key的更新存在一个渲染周期的延迟，引发了竞态和内容闪烁。
+ * - **解决方案**:
+ *   1.  **废弃手动Key管理**: 完全移除了 `panelContentAnimationKey` 状态、`prevPanelContentRef` 以及用于更新它们的手动 `useEffect`。
+ *   2.  **统一动画Key**: `RightSearchPanel` 的 `contentKey` prop 现在直接使用与主内容区 `<MotionBox>` 完全相同的 `basePath` (即 `pathname.split('/').slice(0, 3).join('/')`)。
+ * - **最终效果**: 现在，当路由变化时，主内容区和侧边面板的内容及动画Key会在同一次渲染中被同步更新。这确保了`<AnimatePresence>`能够正确地在新旧内容之间执行动画，从根本上消除了闪烁问题，并实现了两个区域内容切换动画的完美同步。
  */
-import { useState, useEffect, useRef, type JSX } from 'react';
+import { useState, useEffect, type JSX } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
@@ -40,6 +43,8 @@ const mobilePanelVariants: Variants = {
 function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX.Element {
     const { pathname } = useLocation();
     const theme = useTheme();
+    // 为主内容区和侧面板提供一个统一的、基于路由的动画 Key
+    const basePath = pathname.split('/').slice(0, 3).join('/');
 
     const {
         isPanelOpen, panelContent, closePanel, setPanelContent, setPanelTitle,
@@ -48,28 +53,27 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
     } = useLayout();
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
-    const [panelContentAnimationKey, setPanelContentAnimationKey] = useState<number>(0);
-    const prevPanelContentRef = useRef<React.ReactNode>(null);
+
+    // 【核心修复】移除手动管理的动画 key 及其相关的所有逻辑
+    // const [panelContentAnimationKey, setPanelContentAnimationKey] = useState<number>(0);
+    // const prevPanelContentRef = useRef<React.ReactNode>(null);
 
     useEffect(() => {
         if (isModalOpen) setIsModalOpen(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname]);
 
-    useEffect(() => {
-        if (isPanelOpen && panelContent && panelContent !== prevPanelContentRef.current) {
-            setPanelContentAnimationKey(Date.now());
-        }
-        prevPanelContentRef.current = panelContent;
-    }, [isPanelOpen, panelContent]);
+    // 【核心修复】移除此 useEffect，因为它导致了竞态问题
+    // useEffect(() => {
+    //     if (isPanelOpen && panelContent && panelContent !== prevPanelContentRef.current) {
+    //         setPanelContentAnimationKey(Date.now());
+    //     }
+    //     prevPanelContentRef.current = panelContent;
+    // }, [isPanelOpen, panelContent]);
 
-    // 【最终修复】请完整替换此 useEffect 代码块
     useEffect(() => {
-        // 仅当面板需要被自动关闭时，才执行内部逻辑
         if (isPanelOpen && !isPanelRelevant) {
-            // 设置一个定时器
             const timerId = setTimeout(() => {
-                // 在回调触发时，再次检查条件，避免竞态问题
                 if (isPanelOpen && !isPanelRelevant) {
                     closePanel();
                     setPanelContent(null);
@@ -77,13 +81,10 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                 }
             }, 50);
 
-            // 返回一个定义明确的清理函数。此函数总是返回 void。
             return () => {
                 clearTimeout(timerId);
             };
         }
-        // 如果条件不满足，此 effect 不执行任何操作，也不返回任何东西（隐式返回 undefined），
-        // 这完全符合 EffectCallback 的类型要求，不会引发错误。
     }, [pathname, isPanelOpen, isPanelRelevant, closePanel, setPanelContent, setPanelTitle]);
 
 
@@ -147,7 +148,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                     }}
                 >
                     <MotionBox
-                        key={pathname.split('/').slice(0, 3).join('/')}
+                        key={basePath} // 主内容区动画Key
                         variants={pageVariants}
                         transition={pageTransition}
                         initial="initial"
@@ -237,7 +238,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                                             </MotionBox>
                                         ) : isPanelOpen && panelContent ? (
                                             <MotionBox
-                                                key={panelContentAnimationKey}
+                                                key={basePath} // 移动端面板内容动画也使用 basePath
                                                 variants={pageVariants}
                                                 transition={pageTransition}
                                                 initial="initial"
@@ -268,7 +269,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                         onClose={closePanel}
                         title={panelTitle}
                         width={panelWidth}
-                        contentKey={panelContentAnimationKey}
+                        contentKey={basePath} // 【核心修复】将动画Key与主内容区同步
                     >
                         {panelContent}
                     </RightSearchPanel>
