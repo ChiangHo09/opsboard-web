@@ -1,29 +1,46 @@
 /**
  * 文件名: src/pages/InspectionBackup.tsx
  *
- * 本次修改内容:
- * - 【布局统一】使用 `PageLayout` 组件来包裹页面内容，确保布局与其他页面完全一致。
- *
  * 文件功能描述:
  * 此文件是“巡检备份”功能的主页面。
+ *
+ * 本次修改内容:
+ * - 【性能优化】适配了重构后的 LayoutContext。
+ * - **优化详情**:
+ *   1.  将 `useLayout` 的调用替换为更高效的 `useLayoutDispatch`，因为此组件仅调用更新函数。
+ *   2.  在 `useEffect` 中对面板的设置操作使用了 `setTimeout(..., 0)` 进行延迟，以避免与页面过渡动画冲突。
  */
 import React, { useEffect, useCallback } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { useLayout } from '../contexts/LayoutContext.tsx';
+// 【核心修复】导入分离后的新版 Hook
+import { useLayoutDispatch } from '../contexts/LayoutContext.tsx';
 import InspectionBackupSearchForm, { type InspectionBackupSearchValues } from '../components/forms/InspectionBackupSearchForm.tsx';
 import PageLayout from '../layouts/PageLayout';
 
 const InspectionBackup: React.FC = () => {
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayout();
+    // 【核心修复】使用更高效的 Hook
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant } = useLayoutDispatch();
 
     const handleSearch = useCallback((values: InspectionBackupSearchValues) => { alert(`搜索条件: ${JSON.stringify(values, null, 2)}`); togglePanel(); }, [togglePanel]);
     const handleReset = useCallback(() => { alert('搜索表单已重置'); }, []);
 
+    // 【核心修复】延迟设置面板状态
     useEffect(() => {
-        setPanelContent(<InspectionBackupSearchForm onSearch={handleSearch} onReset={handleReset} />);
-        setPanelTitle('巡检备份搜索'); setPanelWidth(360); setIsPanelRelevant(true);
-        return () => { setPanelContent(null); setPanelTitle(''); setPanelWidth(360); setIsPanelRelevant(false); };
+        const timerId = setTimeout(() => {
+            setPanelContent(<InspectionBackupSearchForm onSearch={handleSearch} onReset={handleReset} />);
+            setPanelTitle('巡检备份搜索');
+            setPanelWidth(360);
+            setIsPanelRelevant(true);
+        }, 0);
+
+        return () => {
+            clearTimeout(timerId);
+            setPanelContent(null);
+            setPanelTitle('');
+            setPanelWidth(360);
+            setIsPanelRelevant(false);
+        };
     }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]);
 
     return (

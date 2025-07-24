@@ -2,15 +2,15 @@
  * 文件名: src/pages/Servers.tsx
  *
  * 代码功能:
- * 此文件负责定义并渲染应用的“服务器信息”页面。它包含服务器数据的获取与展示、分页控制、与侧边搜索面板的交互逻辑，以及一个支持行列冻结和内容截断的高级数据表格。
+ * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【布局终极修复】解决了因引入 `<ButtonBase>` 导致表格布局错乱的问题。
- * - **问题定位**: `<ButtonBase>` 的默认 `display` 样式（`inline-flex`）覆盖了 `<TableRow>` 所需的 `display: 'table-row'`，破坏了表格的列对齐。
- * - **解决方案**:
- *   1.  在使用 `<ButtonBase component={TableRow}>` 时，通过 `sx` 属性，强制将其 `display` 样式覆盖回 `'table-row'`。
- *   2.  这使得组件在获得水波纹动画效果的同时，也保留了其作为表格行 (`<tr>`) 的正确布局行为。
- * - **最终效果**: 表格的列已完全对齐，恢复了正确的视觉布局，并且点击行时的水波纹动画效果也得以保留。
+ * - 【性能优化】适配了重构后的 LayoutContext，将 `useLayout` 拆分为 `useLayoutState` 和 `useLayoutDispatch`。
+ * - **优化详情**:
+ *   1.  现在从 `useLayoutState` 中获取只读的状态值（如 `isMobile`）。
+ *   2.  从 `useLayoutDispatch` 中获取所有状态更新函数。这可以防止组件因不相关的状态变化而重新渲染。
+ *   3.  在 `useEffect` 中对面板的设置操作使用了 `setTimeout(..., 0)` 进行延迟，以避免与页面过渡动画冲突。
+ *   4.  优化了 `onClick` 事件，直接在点击时触发弹窗，提供即时反馈。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -19,7 +19,8 @@ import {
     TableHead, TableRow, useTheme, ButtonBase
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { useLayout } from '../contexts/LayoutContext.tsx';
+// 【核心修复】导入分离后的新版 Hooks
+import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
 import ServerSearchForm, { type ServerSearchValues } from '../components/forms/ServerSearchForm';
 import ServerDetailContent from '../components/modals/ServerDetailContent';
 import TooltipCell from '../components/ui/TooltipCell';
@@ -32,7 +33,10 @@ const LONG_NOTE = '这是一段非常非常长的使用备注，用于测试在�
 const rows: Row[] = [ create('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10', '应用', LONG_NOTE), create('srv002', '客户a', 'DB-SERVER-AB', '192.168.1.20', '数据库', LONG_NOTE, '共享', '客户 a/b 共用'), ...Array.from({ length: 100 }).map((_, i) => create(`test${i + 1}`, `测试客户${i + 1}`, `TestServer${i + 1}`, `10.0.0.${i + 1}`, i % 2 === 0 ? '应用' : '数据库', `（第 ${i + 1} 条）${LONG_NOTE}`, i % 3 === 0 ? '测试版' : undefined)), ];
 
 const Servers: React.FC = () => {
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, isMobile, setIsModalOpen, setModalConfig } = useLayout();
+    // 【核心修复】分离状态和派发函数的消费
+    const { isMobile } = useLayoutState();
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, setIsModalOpen, setModalConfig } = useLayoutDispatch();
+
     const theme    = useTheme();
     const navigate = useNavigate();
     const { serverId } = useParams<{ serverId: string }>();
@@ -40,18 +44,34 @@ const Servers: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
+    // 处理深链接
     useEffect(() => {
-        if (serverId) { setIsModalOpen(true); setModalConfig({ content: <ServerDetailContent serverId={serverId} />, onClose: () => navigate('/app/servers') }); }
-        else { setIsModalOpen(false); }
-    }, [serverId, navigate, setIsModalOpen, setModalConfig]);
+        if (serverId && !isMobile) {
+            setIsModalOpen(true);
+            setModalConfig({ content: <ServerDetailContent serverId={serverId} />, onClose: () => navigate('/app/servers') });
+        } else {
+            setIsModalOpen(false);
+        }
+    }, [serverId, navigate, setIsModalOpen, setModalConfig, isMobile]);
 
     const onSearch = useCallback((v: ServerSearchValues) => { alert(`搜索: ${JSON.stringify(v)}`); togglePanel(); }, [togglePanel]);
     const onReset  = useCallback(() => { alert('重置搜索表单'); setPage(0); setRowsPerPage(10); }, []);
 
+    // 延迟设置面板内容
     useEffect(() => {
-        setPanelContent(<ServerSearchForm onSearch={onSearch} onReset={onReset} />);
-        setPanelTitle('服务器搜索'); setPanelWidth(360); setIsPanelRelevant(true);
-        return () => { setPanelContent(null); setPanelTitle(''); setIsPanelRelevant(false); };
+        const timerId = setTimeout(() => {
+            setPanelContent(<ServerSearchForm onSearch={onSearch} onReset={onReset} />);
+            setPanelTitle('服务器搜索');
+            setPanelWidth(360);
+            setIsPanelRelevant(true);
+        }, 0);
+
+        return () => {
+            clearTimeout(timerId);
+            setPanelContent(null);
+            setPanelTitle('');
+            setIsPanelRelevant(false);
+        };
     }, [onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant]);
 
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
@@ -98,9 +118,15 @@ const Servers: React.FC = () => {
                                 <ButtonBase
                                     key={r.id}
                                     component={TableRow}
-                                    onClick={() => navigate(`/app/servers/${r.id}`)}
+                                    onClick={() => {
+                                        if (!isMobile) {
+                                            setModalConfig({ content: <ServerDetailContent serverId={r.id} />, onClose: () => navigate('/app/servers') });
+                                            setIsModalOpen(true);
+                                        }
+                                        navigate(`/app/servers/${r.id}`);
+                                    }}
                                     sx={{
-                                        display: 'table-row', // 【核心修复】强制 display 样式为 table-row
+                                        display: 'table-row',
                                         width: '100%',
                                         position: 'relative',
                                         '&:hover': {

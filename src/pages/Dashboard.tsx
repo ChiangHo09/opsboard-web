@@ -3,14 +3,12 @@
  *
  * 代码功能:
  * - 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
- * - 使用 Material-UI (MUI) 构建界面布局和组件。
- * - 使用 Framer Motion 添加平滑的动画效果。
- * - 提供了到其他页面（如服务器列表、更新日志、工单）的导航链接。
  *
  * 本次修改内容:
- * - 【UI优化】根据要求进一步调整了“快捷操作”区域。
- * - 1. **新增按钮**: 在快捷操作区新增了“查看统计信息”按钮，并按要求放置在“查看服务器信息”按钮之前。
- * - 2. **图标同步**: 为新增的按钮配置了与侧边栏一致的 `PollRoundedIcon` 图标，并更新了图标导入列表。
+ * - 【性能优化】适配了重构后的 LayoutContext。
+ * - **优化详情**:
+ *   1.  将 `useLayout` 的调用替换为更高效的 `useLayoutDispatch`，因为此组件仅调用更新函数，不读取状态。这可以防止因不相关的状态变化而导致的组件不必要重渲染。
+ *   2.  在 `useEffect` 中对面板的设置操作使用了 `setTimeout(..., 0)` 进行延迟，以避免与页面过渡动画产生渲染冲突。
  */
 import React, { useEffect } from 'react';
 import {
@@ -30,17 +28,17 @@ import {
 
 import { motion, type Transition } from 'framer-motion';
 
-// 【核心修复】导入与侧边栏完全一致的图标，并新增 PollRoundedIcon
 import RestorePageIcon from '@mui/icons-material/RestorePage';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PlaylistAddCheckCircleIcon from '@mui/icons-material/PlaylistAddCheckCircle';
-import PollRoundedIcon from '@mui/icons-material/PollRounded'; // 新增的图标
+import PollRoundedIcon from '@mui/icons-material/PollRounded';
 import DnsIcon from '@mui/icons-material/Dns';
 import UpdateIcon from '@mui/icons-material/Update';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 
 import { useNavigate } from 'react-router-dom';
-import { useLayout } from '../contexts/LayoutContext.tsx';
+// 【核心修复】导入并使用正确的 useLayoutDispatch hook
+import { useLayoutDispatch } from '../contexts/LayoutContext.tsx';
 import PageLayout from '../layouts/PageLayout';
 
 // 最近活动数据
@@ -93,7 +91,8 @@ const StatCard = ({
 export default function Dashboard() {
     const nickname = 'chiangho';
     const navigate = useNavigate();
-    const { setIsPanelRelevant } = useLayout();
+    // 【核心修复】使用更高效的 Hook
+    const { setIsPanelRelevant } = useLayoutDispatch();
 
     // 胶囊按钮样式
     const quickBtnSX = {
@@ -122,10 +121,13 @@ export default function Dashboard() {
         },
     } as const;
 
-    // 页面初始化时取消右侧抽屉
+    // 【核心修复】延迟设置面板状态
     useEffect(() => {
-        setIsPanelRelevant(false);
+        const timerId = setTimeout(() => {
+            setIsPanelRelevant(false);
+        }, 0);
         return () => {
+            clearTimeout(timerId);
             setIsPanelRelevant(false);
         };
     }, [setIsPanelRelevant]);
@@ -206,12 +208,11 @@ export default function Dashboard() {
                                         paddingTop: 16,
                                     }}
                                 >
-                                    {/* 【核心修复】更新按钮的顺序、文本和图标 */}
                                     {[
                                         { key: 'new-changelog', text: '新建更新记录', icon: <RestorePageIcon />, to: '/app/changelog' },
                                         { key: 'new-ticket', text: '生成工单', icon: <AssignmentIcon />, to: '/app/tickets' },
                                         { key: 'new-inspection-backup', text: '新建巡检备份任务', icon: <PlaylistAddCheckCircleIcon />, to: '/app/inspection-backup' },
-                                        { key: 'view-stats', text: '查看统计信息', icon: <PollRoundedIcon />, to: '/app/stats' }, // 新增的按钮
+                                        { key: 'view-stats', text: '查看统计信息', icon: <PollRoundedIcon />, to: '/app/stats' },
                                         { key: 'view-servers', text: '查看服务器信息', icon: <DnsIcon />, to: '/app/servers' }
                                     ].map(({ key, text, icon, to }) => (
                                         <motion.div
