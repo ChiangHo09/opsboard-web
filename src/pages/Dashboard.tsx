@@ -1,4 +1,4 @@
-/*
+/**
  * 文件名: src/pages/Dashboard.tsx
  *
  * 代码功能:
@@ -8,13 +8,10 @@
  * - 提供了到其他页面（如服务器列表、更新日志、工单）的导航链接。
  *
  * 本次修改内容:
- * - 【核心动画修复】重构了整个页面的布局结构，以解决因“嵌套滚动容器”导致的 framer-motion 动画失效问题。
- * - 移除了页面内部的 `overflowY: 'auto'` 容器，确保页面内容只有一个由父级 `MainLayout` 提供的主滚动条。
- * - 简化了 `PageLayout` 的用法，移除了 `display: 'flex'` 和 `height: '100%'`，使其只负责水平居中。
- * - 使用根级的 `<Stack>` 来组织所有页面内容，实现自然的垂直流式布局。
- * - 此修改为 `motion` 组件提供了稳定的坐标环境，从而恢复了按钮换行时的平滑过渡动画。
+ * - 【UI优化】根据要求进一步调整了“快捷操作”区域。
+ * - 1. **新增按钮**: 在快捷操作区新增了“查看统计信息”按钮，并按要求放置在“查看服务器信息”按钮之前。
+ * - 2. **图标同步**: 为新增的按钮配置了与侧边栏一致的 `PollRoundedIcon` 图标，并更新了图标导入列表。
  */
-
 import React, { useEffect } from 'react';
 import {
     Box,
@@ -33,9 +30,11 @@ import {
 
 import { motion, type Transition } from 'framer-motion';
 
-import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import StorageIcon from '@mui/icons-material/Storage';
+// 【核心修复】导入与侧边栏完全一致的图标，并新增 PollRoundedIcon
+import RestorePageIcon from '@mui/icons-material/RestorePage';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import PlaylistAddCheckCircleIcon from '@mui/icons-material/PlaylistAddCheckCircle';
+import PollRoundedIcon from '@mui/icons-material/PollRounded'; // 新增的图标
 import DnsIcon from '@mui/icons-material/Dns';
 import UpdateIcon from '@mui/icons-material/Update';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
@@ -179,9 +178,7 @@ export default function Dashboard() {
     };
 
     return (
-        // ✅ PageLayout 只负责居中，不再是 flex 容器
         <PageLayout>
-            {/* ✅ 使用一个根级 Stack 来组织所有内容 */}
             <Stack spacing={4}>
                 {/* 顶部欢迎语 */}
                 <Box>
@@ -200,19 +197,22 @@ export default function Dashboard() {
                         <Stack spacing={4}>
                             {/* 快捷操作区 */}
                             <Box>
-                                <Typography variant="h6" mb={2}>快捷操作</Typography>
                                 <motion.div
                                     layout
                                     style={{
                                         display: 'flex',
                                         flexWrap: 'wrap',
                                         gap: 16,
+                                        paddingTop: 16,
                                     }}
                                 >
+                                    {/* 【核心修复】更新按钮的顺序、文本和图标 */}
                                     {[
-                                        { key: 'new-log', text: '新建更新记录', icon: <NoteAddIcon />, to: '/app/changelog' },
-                                        { key: 'new-ticket', text: '生成工单', icon: <ReceiptLongIcon />, to: '/app/tickets' },
-                                        { key: 'view-servers', text: '查看服务器信息', icon: <StorageIcon />, to: '/app/servers' }
+                                        { key: 'new-changelog', text: '新建更新记录', icon: <RestorePageIcon />, to: '/app/changelog' },
+                                        { key: 'new-ticket', text: '生成工单', icon: <AssignmentIcon />, to: '/app/tickets' },
+                                        { key: 'new-inspection-backup', text: '新建巡检备份任务', icon: <PlaylistAddCheckCircleIcon />, to: '/app/inspection-backup' },
+                                        { key: 'view-stats', text: '查看统计信息', icon: <PollRoundedIcon />, to: '/app/stats' }, // 新增的按钮
+                                        { key: 'view-servers', text: '查看服务器信息', icon: <DnsIcon />, to: '/app/servers' }
                                     ].map(({ key, text, icon, to }) => (
                                         <motion.div
                                             key={key}
