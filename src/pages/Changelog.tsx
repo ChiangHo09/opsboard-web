@@ -38,7 +38,7 @@ const Changelog: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // ✅ 效果1: 自动分页到指定条目
+    // 效果1: 自动分页到指定条目
     useEffect(() => {
         if (logId) {
             const itemIndex = rows.findIndex(row => row.id === logId);
@@ -103,7 +103,7 @@ const Changelog: React.FC = () => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => {
-                                // ✅ 效果2: 判断当前行是否需要高亮
+                                // 效果2: 判断当前行是否需要高亮
                                 const isHighlighted = r.id === logId;
                                 return (
                                     <TableRow
@@ -112,7 +112,7 @@ const Changelog: React.FC = () => {
                                         sx={{
                                             cursor: 'pointer',
                                             position: 'relative',
-                                            // ✅ 效果3: 应用高亮样式，并优化 hover 状态
+                                            // 效果3: 应用高亮样式，并优化 hover 状态
                                             bgcolor: isHighlighted ? theme.palette.action.selected : 'transparent',
                                             '&:hover > .MuiTableCell-root': {
                                                 background: isHighlighted ? theme.palette.action.selected : theme.palette.action.hover,

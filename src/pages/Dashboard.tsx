@@ -8,11 +8,9 @@
  * - 提供了到其他页面（如服务器列表、更新日志、工单）的导航链接。
  *
  * 本次修改内容:
- * - 【核心动画修复】重构了整个页面的布局结构，以解决因“嵌套滚动容器”导致的 framer-motion 动画失效问题。
- * - 移除了页面内部的 `overflowY: 'auto'` 容器，确保页面内容只有一个由父级 `MainLayout` 提供的主滚动条。
- * - 简化了 `PageLayout` 的用法，移除了 `display: 'flex'` 和 `height: '100%'`，使其只负责水平居中。
- * - 使用根级的 `<Stack>` 来组织所有页面内容，实现自然的垂直流式布局。
- * - 此修改为 `motion` 组件提供了稳定的坐标环境，从而恢复了按钮换行时的平滑过渡动画。
+ * - 在“快捷操作”区域新增了一个“查看服务器信息”按钮。
+ * - 该按钮使用了侧边栏中对应的 <DnsIcon /> 图标，并配置了正确的导航链接，使其能跳转到 `/app/servers` 页面。
+ * - 相应地调整了图标的导入，以包含所有需要的图标。
  */
 
 import React, { useEffect } from 'react';
@@ -33,9 +31,10 @@ import {
 
 import { motion, type Transition } from 'framer-motion';
 
-import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import StorageIcon from '@mui/icons-material/Storage';
+// 更新了图标导入以包含 DnsIcon
+import RestorePageIcon from '@mui/icons-material/RestorePage';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import PlaylistAddCheckCircleIcon from '@mui/icons-material/PlaylistAddCheckCircle';
 import DnsIcon from '@mui/icons-material/Dns';
 import UpdateIcon from '@mui/icons-material/Update';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
@@ -179,9 +178,7 @@ export default function Dashboard() {
     };
 
     return (
-        // ✅ PageLayout 只负责居中，不再是 flex 容器
         <PageLayout>
-            {/* ✅ 使用一个根级 Stack 来组织所有内容 */}
             <Stack spacing={4}>
                 {/* 顶部欢迎语 */}
                 <Box>
@@ -209,10 +206,12 @@ export default function Dashboard() {
                                         gap: 16,
                                     }}
                                 >
+                                    {/* 新增了“查看服务器信息”按钮 */}
                                     {[
-                                        { key: 'new-log', text: '新建更新记录', icon: <NoteAddIcon />, to: '/app/changelog' },
-                                        { key: 'new-ticket', text: '生成工单', icon: <ReceiptLongIcon />, to: '/app/tickets' },
-                                        { key: 'view-servers', text: '查看服务器信息', icon: <StorageIcon />, to: '/app/servers' }
+                                        { key: 'new-changelog', text: '新建更新记录', icon: <RestorePageIcon />, to: '/app/changelog' },
+                                        { key: 'new-ticket', text: '生成工单', icon: <AssignmentIcon />, to: '/app/tickets' },
+                                        { key: 'new-inspection-backup', text: '新建巡检备份任务', icon: <PlaylistAddCheckCircleIcon />, to: '/app/inspection-backup' },
+                                        { key: 'view-servers', text: '查看服务器信息', icon: <DnsIcon />, to: '/app/servers' }
                                     ].map(({ key, text, icon, to }) => (
                                         <motion.div
                                             key={key}

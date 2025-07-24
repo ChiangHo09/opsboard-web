@@ -5,20 +5,22 @@
  * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
  *
  * 本次修改内容:
- * - 【核心问题修复】解决了详情弹窗在页面加载时闪烁后消失、点击行不出现的问题。
- * - 问题原因：一个用于在页面切换时关闭弹窗的 `useEffect` 错误地将 `isModalOpen` 作为依赖，导致在弹窗打开时触发了自我关闭的逻辑循环。
- * - 解决方案：将该 `useEffect` 的依赖数组修正为只包含 `basePath` 和 `setIsModalOpen`。
- *   - 这样，该 effect 只会在主页面模块 (`basePath`) 真正改变时运行一次，以关闭可能残留的弹窗，而不会再错误地响应弹窗自身的打开事件。
+ * - 【动画问题修复】解决了页面切换动画期间，右侧出现不必要滚动条的问题。
+ * - 解决方案：在主滚动容器和动画容器之间，增加了一个“剪裁层”。
+ * - 这个剪裁层是一个设置了 `overflow: 'hidden'` 的 <Box>，它的作用是“吸收”并隐藏掉页面切换动画（transform: translateY）所产生的溢出部分。
+ * - 这样，主滚动容器就不会再检测到内容溢出，从而避免了在动画过程中错误地显示滚动条。
  */
 import { useState, type JSX, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Box, useTheme } from '@mui/material';
 import SideNav from '../components/SideNav';
 import { LayoutProvider, useLayout } from '../contexts/LayoutContext.tsx';
 import RightSearchPanel from '../components/RightSearchPanel';
 import Modal from '../components/Modal';
+import { pageVariants, pageTransition } from '../utils/pageAnimations';
 
+const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
 function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
@@ -36,7 +38,6 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
     const [panelContentAnimationKey, setPanelContentAnimationKey] = useState<string | number>(0);
     const prevPanelContentRef = useRef<React.ReactNode | null>(null);
 
-    // ✅ 核心修复：移除 isModalOpen 依赖，避免自我触发的关闭循环
     useEffect(() => {
         setIsModalOpen(false);
     }, [basePath, setIsModalOpen]);
@@ -61,8 +62,30 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }) {
                             position: 'relative',
                         }}
                     >
-                        <Outlet />
-                        {isMobile && modalComponent}
+                        {/* ✅ 新增一个剪裁层，用于隐藏动画溢出 */}
+                        <Box
+                            sx={{
+                                width: '100%',
+                                height: '100%',
+                                overflow: 'hidden', // 关键属性
+                            }}
+                        >
+                            <MotionBox
+                                key={basePath}
+                                initial="initial"
+                                animate="animate"
+                                exit="exit"
+                                variants={pageVariants}
+                                transition={pageTransition}
+                                sx={{
+                                    width: '100%',
+                                    height: '100%',
+                                }}
+                            >
+                                <Outlet />
+                                {isMobile && modalComponent}
+                            </MotionBox>
+                        </Box>
                     </Box>
                 </Box>
                 {!isMobile && ( <RightSearchPanel open={isPanelOpen} onClose={closePanel} title={panelTitle} width={panelWidth} contentKey={panelContentAnimationKey}>{panelContent}</RightSearchPanel> )}

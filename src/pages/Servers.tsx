@@ -92,7 +92,7 @@ const Servers: React.FC = () => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                // ✅ 添加 position: 'relative' 来修复点击事件
+                                // 添加 position: 'relative' 来修复点击事件
                                 <TableRow key={r.id} onClick={() => navigate(`/app/servers/${r.id}`)} sx={{ cursor: 'pointer', position: 'relative', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
                                     {isMobile ? (
                                         <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.serverName}</TooltipCell><TooltipCell>{r.role}</TooltipCell></>

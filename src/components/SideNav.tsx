@@ -5,10 +5,10 @@
  * 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航，支持展开、折叠以及移动端适配。
  *
  * 本次修改内容:
- * - 【核心问题修复】解决了 TS2746 错误，即一个组件期望单个子元素但收到了多个。
- * - 问题原因：MUI 的 <Menu> 组件期望其直接子元素是 <MenuItem>，但代码中提供了一个 <Box> 和一个 <MenuItem> 作为并列的子元素。
- * - 解决方案：将账户信息头部（原来的 <Box>）包裹在一个 `disabled` 的 <MenuItem> 中，使其在结构上符合 <Menu> 的要求，同时保持其不可点击的特性。
- * - 通过 sx 属性覆盖了禁用状态下的透明度，以确保头部文本正常显示。
+ * - 【核心问题修复】修复了 TS2746 错误。
+ * - 问题原因：在 `accountMenu` 变量中，“退出登录”的 <MenuItem> 组件内部直接放置了 <LogoutIcon> 组件和一个文本节点，这构成了多个子元素，违反了 <MenuItem> 的 props 类型定义。
+ * - 解决方案：使用 React Fragment (`<>...</>`) 将图标和文本包裹起来，使其对于 <MenuItem> 来说成为一个单一的子元素，从而修复了类型错误。
+ * - 【新增修复】修复非移动端两个按钮的多个子元素问题，使用 Box 容器包裹
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -116,7 +116,6 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
         );
     };
 
-    // ✅ 修复 TS2746 错误
     const accountMenu = (
         <Menu
             anchorEl={anchorEl}
@@ -126,11 +125,10 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
             transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
             slotProps={{ paper: { sx: { ml: 1, p: 1, width: 220 } } }}
         >
-            {/* 将头部信息包裹在禁用的 MenuItem 中 */}
             <MenuItem
                 disabled
                 sx={{
-                    opacity: '1 !important', // 覆盖禁用状态的透明度
+                    opacity: '1 !important',
                     py: 1,
                     px: 2,
                 }}
@@ -144,15 +142,219 @@ export default function SideNav({ open, onToggle, onFakeLogout }: SideNavProps) 
                 onClick={() => { setAnchorEl(null); onFakeLogout(); }}
                 sx={{ color: 'error.main', borderRadius: 1.5, mx: 1, mt: 1 }}
             >
-                <LogoutIcon fontSize="small" sx={{ mr: 1.5 }} />
-                退出登录
+                {/* ✅ 使用 Fragment 将图标和文本包裹起来 */}
+                <>
+                    <LogoutIcon fontSize="small" sx={{ mr: 1.5 }} />
+                    退出登录
+                </>
             </MenuItem>
         </Menu>
     );
 
     if (isMobile) {
-        return ( <React.Fragment> <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, height: MOBILE_TOP_BAR_HEIGHT, bgcolor: 'app.background', zIndex: theme.zIndex.appBar + 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, boxShadow: 'none' }}> <IconButton onClick={() => setMobileDrawerOpen(true)} aria-label="open drawer"> <ViewStreamRoundedIcon sx={controlIconSx} /> </IconButton> <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}> {bottomNavItems.filter(item => item.isMobileTopBarItem).map(item => ( <IconButton key={item.path} onClick={() => nav(item.path)} aria-label={item.label}> <Tooltip title={item.label} placement="bottom" slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}> <Box component="span" sx={controlIconSx}>{item.icon}</Box> </Tooltip> </IconButton> ))} <IconButton onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setAnchorEl(e.currentTarget); }} aria-label="account"> <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(0,0,0,.05)' }}> <AccountIcon sx={controlIconSx} /> </Avatar> </IconButton> </Box> </Box> <MotionDrawer variant="temporary" open={mobileDrawerOpen} onClose={() => setMobileDrawerOpen(false)} ModalProps={{ keepMounted: true }} animate={{ width: mobileDrawerOpen ? W_EXPANDED : 0 }} transition={{ duration: TRANS_DUR, ease: MOTION_EASING }} sx={{ flexShrink: 0, '& .MuiDrawer-paper': { width: W_EXPANDED, bgcolor: 'app.background', border: 'none', boxSizing: 'border-box', overflow: 'hidden' } }}> <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}> <Box sx={{ display: 'flex', alignItems: 'center', height: MOBILE_TOP_BAR_HEIGHT, boxSizing: 'border-box', p: 2 }}> <Box component="img" src="/favicon.svg" alt="logo" sx={{ height: 28, width: 'auto', mr: 1.5 }} /> <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'neutral.main' }}>运维信息表</Typography> </Box> <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden', pt: `${GAP}px`, pb: `${GAP}px` }}> <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}> {mainNavItems.map(item => renderNavButton(item, () => setMobileDrawerOpen(false)))} </List> </Box> <Box sx={{ py: `${GAP}px` }}> <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}> {bottomNavItems.filter(item => !item.isMobileTopBarItem).map(item => renderNavButton(item, () => setMobileDrawerOpen(false)))} </List> </Box> </Box> </MotionDrawer> {accountMenu} </React.Fragment> );
+        return (
+            <React.Fragment>
+                <Box sx={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: MOBILE_TOP_BAR_HEIGHT,
+                    bgcolor: 'app.background',
+                    zIndex: theme.zIndex.appBar + 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 2,
+                    boxShadow: 'none'
+                }}>
+                    <IconButton onClick={() => setMobileDrawerOpen(true)} aria-label="open drawer">
+                        <ViewStreamRoundedIcon sx={controlIconSx} />
+                    </IconButton>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {bottomNavItems.filter(item => item.isMobileTopBarItem).map(item => (
+                            <IconButton key={item.path} onClick={() => nav(item.path)} aria-label={item.label}>
+                                <Tooltip
+                                    title={item.label}  // ✅ 修复引号闭合问题
+                                    placement="bottom"
+                                    slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}
+                                >
+                                    <Box component="span" sx={controlIconSx}>{item.icon}</Box>
+                                </Tooltip>
+                            </IconButton>
+                        ))}
+                        <IconButton onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                            e.stopPropagation();
+                            setAnchorEl(e.currentTarget);
+                        }} aria-label="account">
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(0,0,0,.05)' }}>
+                                <AccountIcon sx={controlIconSx} />
+                            </Avatar>
+                        </IconButton>
+                    </Box>
+                </Box>
+                <MotionDrawer
+                    variant="temporary"
+                    open={mobileDrawerOpen}
+                    onClose={() => setMobileDrawerOpen(false)}
+                    ModalProps={{ keepMounted: true }}
+                    animate={{ width: mobileDrawerOpen ? W_EXPANDED : 0 }}
+                    transition={{ duration: TRANS_DUR, ease: MOTION_EASING }}
+                    sx={{
+                        flexShrink: 0,
+                        '& .MuiDrawer-paper': {
+                            width: W_EXPANDED,
+                            bgcolor: 'app.background',
+                            border: 'none',
+                            boxSizing: 'border-box',
+                            overflow: 'hidden'
+                        }
+                    }}
+                >
+                    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', height: MOBILE_TOP_BAR_HEIGHT, boxSizing: 'border-box', p: 2 }}>
+                            <Box component="img" src="/favicon.svg" alt="logo" sx={{ height: 28, width: 'auto', mr: 1.5 }} />
+                            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'neutral.main' }}>运维信息表</Typography>
+                        </Box>
+                        <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden', pt: `${GAP}px`, pb: `${GAP}px` }}>
+                            <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
+                                {mainNavItems.map(item => renderNavButton(item, () => setMobileDrawerOpen(false)))}
+                            </List>
+                        </Box>
+                        <Box sx={{ py: `${GAP}px` }}>
+                            <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
+                                {bottomNavItems.filter(item => !item.isMobileTopBarItem).map(item => renderNavButton(item, () => setMobileDrawerOpen(false)))}
+                            </List>
+                        </Box>
+                    </Box>
+                </MotionDrawer>
+                {accountMenu}
+            </React.Fragment>
+        );
     } else {
-        return ( <React.Fragment> <MotionDrawer variant="permanent" animate={{ width: open ? W_EXPANDED : W_COLLAPSED }} transition={{ duration: TRANS_DUR, ease: MOTION_EASING }} sx={{ flexShrink: 0, '& .MuiDrawer-paper': { width: 'inherit', bgcolor: 'app.background', border: 'none', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden', '@media (hover: hover)': { cursor: 'pointer' } } }}> <Box onClick={onToggle} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}> <Box sx={{ py: `${GAP}px` }}> <ListItem disablePadding sx={{ position: 'relative', height: BTN_SIZE }}> <MotionButtonBase onClick={(e: MouseEvent) => { e.stopPropagation(); onToggle(); }} animate={{ width: open ? W_EXPANDED_CONTENT : BTN_SIZE }} transition={{ duration: TRANS_DUR, ease: MOTION_EASING }} sx={{ position: 'absolute', height: BTN_SIZE, borderRadius: 9999, left: HORIZONTAL_PADDING, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', p: 0, overflow: 'hidden', '@media (hover: hover)': { '&:hover': { bgcolor: 'action.hover' } } }}> <Tooltip title={open ? '' : '展开'} placement="right" slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}> <Box sx={{ width: BTN_SIZE, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}> <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: TRANS_DUR }}><ViewStreamRoundedIcon sx={controlIconSx} /></motion.div> </Box> </Tooltip> <Box sx={{ pl: 0.5 }}> <AnimatePresence>{open && (<motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.2, ease: 'easeOut' }}><Typography sx={{ fontSize: 14, whiteSpace: 'nowrap' }}>收起</Typography></motion.div>)}</AnimatePresence> </Box> </MotionButtonBase> </ListItem> </Box> <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}> <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}> {mainNavItems.map(item => renderNavButton(item))} </List> </Box> <Box sx={{ py: `${GAP}px` }}> <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}> {bottomNavItems.map(item => renderNavButton(item))} <ListItem disablePadding sx={{ position: 'relative', height: BTN_SIZE }}> <MotionButtonBase onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setAnchorEl(e.currentTarget); }} animate={{ width: open ? W_EXPANDED_CONTENT : BTN_SIZE }} transition={{ duration: TRANS_DUR, ease: MOTION_EASING }} sx={{ position: 'absolute', height: BTN_SIZE, borderRadius: 9999, left: HORIZONTAL_PADDING, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', p: 0, overflow: 'hidden', '@media (hover: hover)': { '&:hover': { bgcolor: 'action.hover' } } }}> <Tooltip title={!open ? "chiangho" : ''} placement="right" slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}> <Box sx={{ width: BTN_SIZE, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}> <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(0,0,0,.05)' }}><AccountIcon sx={controlIconSx} /></Avatar> </Box> </Tooltip> <Box sx={{ pl: 0.5 }}> <AnimatePresence>{open && (<motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.2, ease: 'easeOut' }}><Typography sx={{ fontSize: 14, whiteSpace: 'nowrap' }}>chiangho</Typography></motion.div>)}</AnimatePresence> </Box> </MotionButtonBase> </ListItem> </List> </Box> </Box> </MotionDrawer> {accountMenu} </React.Fragment> );
+        return (
+            <React.Fragment>
+                <MotionDrawer
+                    variant="permanent"
+                    animate={{ width: open ? W_EXPANDED : W_COLLAPSED }}
+                    transition={{ duration: TRANS_DUR, ease: MOTION_EASING }}
+                    sx={{
+                        flexShrink: 0,
+                        '& .MuiDrawer-paper': {
+                            width: 'inherit',
+                            bgcolor: 'app.background',
+                            border: 'none',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            boxSizing: 'border-box',
+                            overflow: 'hidden',
+                            '@media (hover: hover)': { cursor: 'pointer' }
+                        }
+                    }}
+                >
+                    <Box onClick={onToggle} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ py: `${GAP}px` }}>
+                            <ListItem disablePadding sx={{ position: 'relative', height: BTN_SIZE }}>
+                                <MotionButtonBase
+                                    onClick={(e: MouseEvent) => { e.stopPropagation(); onToggle(); }}
+                                    animate={{ width: open ? W_EXPANDED_CONTENT : BTN_SIZE }}
+                                    transition={{ duration: TRANS_DUR, ease: MOTION_EASING }}
+                                    sx={{
+                                        position: 'absolute',
+                                        height: BTN_SIZE,
+                                        borderRadius: 9999,
+                                        left: HORIZONTAL_PADDING,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-start',
+                                        p: 0,
+                                        overflow: 'hidden',
+                                        '@media (hover: hover)': { '&:hover': { bgcolor: 'action.hover' } }
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Tooltip title={open ? '' : '展开'} placement="right" slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}>
+                                            <Box sx={{ width: BTN_SIZE, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: TRANS_DUR }}>
+                                                    <ViewStreamRoundedIcon sx={controlIconSx} />
+                                                </motion.div>
+                                            </Box>
+                                        </Tooltip>
+                                        <Box sx={{ pl: 0.5 }}>
+                                            <AnimatePresence>
+                                                {open && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, x: -8 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        exit={{ opacity: 0, x: -8 }}
+                                                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                    >
+                                                        <Typography sx={{ fontSize: 14, whiteSpace: 'nowrap' }}>收起</Typography>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </Box>
+                                    </Box>
+                                </MotionButtonBase>
+                            </ListItem>
+                        </Box>
+                        <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                            <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
+                                {mainNavItems.map(item => renderNavButton(item))}
+                            </List>
+                        </Box>
+                        <Box sx={{ py: `${GAP}px` }}>
+                            <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
+                                {bottomNavItems.map(item => renderNavButton(item))}
+                                <ListItem disablePadding sx={{ position: 'relative', height: BTN_SIZE }}>
+                                    <MotionButtonBase
+                                        onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setAnchorEl(e.currentTarget); }}
+                                        animate={{ width: open ? W_EXPANDED_CONTENT : BTN_SIZE }}
+                                        transition={{ duration: TRANS_DUR, ease: MOTION_EASING }}
+                                        sx={{
+                                            position: 'absolute',
+                                            height: BTN_SIZE,
+                                            borderRadius: 9999,
+                                            left: HORIZONTAL_PADDING,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'flex-start',
+                                            p: 0,
+                                            overflow: 'hidden',
+                                            '@media (hover: hover)': { '&:hover': { bgcolor: 'action.hover' } }
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Tooltip title={!open ? "chiangho" : ''} placement="right" slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}>
+                                                <Box sx={{ width: BTN_SIZE, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(0,0,0,.05)' }}>
+                                                        <AccountIcon sx={controlIconSx} />
+                                                    </Avatar>
+                                                </Box>
+                                            </Tooltip>
+                                            <Box sx={{ pl: 0.5 }}>
+                                                <AnimatePresence>
+                                                    {open && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, x: -8 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            exit={{ opacity: 0, x: -8 }}
+                                                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                        >
+                                                            <Typography sx={{ fontSize: 14, whiteSpace: 'nowrap' }}>chiangho</Typography>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </Box>
+                                        </Box>
+                                    </MotionButtonBase>
+                                </ListItem>
+                            </List>
+                        </Box>
+                    </Box>
+                </MotionDrawer>
+                {accountMenu}
+            </React.Fragment>
+        );
     }
 }
