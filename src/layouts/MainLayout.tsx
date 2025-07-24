@@ -3,17 +3,15 @@
  *
  * 代码功能:
  * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
- * 它还管理着这些布局组件之间的交互逻辑，如面板的开关、动画和响应式行为。
  *
  * 本次修改内容:
- * - 【动画闪烁与同步终极修复】通过统一动画源，彻底解决了侧边面板内容切换时“先闪烁内容再播放动画”的问题。
- * - **问题定位**: 原代码通过`useEffect`和`useState`手动管理面板的动画Key(`panelContentAnimationKey`)，导致内容更新与Key的更新存在一个渲染周期的延迟，引发了竞态和内容闪烁。
+ * - 【懒加载支持】将 React.Suspense 组件集成到了布局内部。
  * - **解决方案**:
- *   1.  **废弃手动Key管理**: 完全移除了 `panelContentAnimationKey` 状态、`prevPanelContentRef` 以及用于更新它们的手动 `useEffect`。
- *   2.  **统一动画Key**: `RightSearchPanel` 的 `contentKey` prop 现在直接使用与主内容区 `<MotionBox>` 完全相同的 `basePath` (即 `pathname.split('/').slice(0, 3).join('/')`)。
- * - **最终效果**: 现在，当路由变化时，主内容区和侧边面板的内容及动画Key会在同一次渲染中被同步更新。这确保了`<AnimatePresence>`能够正确地在新旧内容之间执行动画，从根本上消除了闪烁问题，并实现了两个区域内容切换动画的完美同步。
+ *   1.  在原来渲染 `<Outlet />` 的位置，使用 `<Suspense>` 组件将其包裹起来。
+ *   2.  为 `<Suspense>` 提供了一个 `fallback` 属性，用于在懒加载的子路由组件代码下载完成前，显示一个居中的加载指示器。
+ * - **最终效果**: 此修改使得 `MainLayout` 能够原生支持懒加载的子路由，同时将懒加载的实现细节内聚在布局组件内部，保持了 `App.tsx` 路由配置的简洁性。
  */
-import { useState, useEffect, type JSX } from 'react';
+import { useState, useEffect, type JSX, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
@@ -43,7 +41,6 @@ const mobilePanelVariants: Variants = {
 function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX.Element {
     const { pathname } = useLocation();
     const theme = useTheme();
-    // 为主内容区和侧面板提供一个统一的、基于路由的动画 Key
     const basePath = pathname.split('/').slice(0, 3).join('/');
 
     const {
@@ -54,22 +51,9 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
 
-    // 【核心修复】移除手动管理的动画 key 及其相关的所有逻辑
-    // const [panelContentAnimationKey, setPanelContentAnimationKey] = useState<number>(0);
-    // const prevPanelContentRef = useRef<React.ReactNode>(null);
-
     useEffect(() => {
         if (isModalOpen) setIsModalOpen(false);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pathname]);
-
-    // 【核心修复】移除此 useEffect，因为它导致了竞态问题
-    // useEffect(() => {
-    //     if (isPanelOpen && panelContent && panelContent !== prevPanelContentRef.current) {
-    //         setPanelContentAnimationKey(Date.now());
-    //     }
-    //     prevPanelContentRef.current = panelContent;
-    // }, [isPanelOpen, panelContent]);
+    }, [basePath]);
 
     useEffect(() => {
         if (isPanelOpen && !isPanelRelevant) {
@@ -148,7 +132,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                     }}
                 >
                     <MotionBox
-                        key={basePath} // 主内容区动画Key
+                        key={basePath}
                         variants={pageVariants}
                         transition={pageTransition}
                         initial="initial"
@@ -167,7 +151,15 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                             position: 'relative',
                         }}
                     >
-                        <Outlet />
+                        <Suspense
+                            fallback={
+                                <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                    <CircularProgress />
+                                </Box>
+                            }
+                        >
+                            <Outlet />
+                        </Suspense>
                         {isMobile && modalJSX}
                     </MotionBox>
                     <AnimatePresence>
@@ -238,7 +230,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                                             </MotionBox>
                                         ) : isPanelOpen && panelContent ? (
                                             <MotionBox
-                                                key={basePath} // 移动端面板内容动画也使用 basePath
+                                                key={basePath}
                                                 variants={pageVariants}
                                                 transition={pageTransition}
                                                 initial="initial"
@@ -269,7 +261,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                         onClose={closePanel}
                         title={panelTitle}
                         width={panelWidth}
-                        contentKey={basePath} // 【核心修复】将动画Key与主内容区同步
+                        contentKey={basePath}
                     >
                         {panelContent}
                     </RightSearchPanel>
