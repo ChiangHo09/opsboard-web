@@ -1,19 +1,22 @@
-/*
+/**
  * 文件名: src/pages/Servers.tsx
  *
  * 代码功能:
  * 此文件负责定义并渲染应用的“服务器信息”页面。它包含服务器数据的获取与展示、分页控制、与侧边搜索面板的交互逻辑，以及一个支持行列冻结和内容截断的高级数据表格。
  *
  * 本次修改内容:
- * - 【核心问题修复】为 <TableRow> 组件的 sx 属性添加了 `position: 'relative'`。
- *   - 此修改解决了在新 DataTable 布局下，点击行无法触发 navigate 事件的问题，恢复了详情弹窗功能。
- *   - 原因是 DataTable 的 grid 布局和 TableContainer 的滚动上下文影响了 TableRow 的事件捕获，`position: 'relative'` 提升了 TableRow 的层叠上下文，使其能正确接收点击事件。
+ * - 【布局终极修复】解决了因引入 `<ButtonBase>` 导致表格布局错乱的问题。
+ * - **问题定位**: `<ButtonBase>` 的默认 `display` 样式（`inline-flex`）覆盖了 `<TableRow>` 所需的 `display: 'table-row'`，破坏了表格的列对齐。
+ * - **解决方案**:
+ *   1.  在使用 `<ButtonBase component={TableRow}>` 时，通过 `sx` 属性，强制将其 `display` 样式覆盖回 `'table-row'`。
+ *   2.  这使得组件在获得水波纹动画效果的同时，也保留了其作为表格行 (`<tr>`) 的正确布局行为。
+ * - **最终效果**: 表格的列已完全对齐，恢复了正确的视觉布局，并且点击行时的水波纹动画效果也得以保留。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, useTheme
+    TableHead, TableRow, useTheme, ButtonBase
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayout } from '../contexts/LayoutContext.tsx';
@@ -92,8 +95,19 @@ const Servers: React.FC = () => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                // 添加 position: 'relative' 来修复点击事件
-                                <TableRow key={r.id} onClick={() => navigate(`/app/servers/${r.id}`)} sx={{ cursor: 'pointer', position: 'relative', '&:hover > .MuiTableCell-root': { background: theme.palette.action.hover } }}>
+                                <ButtonBase
+                                    key={r.id}
+                                    component={TableRow}
+                                    onClick={() => navigate(`/app/servers/${r.id}`)}
+                                    sx={{
+                                        display: 'table-row', // 【核心修复】强制 display 样式为 table-row
+                                        width: '100%',
+                                        position: 'relative',
+                                        '&:hover': {
+                                            backgroundColor: theme.palette.action.hover,
+                                        }
+                                    }}
+                                >
                                     {isMobile ? (
                                         <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.serverName}</TooltipCell><TooltipCell>{r.role}</TooltipCell></>
                                     ) : (
@@ -106,7 +120,7 @@ const Servers: React.FC = () => {
                                             <TooltipCell>{r.note || '-'}</TooltipCell>
                                         </>
                                     )}
-                                </TableRow>
+                                </ButtonBase>
                             ))}
                         </TableBody>
                     </Table>

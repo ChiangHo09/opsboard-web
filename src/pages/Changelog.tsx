@@ -1,20 +1,22 @@
-/*
+/**
  * 文件名: src/pages/Changelog.tsx
  *
  * 代码功能:
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【新增功能】实现了从其他页面跳转过来时，高亮显示指定条目的功能。
- * - 1. **自动分页**: 新增一个 `useEffect` 钩子。当页面加载且 URL 中带有 `logId` 时，它会自动计算该条目所在的页码并跳转，确保用户能看到目标条目。
- * - 2. **高亮显示**: 在渲染表格行时，通过判断当前行 ID 是否与 URL 中的 `logId` 匹配，为匹配的 `<TableRow>` 动态添加高亮背景色 (`theme.palette.action.selected`)。
- * - 3. **优化 Hover 效果**: 调整了行的 `sx` 属性，确保高亮行的 hover 效果不会覆盖其高亮状态，提升了视觉一致性。
+ * - 【布局终极修复】解决了因引入 `<ButtonBase>` 导致表格布局错乱的问题。
+ * - **问题定位**: `<ButtonBase>` 的默认 `display` 样式（`inline-flex`）覆盖了 `<TableRow>` 所需的 `display: 'table-row'`，破坏了表格的列对齐。
+ * - **解决方案**:
+ *   1.  在使用 `<ButtonBase component={TableRow}>` 时，通过 `sx` 属性，强制将其 `display` 样式覆盖回 `'table-row'`。
+ *   2.  这使得组件在获得水波纹动画效果的同时，也保留了其作为表格行 (`<tr>`) 的正确布局行为。
+ * - **最终效果**: 表格的列已完全对齐，恢复了正确的视觉布局，并且点击行时的水波纹动画效果也得以保留。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, useTheme
+    TableHead, TableRow, useTheme, ButtonBase
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayout } from '../contexts/LayoutContext.tsx';
@@ -38,7 +40,6 @@ const Changelog: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // 效果1: 自动分页到指定条目
     useEffect(() => {
         if (logId) {
             const itemIndex = rows.findIndex(row => row.id === logId);
@@ -49,7 +50,6 @@ const Changelog: React.FC = () => {
         }
     }, [logId, rowsPerPage]);
 
-    // 处理模态框的逻辑
     useEffect(() => {
         if (logId) { setIsModalOpen(true); setModalConfig({ content: <ChangelogDetailContent logId={logId} />, onClose: () => navigate('/app/changelog') }); }
         else { setIsModalOpen(false); }
@@ -103,19 +103,19 @@ const Changelog: React.FC = () => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => {
-                                // 效果2: 判断当前行是否需要高亮
                                 const isHighlighted = r.id === logId;
                                 return (
-                                    <TableRow
+                                    <ButtonBase
                                         key={r.id}
+                                        component={TableRow}
                                         onClick={() => navigate(`/app/changelog/${r.id}`)}
                                         sx={{
-                                            cursor: 'pointer',
+                                            display: 'table-row', // 【核心修复】强制 display 样式为 table-row
+                                            width: '100%',
                                             position: 'relative',
-                                            // 效果3: 应用高亮样式，并优化 hover 状态
                                             bgcolor: isHighlighted ? theme.palette.action.selected : 'transparent',
-                                            '&:hover > .MuiTableCell-root': {
-                                                background: isHighlighted ? theme.palette.action.selected : theme.palette.action.hover,
+                                            '&:hover': {
+                                                backgroundColor: isHighlighted ? theme.palette.action.selected : theme.palette.action.hover,
                                             },
                                         }}
                                     >
@@ -129,7 +129,7 @@ const Changelog: React.FC = () => {
                                                 <TooltipCell>{r.updateContent}</TooltipCell>
                                             </>
                                         )}
-                                    </TableRow>
+                                    </ButtonBase>
                                 );
                             })}
                         </TableBody>
