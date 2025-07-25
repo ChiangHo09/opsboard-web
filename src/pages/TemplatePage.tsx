@@ -3,25 +3,28 @@
  *
  * 文件功能描述:
  * 此文件定义了一个【模板页面】组件（TemplatePage）。它展示了如何以最佳实践的方式集成右侧搜索面板和全局模态框（弹窗），
- * 可以作为创建新页面的基础模板。它包含了性能优化、动画同步以及详尽的注释。
+ * 并遵循了“路由驱动状态”的设计模式。此文件可以作为创建新页面的基础模板，因为它包含了性能优化、动画同步、
+ * 健壮的状态管理逻辑以及详尽的注释。
  *
- * 本次修改内容:
- * - 【最终优化】应用了项目中的所有最佳实践，使此模板达到生产级别标准。
- * - 1. **分离 Context Hooks**: 将 `useLayout` 的调用拆分为 `useLayoutDispatch` 和 `useLayoutState`，
- *      这可以防止因不相关的状态更新而导致的组件不必要重渲染，是React性能优化的关键。
- * - 2. **延迟副作用**: 在 `useEffect` 中，所有对面板状态的更新（如`setPanelContent`）都被包裹在了 `setTimeout(..., 0)`
- *      之内。这个技巧将状态更新推迟到下一个事件循环，从而确保它们不会与页面的进入/退出动画（由Framer Motion处理）产生渲染冲突，
- *      避免了视觉上的闪烁。
- * - 3. **即时弹窗反馈**: 修改了“打开弹窗”按钮的 `onClick` 事件处理器。现在，它会立即调用 `setIsModalOpen(true)` 来触发弹窗动画，
- *      而不是依赖于其他状态或 `useEffect`，这确保了用户的点击操作能得到即时、无延迟的视觉反馈。
- * - 4. **完善注释**: 对所有新增和修改的代码，都补充了极其详尽的、开发者视角的中文注释。
+ * 此模板实现了以下核心功能:
+ * - 1. **右侧搜索面板集成**: 展示了如何正确地设置和清理与页面相关的右侧搜索面板内容。
+ * - 2. **全局弹窗集成**: 展示了如何通过 URL 参数来控制全局弹窗的显示与隐藏，支持深链接和浏览器刷新。
+ * - 3. **性能优化**: 严格使用 `useLayoutDispatch` 和 `useLayoutState` 来分离状态的读写，防止不必要的组件重渲染。
+ * - 4. **动画安全**: 所有对全局状态的副作用（如设置面板内容）都通过 `setTimeout` 延迟执行，避免与页面过渡动画冲突。
+ * - 5. **路由驱动状态**: 用户的交互（如点击按钮）只负责更新 URL，而页面的所有状态变化（如弹窗显示）都由 `useEffect` 监听 URL 变化来驱动，保证了单一事实来源。
  */
 
 // 从 'react' 库导入核心功能：
-// - useEffect: 这是一个 React Hook，用于处理组件生命周期中的“副作用”，例如数据获取、订阅或手动更改 DOM。在这里，我们用它来设置和清理侧边搜索面板的内容。
-// - useCallback: 这是一个 React Hook，用于记忆化回调函数。它可以防止在每次父组件重渲染时都创建一个新的函数实例，从而避免不必要的子组件重渲染，优化性能。
-// - FC (FunctionComponent): 这是一个 TypeScript 类型，用于为函数式组件提供类型定义，确保组件的 props 和返回值类型正确。
-import { useEffect, useCallback, type FC } from 'react';
+// - React: React 库的主入口，在现代 JSX 转换中是必需的。
+// - useEffect: 一个 React Hook，用于处理组件生命周期中的“副作用”，例如数据获取、订阅或手动更改 DOM。在这里，我们用它来响应 URL 变化和设置搜索面板。
+// - useCallback: 一个 React Hook，用于记忆化回调函数。它可以防止在每次父组件重渲染时都创建一个新的函数实例，从而避免不必要的子组件重渲染，优化性能。
+// - useState: 一个 React Hook，用于在函数组件中添加和管理局部状态。
+import React, { useEffect, useCallback } from 'react';
+
+// 从 'react-router-dom' 库导入用于路由的钩子：
+// - useNavigate: 一个钩子，返回一个函数，允许我们以编程方式进行导航（例如，在点击按钮后跳转到新页面）。
+// - useParams: 一个钩子，返回一个包含 URL 中动态参数（例如 /items/:itemId 中的 itemId）的对象。
+import { useNavigate, useParams } from 'react-router-dom';
 
 // 从 '@mui/material' 库导入 UI 组件，用于构建页面布局和元素：
 // - Box: 一个通用的容器组件，类似于 HTML 的 `<div>`，但提供了访问主题（theme）和 `sx` 属性的便利，用于快速样式化。
@@ -34,9 +37,10 @@ import { Box, Typography, Button, Stack } from '@mui/material';
 // - SearchIcon: 一个放大镜图标，通常用于表示“搜索”功能。
 import SearchIcon from '@mui/icons-material/Search';
 
-// 【核心修复】从我们自己定义的全局布局上下文中导入分离后的 `useLayoutDispatch` 自定义钩子。
-// 这个钩子只提供状态更新函数，消费它的组件不会因为状态值的变化而重渲染，这是性能优化的关键。
-import { useLayoutDispatch } from '../contexts/LayoutContext.tsx';
+// 【性能优化】从我们自己定义的全局布局上下文中导入分离后的自定义钩子。
+// - useLayoutDispatch: 只提供状态更新函数（dispatchers），消费它的组件不会因为状态值的变化而重渲染。
+// - useLayoutState: 只提供状态值（state），消费它的组件会在状态值变化时重渲染。
+import { useLayoutDispatch, useLayoutState } from '../contexts/LayoutContext.tsx';
 
 // 导入我们创建的、用于统一页面布局的可重用组件。
 import PageLayout from '../layouts/PageLayout.tsx';
@@ -48,9 +52,11 @@ import TemplateSearchForm, { type TemplateSearchValues } from '../components/for
 import TemplateModalContent from '../components/modals/TemplateModalContent.tsx';
 
 // 定义 TemplatePage 组件，它是一个函数式组件（FC），不接收任何 props。
-const TemplatePage: FC = () => {
-    // 【核心修复】使用 `useLayoutDispatch` 钩子，从全局上下文中解构出需要用到的【状态更新函数】。
-    // 这样做可以确保此组件只在需要“派发”一个动作时才与 context 交互，而不会订阅 context 中状态值的变化，从而避免了不必要的重渲染。
+const TemplatePage: React.FC = () => {
+    // --- 1. HOOKS INITIALIZATION ---
+
+    // 从全局布局上下文中解构出【状态更新函数】。
+    // 因为此组件只负责“触发”状态变更，所以使用 useLayoutDispatch 来避免不必要的重渲染。
     const {
         togglePanel,      // togglePanel: 一个函数，用于切换右侧搜索面板的显示/隐藏状态。
         setPanelContent,  // setPanelContent: 一个函数，用于设置右侧面板中要渲染的 React 组件。
@@ -60,6 +66,17 @@ const TemplatePage: FC = () => {
         setIsModalOpen,   // setIsModalOpen: 一个函数，用于直接设置全局弹窗的打开/关闭状态 (true/false)。
         setModalConfig,   // setModalConfig: 一个函数，用于设置全局弹窗的内容和关闭时的回调函数。
     } = useLayoutDispatch();
+
+    // 从全局布局上下文中解构出【状态值】。
+    // 此处仅用于演示，如果组件确实需要根据 isMobile 状态来改变渲染逻辑，则使用此钩子。
+    // 如果组件不需要读取任何状态，则可以移除此行。
+    const { isMobile } = useLayoutState();
+
+    // 初始化路由相关的钩子。
+    const navigate = useNavigate(); // 获取导航函数。
+    const { itemId } = useParams<{ itemId: string }>(); // 从 URL 中获取动态参数 `itemId`。
+
+    // --- 2. CALLBACKS & EVENT HANDLERS ---
 
     // 使用 useCallback 创建一个记忆化的回调函数 `handleSearch`，用于处理搜索事件。
     const handleSearch = useCallback((
@@ -82,27 +99,37 @@ const TemplatePage: FC = () => {
         alert('表单已重置');
     }, []); // 空依赖数组 `[]` 表示此函数在组件的整个生命周期内引用是稳定的。
 
-    // 【核心修复】修改 `handleOpenModal` 以提供即时反馈。
-    // 使用 useCallback 创建一个记忆化的回调函数 `handleOpenModal`，用于处理打开弹窗的事件。
-    const handleOpenModal = useCallback(() => {
-        // 【第1步】: 立即设置弹窗的内容和关闭回调。
-        // content: 这个属性的值是一个 React 元素，即我们想要在弹窗中渲染的组件。
-        // onClose: 这个属性的值是一个函数。当弹窗关闭时，这个函数将被调用。
-        setModalConfig({
-            content: <TemplateModalContent id="template-123" />,
-            onClose: () => setIsModalOpen(false),
-        });
-        // 【第2步】: 紧接着，立即调用 `setIsModalOpen(true)` 函数，将全局弹窗的状态设置为“打开”。
-        // 这个操作会立刻触发弹窗的进入动画，与用户的点击行为同步。
-        setIsModalOpen(true);
-    }, [setIsModalOpen, setModalConfig]); // 依赖数组确保使用的是最新的稳定函数引用。
+    // --- 3. SIDE EFFECTS MANAGEMENT (useEffect) ---
+
+    // 【核心实践】使用 useEffect 来响应 URL 参数的变化，并管理弹窗状态。
+    // 这是“路由驱动状态”模式的核心。
+    useEffect(() => {
+        // 检查 URL 中是否存在有效的 `itemId`。
+        const itemExists = !!itemId;
+
+        // 如果 itemId 存在并且不是在移动端视图，则打开弹窗。
+        if (itemExists && !isMobile) {
+            // 步骤 a: 设置弹窗内容和关闭回调。
+            setModalConfig({
+                content: <TemplateModalContent id={itemId} />,
+                // 当弹窗关闭时，导航回基础路径，并使用 replace: true 来优化浏览器历史。
+                onClose: () => navigate('/app/template-page', { replace: true }),
+            });
+            // 步骤 b: 打开弹窗。
+            setIsModalOpen(true);
+        } else {
+            // 如果 itemId 不存在或在移动端，则确保弹窗是关闭的，并清理其配置。
+            setIsModalOpen(false);
+            setModalConfig({ content: null, onClose: null });
+        }
+        // 依赖数组：这个 effect 会在 itemId, isMobile, navigate, setIsModalOpen, 或 setModalConfig 变化时重新运行。
+    }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig]);
 
 
-    // 【核心修复】使用 useEffect Hook 并延迟其内部的状态更新。
+    // 【核心实践】使用 useEffect 来管理与此页面相关的侧边面板。
     useEffect(() => {
         // 使用 setTimeout 将状态更新操作推迟到下一个事件循环。
-        // 这确保了页面本身的过渡动画（由 `MainLayout` 中的 `AnimatePresence` 控制）能够优先执行，
-        // 从而避免了因状态更新导致的渲染冲突和视觉闪烁。
+        // 这确保了页面本身的过渡动画能够优先执行，避免了因渲染冲突导致的视觉闪烁。
         const timerId = setTimeout(() => {
             // 调用 `setPanelContent`，将 `<TemplateSearchForm />` 组件设置为右侧面板的内容。
             setPanelContent(
@@ -120,13 +147,15 @@ const TemplatePage: FC = () => {
         return () => {
             // 清除可能还未执行的定时器，防止在已卸载的组件上执行状态更新。
             clearTimeout(timerId);
-            // 将面板的各种状态重置为默认值。
+            // 将面板的各种状态重置为默认值，确保切换到其他页面时不会有残留。
             setPanelContent(null);
             setPanelTitle('');
-            setPanelWidth(360);
             setIsPanelRelevant(false);
         };
-    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]); // 依赖数组确保 effect 只在这些函数引用变化时重新运行（在此应用中，只运行一次）。
+        // 依赖数组：确保 effect 只在这些函数引用变化时重新运行（在此应用中，只运行一次）。
+    }, [setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, handleSearch, handleReset]);
+
+    // --- 4. JSX RENDER ---
 
     // 返回组件的 JSX 渲染结构。
     return (
@@ -139,28 +168,22 @@ const TemplatePage: FC = () => {
                 <Typography variant="h4">模板页面 (Template Page)</Typography>
                 {/* 打开搜索面板的按钮。 */}
                 <Button
-                    // variant="contained": 按钮样式为"包含式"。
-                    variant="contained"
-                    // startIcon: 在按钮文本前显示一个图标。
-                    startIcon={<SearchIcon />}
-                    // onClick: 点击事件处理器。
-                    onClick={togglePanel}
-                    // sx: Material-UI 的样式属性。
-                    sx={{
-                        height: '42px',                 // 按钮高度
-                        borderRadius: '50px',           // 圆角
-                        bgcolor: 'app.button.background',// 背景色
-                        color: 'neutral.main',          // 文字颜色
-                        boxShadow: 'none',              // 移除阴影
-                        textTransform: 'none',          // 禁用文本大写
-                        fontSize: '15px',               // 字体大小
-                        fontWeight: 500,                // 字体重量
-                        px: 3,                          // 左右内边距
-                        // '&:hover': 定义鼠标悬停时的样式
+                    variant="contained"         // variant="contained": 按钮样式为"包含式"。
+                    startIcon={<SearchIcon />}  // startIcon: 在按钮文本前显示一个图标。
+                    onClick={togglePanel}       // onClick: 点击事件处理器。
+                    sx={{                       // sx: Material-UI 的样式属性。
+                        height: '42px',
+                        borderRadius: '50px',
+                        bgcolor: 'app.button.background',
+                        color: 'neutral.main',
+                        boxShadow: 'none',
+                        textTransform: 'none',
+                        fontSize: '15px',
+                        fontWeight: 500,
+                        px: 3,
                         '&:hover': { bgcolor: 'app.button.hover', boxShadow: 'none' },
                     }}
                 >
-                    {/* 按钮内的文本。 */}
                     <Typography component="span" sx={{ transform: 'translateY(1px)' }}>
                         搜索
                     </Typography>
@@ -179,14 +202,16 @@ const TemplatePage: FC = () => {
 
                 {/* 打开全局弹窗的按钮。 */}
                 <Button
-                    // variant="outlined": 按钮样式为"轮廓式"。
-                    variant="outlined"
-                    // sx: 设置上外边距。
-                    sx={{ mt: 2 }}
-                    // onClick: 点击事件处理器，调用我们上面定义的 handleOpenModal 函数。
-                    onClick={handleOpenModal}
+                    variant="outlined" // variant="outlined": 按钮样式为"轮廓式"。
+                    sx={{ mt: 2 }}     // sx: 设置上外边距。
+                    // 【核心实践】onClick 只负责导航，将状态变更的责任交给 URL 和 useEffect。
+                    onClick={() => {
+                        // 点击按钮时，导航到带有 itemId 的 URL。
+                        // 使用 replace: true 可以防止在浏览器历史中留下多余的记录。
+                        navigate('/app/template-page/template-123', { replace: true });
+                    }}
                 >
-                    打开弹窗
+                    打开弹窗 (ID: template-123)
                 </Button>
             </Box>
         </PageLayout>
