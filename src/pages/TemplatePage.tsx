@@ -9,6 +9,7 @@
  * - 1. **懒加载集成**: `TemplateSearchForm` 和 `TemplateModalContent` 都通过 `React.lazy` 进行动态导入，并使用 `<Suspense>` 进行包裹，只有在需要时才下载其代码，优化初始加载性能。
  * - 2. **右侧搜索面板管理**:
  *      - **按需加载**: 仅在用户首次点击“搜索”按钮时，才加载并渲染搜索表单。
+ *      - **跨页状态同步**: 在挂载时检查全局 `isPanelOpen` 状态，确保在跨页跳转时能无缝衔接面板内容。
  *      - **生命周期管理**: 此页面完全负责其关联的搜索面板的生命周期。在 `useEffect` 的清理函数中，会彻底清空面板内容，防止状态“泄露”到其他页面。
  * - 3. **全局弹窗集成**:
  *      - **路由驱动**: 完全通过 URL 参数来控制全局弹窗的显示与隐藏，支持深链接和浏览器刷新。
@@ -64,8 +65,8 @@ const TemplateModalContent = lazy(() => import('../components/modals/TemplateMod
 const TemplatePage: React.FC = () => {
     // --- 1. HOOKS INITIALIZATION ---
 
-    // 从全局布局上下文中解构出【状态更新函数】。
-    // 使用 useLayoutDispatch 可以确保此组件只在需要“派发”一个动作时才与 context 交互，从而避免了不必要的重渲染。
+    // 【核心修复】同时从全局布局上下文中解构出【状态值】和【状态更新函数】。
+    const { isMobile, isPanelOpen } = useLayoutState();
     const {
         togglePanel,      // togglePanel: 一个函数，用于切换右侧搜索面板的显示/隐藏状态。
         setPanelContent,  // setPanelContent: 一个函数，用于设置右侧面板中要渲染的 React 组件。
@@ -75,16 +76,12 @@ const TemplatePage: React.FC = () => {
         setModalConfig,   // setModalConfig: 一个函数，用于设置全局弹窗的内容和关闭时的回调函数。
     } = useLayoutDispatch();
 
-    // 从全局布局上下文中解构出【状态值】。
-    // 此处仅用于演示，如果组件确实需要根据 isMobile 状态来改变渲染逻辑，则使用此钩子。
-    const { isMobile } = useLayoutState();
-
     // 初始化路由相关的钩子。
     const navigate = useNavigate(); // 获取导航函数。
     const { itemId } = useParams<{ itemId: string }>(); // 从 URL 中获取动态参数 `itemId`。
 
     // 创建一个本地状态，用于跟踪是否应该加载和设置面板内容。
-    // 默认为 false，只有在用户首次点击搜索按钮时才变为 true。
+    // 默认为 false，只有在用户首次点击搜索按钮或页面加载时面板已打开，才变为 true。
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
     // --- 2. CALLBACKS & EVENT HANDLERS ---
@@ -120,6 +117,16 @@ const TemplatePage: React.FC = () => {
 
     // --- 3. SIDE EFFECTS MANAGEMENT (useEffect) ---
 
+    // 【核心修复】此 useEffect 负责在页面加载时，同步全局面板的打开状态。
+    useEffect(() => {
+        // 如果此页面挂载时，全局的面板已经是打开状态...
+        if (isPanelOpen) {
+            // ...则立即将本页面的内容加载状态设置为 true。
+            // 这确保了在跨页跳转时，面板内容能够无缝衔接，而不是卡在加载中。
+            setIsPanelContentSet(true);
+        }
+    }, [isPanelOpen]); // 依赖数组只包含 isPanelOpen，确保此 effect 只在 isPanelOpen 状态变化时运行一次（通常是在挂载时）。
+
     // 此 useEffect 负责响应 URL 参数的变化，并管理弹窗状态（路由驱动状态）。
     useEffect(() => {
         // 检查 URL 中是否存在有效的 `itemId`。
@@ -153,7 +160,7 @@ const TemplatePage: React.FC = () => {
 
     // 此 useEffect 负责管理与此页面相关的侧边面板的生命周期。
     useEffect(() => {
-        // 如果 `isPanelContentSet` 为 false（即用户还未点击过搜索按钮），则不执行任何操作。
+        // 如果 `isPanelContentSet` 为 false（即用户还未点击过搜索按钮，且页面加载时面板是关闭的），则不执行任何操作。
         if (!isPanelContentSet) return;
 
         // 使用 setTimeout 将状态更新操作推迟到下一个事件循环，以避免与页面过渡动画冲突。
@@ -175,7 +182,7 @@ const TemplatePage: React.FC = () => {
         return () => {
             // 清除可能还未执行的定时器。
             clearTimeout(timerId);
-            // 【核心修复】页面自己负责清理自己设置的面板内容，防止状态泄露。
+            // 页面自己负责清理自己设置的面板内容，防止状态泄露。
             setPanelContent(null);
             setPanelTitle('');
         };
