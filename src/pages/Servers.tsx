@@ -5,26 +5,30 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【代码可维护性优化】简化了弹窗触发逻辑，遵循单一事实来源原则。
- * - **优化详情**:
- *   1.  移除了 `onClick` 事件处理器中直接调用 `setModalConfig` 和 `setIsModalOpen` 的逻辑。
- *   2.  `onClick` 的唯一职责现在是调用 `navigate` 来更新 URL。
- *   3.  `useEffect` 现在是管理弹窗状态的唯一来源。它监听 `serverId` 的变化，并据此决定是打开还是关闭弹窗。
- * - **最终效果**: 这种模式消除了命令式代码和声明式代码之间的潜在冲突，使得组件状态完全由路由驱动，逻辑更清晰，可维护性更高，并从根源上解决了与 `MainLayout` 的竞态条件问题。
+ * - 【跳转逻辑终极修复】此页面现在完全负责管理其关联的搜索面板的生命周期。
+ * - **解决方案**:
+ *   1.  `useEffect` 的清理函数 (return) 现在会在组件卸载时，负责清空面板的内容和标题。
+ *   2.  这确保了当用户从此页面导航离开时，面板内容会被正确清理，不会“泄露”到其他页面。
+ * - **最终效果**:
+ *   通过让每个“有面板”的页面主动承担清理职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
  */
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, useTheme, ButtonBase
+    TableHead, TableRow, useTheme, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
-import ServerSearchForm, { type ServerSearchValues } from '../components/forms/ServerSearchForm';
-import ServerDetailContent from '../components/modals/ServerDetailContent';
+import { type ServerSearchValues } from '../components/forms/ServerSearchForm';
 import TooltipCell from '../components/ui/TooltipCell';
 import PageLayout from '../layouts/PageLayout';
 import DataTable from '../components/ui/DataTable';
+
+// 使用 React.lazy 动态导入组件
+const ServerSearchForm = lazy(() => import('../components/forms/ServerSearchForm'));
+const ServerDetailContent = lazy(() => import('../components/modals/ServerDetailContent'));
+
 
 interface Row { id: string; customerName: string; serverName: string; ip: string; role: string; note?: string; dep?: string; custNote?: string; }
 const create = (id: string, c: string, s: string, ip: string, role: string, note?: string, dep?: string, cn?: string): Row => ({ id, customerName: c, serverName: s, ip, role, note, dep, custNote: cn });
@@ -33,7 +37,7 @@ const rows: Row[] = [ create('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10'
 
 const Servers: React.FC = () => {
     const { isMobile } = useLayoutState();
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, setIsModalOpen, setModalConfig } = useLayoutDispatch();
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
     const theme    = useTheme();
     const navigate = useNavigate();
@@ -41,13 +45,18 @@ const Servers: React.FC = () => {
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
     useEffect(() => {
         const serverExists = serverId && rows.some(row => row.id === serverId);
         if (serverExists && !isMobile) {
             setIsModalOpen(true);
             setModalConfig({
-                content: <ServerDetailContent serverId={serverId} />,
+                content: (
+                    <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
+                        <ServerDetailContent serverId={serverId} />
+                    </Suspense>
+                ),
                 onClose: () => navigate('/app/servers', { replace: true })
             });
         } else {
@@ -60,28 +69,40 @@ const Servers: React.FC = () => {
     const onReset  = useCallback(() => { alert('重置搜索表单'); setPage(0); setRowsPerPage(10); }, []);
 
     useEffect(() => {
+        if (!isPanelContentSet) return;
+
         const timerId = setTimeout(() => {
-            setPanelContent(<ServerSearchForm onSearch={onSearch} onReset={onReset} />);
+            setPanelContent(
+                <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
+                    <ServerSearchForm onSearch={onSearch} onReset={onReset} />
+                </Suspense>
+            );
             setPanelTitle('服务器搜索');
             setPanelWidth(360);
-            setIsPanelRelevant(true);
         }, 0);
 
+        // 【核心修复】修改清理函数，让页面自己负责清理自己的面板内容
         return () => {
             clearTimeout(timerId);
             setPanelContent(null);
             setPanelTitle('');
-            setIsPanelRelevant(false);
         };
-    }, [onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant]);
+    }, [isPanelContentSet, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+    const handleTogglePanel = () => {
+        if (!isPanelContentSet) {
+            setIsPanelContentSet(true);
+        }
+        togglePanel();
+    };
 
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
                 <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>服务器信息</Typography>
-                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={togglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' } }}>
+                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={handleTogglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' } }}>
                     <Typography component="span" sx={{ transform: 'translateY(1px)' }}>搜索</Typography>
                 </Button>
             </Box>
@@ -119,7 +140,6 @@ const Servers: React.FC = () => {
                                 <ButtonBase
                                     key={r.id}
                                     component={TableRow}
-                                    // 【核心修复】简化 onClick，只负责导航
                                     onClick={() => {
                                         navigate(`/app/servers/${r.id}`, { replace: true });
                                     }}

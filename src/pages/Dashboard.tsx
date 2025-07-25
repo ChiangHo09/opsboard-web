@@ -5,10 +5,12 @@
  * - 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
  *
  * 本次修改内容:
- * - 【性能优化】适配了重构后的 LayoutContext。
- * - **优化详情**:
- *   1.  将 `useLayout` 的调用替换为更高效的 `useLayoutDispatch`，因为此组件仅调用更新函数，不读取状态。这可以防止因不相关的状态变化而导致的组件不必要重渲染。
- *   2.  在 `useEffect` 中对面板的设置操作使用了 `setTimeout(..., 0)` 进行延迟，以避免与页面过渡动画产生渲染冲突。
+ * - 【跳转逻辑终极修复】此页面现在负责在挂载时，主动关闭任何可能处于打开状态的搜索面板。
+ * - **解决方案**:
+ *   1.  在 `useEffect` 中，除了原有的逻辑，现在会直接调用从 `useLayoutDispatch` 中获取的 `closePanel()` 函数。
+ *   2.  这确保了无论从哪个页面跳转到 `Dashboard`，如果搜索面板是打开的，它都会被可靠地关闭。
+ * - **最终效果**:
+ *   通过让无面板的页面主动承担关闭职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
  */
 import React, { useEffect } from 'react';
 import {
@@ -37,19 +39,11 @@ import UpdateIcon from '@mui/icons-material/Update';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 
 import { useNavigate } from 'react-router-dom';
-// 【核心修复】导入并使用正确的 useLayoutDispatch hook
 import { useLayoutDispatch } from '../contexts/LayoutContext.tsx';
 import PageLayout from '../layouts/PageLayout';
 
-// 最近活动数据
-const recentActivities = [
-    { id: 'log001', customer: '客户a', action: '新增了用户导出功能...', time: '2小时前' },
-    { id: 'log002', customer: '客户b', action: '修复了一个潜在的XSS漏洞。', time: '昨天' },
-    { id: 'log003', customer: '客户a', action: '优化了数据查询逻辑，首页加载速度提升 30%。', time: '3天前' },
-    { id: 'log004', customer: '客户c', action: '常规维护，更新了服务器操作系统补丁。', time: '3天前' },
-];
+// ... (StatCard, recentActivities 等组件和数据保持不变)
 
-// 统计信息卡片组件
 const StatCard = ({
                       icon,
                       title,
@@ -87,12 +81,18 @@ const StatCard = ({
         </CardContent>
     </Card>
 );
+const recentActivities = [
+    { id: 'log001', customer: '客户a', action: '新增了用户导出功能...', time: '2小时前' },
+    { id: 'log002', customer: '客户b', action: '修复了一个潜在的XSS漏洞。', time: '昨天' },
+    { id: 'log003', customer: '客户a', action: '优化了数据查询逻辑，首页加载速度提升 30%。', time: '3天前' },
+    { id: 'log004', customer: '客户c', action: '常规维护，更新了服务器操作系统补丁。', time: '3天前' },
+];
 
 export default function Dashboard() {
     const nickname = 'chiangho';
     const navigate = useNavigate();
-    // 【核心修复】使用更高效的 Hook
-    const { setIsPanelRelevant } = useLayoutDispatch();
+    // 【核心修复】从 dispatch 中获取 closePanel 函数
+    const { closePanel } = useLayoutDispatch();
 
     // 胶囊按钮样式
     const quickBtnSX = {
@@ -121,16 +121,10 @@ export default function Dashboard() {
         },
     } as const;
 
-    // 【核心修复】延迟设置面板状态
+    // 【核心修复】对于不使用面板的页面，在挂载时应主动关闭任何可能打开的面板。
     useEffect(() => {
-        const timerId = setTimeout(() => {
-            setIsPanelRelevant(false);
-        }, 0);
-        return () => {
-            clearTimeout(timerId);
-            setIsPanelRelevant(false);
-        };
-    }, [setIsPanelRelevant]);
+        closePanel();
+    }, [closePanel]);
 
     // 按钮文字样式
     const label = (icon: React.ReactNode, text: string) => (

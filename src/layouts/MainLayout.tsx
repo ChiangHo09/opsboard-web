@@ -6,16 +6,13 @@
  * 它还负责所有页面切换的动画编排。
  *
  * 本次修改内容:
- * - 【弹窗闪现修复】彻底修复了首次点击打开弹窗时，弹窗会闪现一次的问题。
- * - **问题根源**:
- *   组件中存在一个副作用钩子 `useEffect(() => { if (isModalOpen) setIsModalOpen(false); }, [location.pathname]);`。
- *   这个钩子的意图是在页面切换时关闭弹窗，但它错误地在任何路径变化时（包括从列表页导航到详情子路由时）都触发，导致了状态更新的竞态条件：一个effect尝试打开弹窗，而另一个effect立即尝试关闭它。
+ * - 【代码简化】移除了所有用于处理面板跨页跳转的复杂 `useEffect` 逻辑。
  * - **解决方案**:
- *   1.  完全移除了这个有问题的 `useEffect`。
- *   2.  弹窗的打开和关闭现在完全由各个页面组件（如 `Servers.tsx`）根据自身的路由参数（如 `serverId`）来控制，这确保了状态管理的唯一事实来源。
- * - **最终效果**: 消除了状态冲突，弹窗在首次点击时也能平滑、正确地打开，不再闪现。
+ *   面板的打开、关闭和内容管理现在完全由各个页面组件自己负责。`MainLayout` 不再需要猜测子组件的意图。
+ * - **最终效果**:
+ *   `MainLayout` 的职责更单一，代码更简洁，并且消除了所有因时序问题导致的竞态条件。
  */
-import { useState, useEffect, type JSX, Suspense } from 'react';
+import { useState, type JSX, Suspense } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
@@ -47,34 +44,15 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
     const basePath = location.pathname.split('/').slice(0, 3).join('/');
 
     const {
-        isPanelOpen, panelContent, closePanel, setPanelContent, setPanelTitle,
-        togglePanel, isPanelRelevant, panelTitle, panelWidth,
+        isPanelOpen, panelContent, closePanel,
+        togglePanel, panelTitle, panelWidth,
         isMobile, isModalOpen, modalContent, onModalClose,
     } = useLayout();
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
 
-    // 【核心修复】移除这个导致竞态条件的 useEffect
-    // useEffect(() => {
-    //     if (isModalOpen) setIsModalOpen(false);
-    // }, [location.pathname]);
-
-    useEffect(() => {
-        if (isPanelOpen && !isPanelRelevant) {
-            const timerId = setTimeout(() => {
-                if (isPanelOpen && !isPanelRelevant) {
-                    closePanel();
-                    setPanelContent(null);
-                    setPanelTitle('');
-                }
-            }, 50);
-
-            return () => {
-                clearTimeout(timerId);
-            };
-        }
-    }, [location.pathname, isPanelOpen, isPanelRelevant, closePanel, setPanelContent, setPanelTitle]);
-
+    // 【核心修复】移除所有用于智能关闭面板的 useEffect 逻辑。
+    // 该职责现在完全下放到各个页面组件。
 
     const modalJSX = (
         <AnimatePresence>

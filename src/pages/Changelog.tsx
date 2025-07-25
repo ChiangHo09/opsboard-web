@@ -5,26 +5,29 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【代码健壮性与可维护性优化】应用了与 Servers.tsx 页面一致的、基于路由驱动的状态管理模式。
- * - **优化详情**:
- *   1.  简化了 `onClick` 事件处理器，使其唯一职责是更新 URL（`navigate`），并使用 `{ replace: true }` 优化浏览器历史记录。
- *   2.  将弹窗管理和分页跳转的逻辑完全整合到 `useEffect` 中，使其成为响应 URL (`logId`) 变化的唯一“事实来源”。
- *   3.  在 `useEffect` 中增加了对 `logId` 是否有效存在的检查，并确保在弹窗关闭时彻底清理其状态（`content` 和 `onClose`），防止状态残留。
- * - **最终效果**: 这种模式消除了命令式代码和声明式代码之间的潜在冲突，使得组件状态完全由路由驱动，逻辑更清晰，可维护性更高。
+ * - 【跳转逻辑修复】配合 MainLayout 的新逻辑，修改了本页面的副作用清理函数。
+ * - **解决方案**:
+ *   1.  `useEffect` 的清理函数 (return) 现在不再负责清空面板内容（`setPanelContent(null)`）和标题（`setPanelTitle('')`）。
+ *   2.  它的唯一职责是在组件卸载时，将 `isPanelRelevant` 标志设置为 `false`。
+ * - **最终效果**:
+ *   此页面不再“擅自”关闭面板。它只是向布局系统报告自己的状态，而关闭面板的最终决策由 `MainLayout` 根据新页面的特性来智能决定，从而实现了无缝的跨页跳转体验。
  */
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, useTheme, ButtonBase
+    TableHead, TableRow, useTheme, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
-import ChangelogSearchForm, { type ChangelogSearchValues } from '../components/forms/ChangelogSearchForm.tsx';
-import ChangelogDetailContent from '../components/modals/ChangelogDetailContent.tsx';
+import { type ChangelogSearchValues } from '../components/forms/ChangelogSearchForm.tsx';
 import TooltipCell from '../components/ui/TooltipCell';
 import PageLayout from '../layouts/PageLayout';
 import DataTable from '../components/ui/DataTable';
+
+const ChangelogSearchForm = lazy(() => import('../components/forms/ChangelogSearchForm.tsx'));
+const ChangelogDetailContent = lazy(() => import('../components/modals/ChangelogDetailContent.tsx'));
+
 
 interface Row { id: string; customerName: string; updateTime: string; updateType: string; updateContent:string; }
 const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({ id, customerName: c, updateTime: t, updateType: typ, updateContent: ct });
@@ -41,17 +44,20 @@ const Changelog: React.FC = () => {
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    // 【核心修复】将所有与 URL 参数相关的逻辑集中在一个 useEffect 中
     useEffect(() => {
         const itemIndex = logId ? rows.findIndex(row => row.id === logId) : -1;
         const logExists = itemIndex !== -1;
 
-        // 1. 处理弹窗逻辑
         if (logExists && !isMobile) {
             setIsModalOpen(true);
             setModalConfig({
-                content: <ChangelogDetailContent logId={logId as string} />,
+                content: (
+                    <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
+                        <ChangelogDetailContent logId={logId as string} />
+                    </Suspense>
+                ),
                 onClose: () => navigate('/app/changelog', { replace: true })
             });
         } else {
@@ -59,7 +65,6 @@ const Changelog: React.FC = () => {
             setModalConfig({ content: null, onClose: null });
         }
 
-        // 2. 处理分页和高亮逻辑
         if (logExists) {
             const targetPage = Math.floor(itemIndex / rowsPerPage);
             if (page !== targetPage) {
@@ -71,29 +76,44 @@ const Changelog: React.FC = () => {
     const onSearch = useCallback((v: ChangelogSearchValues) => { alert(`搜索: ${JSON.stringify({ ...v, startTime: v.startTime?.format('YYYY-MM-DD'), endTime:   v.endTime?.format('YYYY-MM-DD'), })}`); togglePanel(); }, [togglePanel]);
     const onReset = useCallback(() => alert('重置表单'), []);
 
-    // 处理侧边搜索面板的 useEffect (保持不变)
     useEffect(() => {
+        if (!isPanelContentSet) {
+            return;
+        }
+
         const timerId = setTimeout(() => {
-            setPanelContent(<ChangelogSearchForm onSearch={onSearch} onReset={onReset} />);
+            setPanelContent(
+                <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
+                    <ChangelogSearchForm onSearch={onSearch} onReset={onReset} />
+                </Suspense>
+            );
             setPanelTitle('日志搜索');
             setPanelWidth(360);
             setIsPanelRelevant(true);
         }, 0);
+
+        // 【核心修复】修改清理函数
         return () => {
             clearTimeout(timerId);
-            setPanelContent(null);
-            setPanelTitle('');
+            // 在组件卸载时，不再清空面板内容，只标记为“不相关”
             setIsPanelRelevant(false);
         };
-    }, [onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant]);
+    }, [isPanelContentSet, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant]);
 
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+    const handleTogglePanel = () => {
+        if (!isPanelContentSet) {
+            setIsPanelContentSet(true);
+        }
+        togglePanel();
+    };
 
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
                 <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>更新日志</Typography>
-                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={togglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' } }}>
+                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={handleTogglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' } }}>
                     <Typography component="span" sx={{ transform: 'translateY(1px)' }}>搜索</Typography>
                 </Button>
             </Box>
@@ -131,7 +151,6 @@ const Changelog: React.FC = () => {
                                     <ButtonBase
                                         key={r.id}
                                         component={TableRow}
-                                        // 【核心修复】简化 onClick，只负责导航
                                         onClick={() => {
                                             navigate(`/app/changelog/${r.id}`, { replace: true });
                                         }}
