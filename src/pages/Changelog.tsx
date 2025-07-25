@@ -5,12 +5,12 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【跳转逻辑修复】配合 MainLayout 的新逻辑，修改了本页面的副作用清理函数。
+ * - 【跳转逻辑终极修复】此页面现在完全负责管理其关联的搜索面板的生命周期。
  * - **解决方案**:
- *   1.  `useEffect` 的清理函数 (return) 现在不再负责清空面板内容（`setPanelContent(null)`）和标题（`setPanelTitle('')`）。
- *   2.  它的唯一职责是在组件卸载时，将 `isPanelRelevant` 标志设置为 `false`。
+ *   1.  `useEffect` 的清理函数 (return) 现在会在组件卸载时，负责清空面板的内容和标题。
+ *   2.  这确保了当用户从此页面导航离开时，面板内容会被正确清理，不会“泄露”到其他页面。
  * - **最终效果**:
- *   此页面不再“擅自”关闭面板。它只是向布局系统报告自己的状态，而关闭面板的最终决策由 `MainLayout` 根据新页面的特性来智能决定，从而实现了无缝的跨页跳转体验。
+ *   通过让每个“有面板”的页面主动承担清理职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
  */
 import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -36,7 +36,7 @@ const rows: Row[] = [ create('log001', '客户a', '2025-07-21 10:30', '功能更
 
 const Changelog: React.FC = () => {
     const { isMobile } = useLayoutState();
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, setIsModalOpen, setModalConfig } = useLayoutDispatch();
+    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
     const theme    = useTheme();
     const navigate = useNavigate();
@@ -89,16 +89,15 @@ const Changelog: React.FC = () => {
             );
             setPanelTitle('日志搜索');
             setPanelWidth(360);
-            setIsPanelRelevant(true);
         }, 0);
 
-        // 【核心修复】修改清理函数
+        // 【核心修复】修改清理函数，让页面自己负责清理自己的面板内容
         return () => {
             clearTimeout(timerId);
-            // 在组件卸载时，不再清空面板内容，只标记为“不相关”
-            setIsPanelRelevant(false);
+            setPanelContent(null);
+            setPanelTitle('');
         };
-    }, [isPanelContentSet, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant]);
+    }, [isPanelContentSet, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 

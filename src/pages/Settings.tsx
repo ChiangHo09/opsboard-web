@@ -5,31 +5,23 @@
  * 此文件定义了应用的“设置”页面。
  *
  * 本次修改内容:
- * - 【性能优化】适配了重构后的 LayoutContext。
- * - **优化详情**:
- *   1.  将 `useLayout` 的调用替换为更高效的 `useLayoutDispatch`。
- *   2.  在 `useEffect` 中对面板的设置操作使用了 `setTimeout(..., 0)` 进行延迟。
+ * - 【跳转逻辑终极修复】此页面现在负责在挂载时，主动关闭任何可能处于打开状态的搜索面板。
+ * - **解决方案**:
+ *   1.  在 `useEffect` 中，会直接调用从 `useLayoutDispatch` 中获取的 `closePanel()` 函数。
+ * - **最终效果**:
+ *   通过让无面板的页面主动承担关闭职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
  */
 import React, { useEffect } from 'react';
 import { Typography } from '@mui/material';
-// 【核心修复】导入分离后的新版 Hook
 import { useLayoutDispatch } from '../contexts/LayoutContext.tsx';
 import PageLayout from '../layouts/PageLayout';
 
 const Settings: React.FC = () => {
-    // 【核心修复】使用更高效的 Hook
-    const { setIsPanelRelevant } = useLayoutDispatch();
+    const { closePanel } = useLayoutDispatch();
 
-    // 【核心修复】延迟设置面板状态
     useEffect(() => {
-        const timerId = setTimeout(() => {
-            setIsPanelRelevant(false);
-        }, 0);
-        return () => {
-            clearTimeout(timerId);
-            setIsPanelRelevant(false);
-        };
-    }, [setIsPanelRelevant]);
+        closePanel();
+    }, [closePanel]);
 
     return (
         <PageLayout>
