@@ -5,12 +5,12 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【性能优化】适配了重构后的 LayoutContext，将 `useLayout` 拆分为 `useLayoutState` 和 `useLayoutDispatch`。
+ * - 【代码健壮性与可维护性优化】应用了与 Servers.tsx 页面一致的、基于路由驱动的状态管理模式。
  * - **优化详情**:
- *   1.  现在从 `useLayoutState` 中获取只读的状态值（如 `isMobile`）。
- *   2.  从 `useLayoutDispatch` 中获取所有状态更新函数。这可以防止组件因不相关的状态变化而重新渲染。
- *   3.  在 `useEffect` 中对面板的设置操作使用了 `setTimeout(..., 0)` 进行延迟，以避免与页面过渡动画冲突。
- *   4.  优化了 `onClick` 事件，直接在点击时触发弹窗，提供即时反馈。
+ *   1.  简化了 `onClick` 事件处理器，使其唯一职责是更新 URL（`navigate`），并使用 `{ replace: true }` 优化浏览器历史记录。
+ *   2.  将弹窗管理和分页跳转的逻辑完全整合到 `useEffect` 中，使其成为响应 URL (`logId`) 变化的唯一“事实来源”。
+ *   3.  在 `useEffect` 中增加了对 `logId` 是否有效存在的检查，并确保在弹窗关闭时彻底清理其状态（`content` 和 `onClose`），防止状态残留。
+ * - **最终效果**: 这种模式消除了命令式代码和声明式代码之间的潜在冲突，使得组件状态完全由路由驱动，逻辑更清晰，可维护性更高。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -19,7 +19,6 @@ import {
     TableHead, TableRow, useTheme, ButtonBase
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-// 【核心修复】导入分离后的新版 Hooks
 import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
 import ChangelogSearchForm, { type ChangelogSearchValues } from '../components/forms/ChangelogSearchForm.tsx';
 import ChangelogDetailContent from '../components/modals/ChangelogDetailContent.tsx';
@@ -27,13 +26,12 @@ import TooltipCell from '../components/ui/TooltipCell';
 import PageLayout from '../layouts/PageLayout';
 import DataTable from '../components/ui/DataTable';
 
-interface Row { id: string; customerName: string; updateTime: string; updateType: string; updateContent: string; }
+interface Row { id: string; customerName: string; updateTime: string; updateType: string; updateContent:string; }
 const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({ id, customerName: c, updateTime: t, updateType: typ, updateContent: ct });
 const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本，需要足够多的内容才能在宽屏的50%列宽中产生溢出效果。我们再加一点，再加一点，现在应该足够长了。';
 const rows: Row[] = [ create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({ length: 50 }).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)), ];
 
 const Changelog: React.FC = () => {
-    // 【核心修复】分离状态和派发函数的消费
     const { isMobile } = useLayoutState();
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
@@ -44,30 +42,36 @@ const Changelog: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
+    // 【核心修复】将所有与 URL 参数相关的逻辑集中在一个 useEffect 中
     useEffect(() => {
-        if (logId) {
-            const itemIndex = rows.findIndex(row => row.id === logId);
-            if (itemIndex !== -1) {
-                const targetPage = Math.floor(itemIndex / rowsPerPage);
+        const itemIndex = logId ? rows.findIndex(row => row.id === logId) : -1;
+        const logExists = itemIndex !== -1;
+
+        // 1. 处理弹窗逻辑
+        if (logExists && !isMobile) {
+            setIsModalOpen(true);
+            setModalConfig({
+                content: <ChangelogDetailContent logId={logId as string} />,
+                onClose: () => navigate('/app/changelog', { replace: true })
+            });
+        } else {
+            setIsModalOpen(false);
+            setModalConfig({ content: null, onClose: null });
+        }
+
+        // 2. 处理分页和高亮逻辑
+        if (logExists) {
+            const targetPage = Math.floor(itemIndex / rowsPerPage);
+            if (page !== targetPage) {
                 setPage(targetPage);
             }
         }
-    }, [logId, rowsPerPage]);
-
-    // 处理深链接
-    useEffect(() => {
-        if (logId && !isMobile) {
-            setIsModalOpen(true);
-            setModalConfig({ content: <ChangelogDetailContent logId={logId} />, onClose: () => navigate('/app/changelog') });
-        } else {
-            setIsModalOpen(false);
-        }
-    }, [logId, navigate, setIsModalOpen, setModalConfig, isMobile]);
+    }, [logId, isMobile, rowsPerPage, page, navigate, setIsModalOpen, setModalConfig]);
 
     const onSearch = useCallback((v: ChangelogSearchValues) => { alert(`搜索: ${JSON.stringify({ ...v, startTime: v.startTime?.format('YYYY-MM-DD'), endTime:   v.endTime?.format('YYYY-MM-DD'), })}`); togglePanel(); }, [togglePanel]);
     const onReset = useCallback(() => alert('重置表单'), []);
 
-    // 延迟设置面板内容
+    // 处理侧边搜索面板的 useEffect (保持不变)
     useEffect(() => {
         const timerId = setTimeout(() => {
             setPanelContent(<ChangelogSearchForm onSearch={onSearch} onReset={onReset} />);
@@ -127,12 +131,9 @@ const Changelog: React.FC = () => {
                                     <ButtonBase
                                         key={r.id}
                                         component={TableRow}
+                                        // 【核心修复】简化 onClick，只负责导航
                                         onClick={() => {
-                                            if (!isMobile) {
-                                                setModalConfig({ content: <ChangelogDetailContent logId={r.id} />, onClose: () => navigate('/app/changelog') });
-                                                setIsModalOpen(true);
-                                            }
-                                            navigate(`/app/changelog/${r.id}`);
+                                            navigate(`/app/changelog/${r.id}`, { replace: true });
                                         }}
                                         sx={{
                                             display: 'table-row',

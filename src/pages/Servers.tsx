@@ -5,12 +5,12 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【性能优化】适配了重构后的 LayoutContext，将 `useLayout` 拆分为 `useLayoutState` 和 `useLayoutDispatch`。
+ * - 【代码可维护性优化】简化了弹窗触发逻辑，遵循单一事实来源原则。
  * - **优化详情**:
- *   1.  现在从 `useLayoutState` 中获取只读的状态值（如 `isMobile`）。
- *   2.  从 `useLayoutDispatch` 中获取所有状态更新函数。这可以防止组件因不相关的状态变化而重新渲染。
- *   3.  在 `useEffect` 中对面板的设置操作使用了 `setTimeout(..., 0)` 进行延迟，以避免与页面过渡动画冲突。
- *   4.  优化了 `onClick` 事件，直接在点击时触发弹窗，提供即时反馈。
+ *   1.  移除了 `onClick` 事件处理器中直接调用 `setModalConfig` 和 `setIsModalOpen` 的逻辑。
+ *   2.  `onClick` 的唯一职责现在是调用 `navigate` 来更新 URL。
+ *   3.  `useEffect` 现在是管理弹窗状态的唯一来源。它监听 `serverId` 的变化，并据此决定是打开还是关闭弹窗。
+ * - **最终效果**: 这种模式消除了命令式代码和声明式代码之间的潜在冲突，使得组件状态完全由路由驱动，逻辑更清晰，可维护性更高，并从根源上解决了与 `MainLayout` 的竞态条件问题。
  */
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -19,7 +19,6 @@ import {
     TableHead, TableRow, useTheme, ButtonBase
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-// 【核心修复】导入分离后的新版 Hooks
 import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
 import ServerSearchForm, { type ServerSearchValues } from '../components/forms/ServerSearchForm';
 import ServerDetailContent from '../components/modals/ServerDetailContent';
@@ -33,7 +32,6 @@ const LONG_NOTE = '这是一段非常非常长的使用备注，用于测试在�
 const rows: Row[] = [ create('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10', '应用', LONG_NOTE), create('srv002', '客户a', 'DB-SERVER-AB', '192.168.1.20', '数据库', LONG_NOTE, '共享', '客户 a/b 共用'), ...Array.from({ length: 100 }).map((_, i) => create(`test${i + 1}`, `测试客户${i + 1}`, `TestServer${i + 1}`, `10.0.0.${i + 1}`, i % 2 === 0 ? '应用' : '数据库', `（第 ${i + 1} 条）${LONG_NOTE}`, i % 3 === 0 ? '测试版' : undefined)), ];
 
 const Servers: React.FC = () => {
-    // 【核心修复】分离状态和派发函数的消费
     const { isMobile } = useLayoutState();
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsPanelRelevant, setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
@@ -44,20 +42,23 @@ const Servers: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // 处理深链接
     useEffect(() => {
-        if (serverId && !isMobile) {
+        const serverExists = serverId && rows.some(row => row.id === serverId);
+        if (serverExists && !isMobile) {
             setIsModalOpen(true);
-            setModalConfig({ content: <ServerDetailContent serverId={serverId} />, onClose: () => navigate('/app/servers') });
+            setModalConfig({
+                content: <ServerDetailContent serverId={serverId} />,
+                onClose: () => navigate('/app/servers', { replace: true })
+            });
         } else {
             setIsModalOpen(false);
+            setModalConfig({ content: null, onClose: null });
         }
-    }, [serverId, navigate, setIsModalOpen, setModalConfig, isMobile]);
+    }, [serverId, isMobile, navigate, setIsModalOpen, setModalConfig]);
 
     const onSearch = useCallback((v: ServerSearchValues) => { alert(`搜索: ${JSON.stringify(v)}`); togglePanel(); }, [togglePanel]);
     const onReset  = useCallback(() => { alert('重置搜索表单'); setPage(0); setRowsPerPage(10); }, []);
 
-    // 延迟设置面板内容
     useEffect(() => {
         const timerId = setTimeout(() => {
             setPanelContent(<ServerSearchForm onSearch={onSearch} onReset={onReset} />);
@@ -118,12 +119,9 @@ const Servers: React.FC = () => {
                                 <ButtonBase
                                     key={r.id}
                                     component={TableRow}
+                                    // 【核心修复】简化 onClick，只负责导航
                                     onClick={() => {
-                                        if (!isMobile) {
-                                            setModalConfig({ content: <ServerDetailContent serverId={r.id} />, onClose: () => navigate('/app/servers') });
-                                            setIsModalOpen(true);
-                                        }
-                                        navigate(`/app/servers/${r.id}`);
+                                        navigate(`/app/servers/${r.id}`, { replace: true });
                                     }}
                                     sx={{
                                         display: 'table-row',

@@ -6,19 +6,17 @@
  * 它还负责所有页面切换的动画编排。
  *
  * 本次修改内容:
- * - 【结构性重构】彻底修复页面切换时的闪烁问题。
+ * - 【弹窗闪现修复】彻底修复了首次点击打开弹窗时，弹窗会闪现一次的问题。
  * - **问题根源**:
- *   之前的结构是动画化一个静态的`<MotionBox>`，而React Router在其内部通过`<Outlet />`替换内容。这导致了动画与内容更新的脱节：对于已加载的页面，其内容会先被渲染出来，然后动画容器的初始状态（如`opacity: 0`）才被应用，从而产生闪烁。
+ *   组件中存在一个副作用钩子 `useEffect(() => { if (isModalOpen) setIsModalOpen(false); }, [location.pathname]);`。
+ *   这个钩子的意图是在页面切换时关闭弹窗，但它错误地在任何路径变化时（包括从列表页导航到详情子路由时）都触发，导致了状态更新的竞态条件：一个effect尝试打开弹窗，而另一个effect立即尝试关闭它。
  * - **解决方案**:
- *   1.  引入 `useOutlet` 钩子，直接获取由路由即将渲染的页面元素（例如 `<Dashboard />` 组件本身）。
- *   2.  将 `AnimatePresence` 的直接子元素从一个静态容器改为一个动态的、包裹着 `useOutlet()` 返回元素的 `<MotionBox>`。
- *   3.  `AnimatePresence` 现在直接管理**整个页面组件**的进入和退出，而不是其容器。
- *   4.  将 `Suspense` 组件移到 `AnimatePresence` 的外层，以正确处理懒加载页面的等待状态。
- * - **最终效果**:
- *   动画和页面内容被绑定在一起进行过渡，保证了渲染时序的绝对同步。无论是首次加载还是切换到已加载页面，都能实现完美、平滑的过渡动画，闪烁问题被从根本上解决。
+ *   1.  完全移除了这个有问题的 `useEffect`。
+ *   2.  弹窗的打开和关闭现在完全由各个页面组件（如 `Servers.tsx`）根据自身的路由参数（如 `serverId`）来控制，这确保了状态管理的唯一事实来源。
+ * - **最终效果**: 消除了状态冲突，弹窗在首次点击时也能平滑、正确地打开，不再闪现。
  */
 import { useState, useEffect, type JSX, Suspense } from 'react';
-import { useLocation, useOutlet } from 'react-router-dom'; // 【核心修复】导入 useOutlet
+import { useLocation, useOutlet } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
     Box,
@@ -45,20 +43,21 @@ const mobilePanelVariants: Variants = {
 
 function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX.Element {
     const location = useLocation();
-    // 【核心修复】使用 useOutlet() 获取当前路由要渲染的元素
     const currentOutlet = useOutlet();
+    const basePath = location.pathname.split('/').slice(0, 3).join('/');
 
     const {
         isPanelOpen, panelContent, closePanel, setPanelContent, setPanelTitle,
         togglePanel, isPanelRelevant, panelTitle, panelWidth,
-        isMobile, isModalOpen, modalContent, onModalClose, setIsModalOpen,
+        isMobile, isModalOpen, modalContent, onModalClose,
     } = useLayout();
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
 
-    useEffect(() => {
-        if (isModalOpen) setIsModalOpen(false);
-    }, [location.pathname]);
+    // 【核心修复】移除这个导致竞态条件的 useEffect
+    // useEffect(() => {
+    //     if (isModalOpen) setIsModalOpen(false);
+    // }, [location.pathname]);
 
     useEffect(() => {
         if (isPanelOpen && !isPanelRelevant) {
@@ -129,10 +128,9 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                         overflow: 'hidden',
                         transition: 'border-radius 0.2s',
                         minHeight: 0,
-                        position: 'relative', // 父容器必须是相对定位
+                        position: 'relative',
                     }}
                 >
-                    {/* 【核心修复】将 Suspense 移到 AnimatePresence 外层 */}
                     <Suspense
                         fallback={
                             <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -141,23 +139,15 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                         }
                     >
                         <AnimatePresence mode="wait">
-                            {/*
-                              【核心修复】
-                              - 我们不再动画化一个静态容器。
-                              - 我们直接动画化一个包裹着 `currentOutlet` 的 MotionBox。
-                              - `key` 必须是 `location.pathname`，这样 AnimatePresence 才能在路由变化时检测到子元素的改变。
-                            */}
                             {currentOutlet && (
                                 <MotionBox
-                                    key={location.pathname}
+                                    key={basePath}
                                     variants={pageVariants}
                                     transition={pageTransition}
                                     initial="initial"
                                     animate="animate"
                                     exit="exit"
                                     sx={{
-                                        // 这些样式至关重要，它们让动画容器表现得像一个覆盖层，
-                                        // 确保进出动画在同一空间发生，不会导致布局跳动。
                                         position: 'absolute',
                                         inset: 0,
                                         width: '100%',
@@ -205,7 +195,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                                                 <CircularProgress />
                                             </MotionBox>
                                         ) : isPanelOpen && panelContent ? (
-                                            <MotionBox key={location.pathname} variants={pageVariants} transition={pageTransition} initial="initial" animate="animate" exit="exit" sx={{ width: '100%', height: '100%', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', }}>
+                                            <MotionBox key={basePath} variants={pageVariants} transition={pageTransition} initial="initial" animate="animate" exit="exit" sx={{ width: '100%', height: '100%', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', }}>
                                                 {panelContent}
                                             </MotionBox>
                                         ) : null}
@@ -221,7 +211,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                         onClose={closePanel}
                         title={panelTitle}
                         width={panelWidth}
-                        contentKey={location.pathname}
+                        contentKey={basePath}
                     >
                         {panelContent}
                     </RightSearchPanel>
