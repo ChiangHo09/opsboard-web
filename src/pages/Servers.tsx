@@ -5,12 +5,15 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【跳转逻辑终极修复】此页面现在完全负责管理其关联的搜索面板的生命周期。
+ * - 【跨页加载修复】修复了当面板已打开时，跳转到此页面，面板会卡在加载状态的问题。
+ * - **问题根源**:
+ *   页面的内容加载逻辑依赖于一个本地状态 `isPanelContentSet`，而这个状态无法感知到面板在跳转前就已经打开的全局状态。
  * - **解决方案**:
- *   1.  `useEffect` 的清理函数 (return) 现在会在组件卸载时，负责清空面板的内容和标题。
- *   2.  这确保了当用户从此页面导航离开时，面板内容会被正确清理，不会“泄露”到其他页面。
+ *   1.  引入 `useLayoutState` 来获取全局的 `isPanelOpen` 状态。
+ *   2.  添加一个新的 `useEffect`，它会在组件挂载时检查 `isPanelOpen`。
+ *   3.  如果 `isPanelOpen` 为 `true`，则立即将本地的 `isPanelContentSet` 设置为 `true`，从而触发本页面搜索表单的加载和渲染。
  * - **最终效果**:
- *   通过让每个“有面板”的页面主动承担清理职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
+ *   现在，当面板打开时，在具备搜索功能的页面之间跳转，面板内容能够正确、无缝地从一个表单过渡到另一个表单，不再卡在加载状态。
  */
 import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -36,7 +39,7 @@ const LONG_NOTE = '这是一段非常非常长的使用备注，用于测试在�
 const rows: Row[] = [ create('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10', '应用', LONG_NOTE), create('srv002', '客户a', 'DB-SERVER-AB', '192.168.1.20', '数据库', LONG_NOTE, '共享', '客户 a/b 共用'), ...Array.from({ length: 100 }).map((_, i) => create(`test${i + 1}`, `测试客户${i + 1}`, `TestServer${i + 1}`, `10.0.0.${i + 1}`, i % 2 === 0 ? '应用' : '数据库', `（第 ${i + 1} 条）${LONG_NOTE}`, i % 3 === 0 ? '测试版' : undefined)), ];
 
 const Servers: React.FC = () => {
-    const { isMobile } = useLayoutState();
+    const { isMobile, isPanelOpen } = useLayoutState();
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
     const theme    = useTheme();
@@ -46,6 +49,14 @@ const Servers: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
+
+    // 【核心修复】添加此 effect 以同步全局面板状态
+    useEffect(() => {
+        // 如果此页面挂载时，面板已经是打开状态，则立即触发内容加载
+        if (isPanelOpen) {
+            setIsPanelContentSet(true);
+        }
+    }, [isPanelOpen]);
 
     useEffect(() => {
         const serverExists = serverId && rows.some(row => row.id === serverId);
@@ -81,7 +92,6 @@ const Servers: React.FC = () => {
             setPanelWidth(360);
         }, 0);
 
-        // 【核心修复】修改清理函数，让页面自己负责清理自己的面板内容
         return () => {
             clearTimeout(timerId);
             setPanelContent(null);
