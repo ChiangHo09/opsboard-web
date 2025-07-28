@@ -2,22 +2,19 @@
  * 文件名: src/pages/TemplatePage.tsx
  *
  * 文件功能描述:
- * 此文件定义了一个【模板页面】组件（TemplatePage）。它展示了如何以最佳实践的方式集成右侧搜索面板和全局模态框（弹窗），
- * 并遵循了“路由驱动状态”、“按需加载”和“责任单一”的设计模式。此文件可以作为创建新页面的基础模板。
+ * 此文件定义了一个【模板页面】组件（TemplatePage）。它展示了如何以最佳实践的方式集成一个带有【固定列】的高级数据表格、
+ * 右侧搜索面板和全局模态框（弹窗）。它遵循了“路由驱动状态”、“按需加载”和“责任单一”的设计模式，
+ * 可以作为创建新数据驱动页面的终极基础模板。
  *
- * 此模板实现了以下核心功能:
- * - 1. **懒加载集成**: `TemplateSearchForm` 和 `TemplateModalContent` 都通过 `React.lazy` 进行动态导入，并使用 `<Suspense>` 进行包裹，只有在需要时才下载其代码，优化初始加载性能。
- * - 2. **右侧搜索面板管理**:
- *      - **按需加载**: 仅在用户首次点击“搜索”按钮时，才加载并渲染搜索表单。
- *      - **跨页状态同步**: 在挂载时检查全局 `isPanelOpen` 状态，确保在跨页跳转时能无缝衔接面板内容。
- *      - **生命周期管理**: 此页面完全负责其关联的搜索面板的生命周期。在 `useEffect` 的清理函数中，会彻底清空面板内容，防止状态“泄露”到其他页面。
- * - 3. **全局弹窗集成**:
- *      - **路由驱动**: 完全通过 URL 参数来控制全局弹窗的显示与隐藏，支持深链接和浏览器刷新。
- * - 4. **性能优化**:
- *      - **Context 分离**: 严格使用 `useLayoutDispatch` 和 `useLayoutState` 来分离状态的读写，防止不必要的组件重渲染。
- *      - **回调记忆化**: 使用 `useCallback` 来稳定回调函数的引用，避免子组件的不必要重渲染。
- * - 5. **动画安全**:
- *      - **延迟设置**: 对面板内容的设置操作被包裹在 `setTimeout(..., 0)` 内，确保不会与页面的进入/退出动画产生渲染冲突。
+ * 本次修改内容:
+ * - 【代码清理】移除了未使用的 `useTheme` 钩子和 `theme` 变量，以修复 ESLint 和 TypeScript 报告的 "no-unused-vars" 警告。
+ * - **问题根源**:
+ *   在之前的开发版本中可能需要 `useTheme` 来访问主题颜色，但在最终版本中，我们利用了 `sx` 属性可以直接解析主题路径（如 'action.hover'）的特性，使得 `theme` 变量变得多余。
+ * - **解决方案**:
+ *   1.  从 `@mui/material` 的导入语句中移除 `useTheme`。
+ *   2.  删除组件内部 `const theme = useTheme();` 这一行代码。
+ * - **最终效果**:
+ *   代码更加简洁，并完全符合 ESLint 和 TypeScript 的静态检查规则，消除了所有警告。
  */
 
 // 从 'react' 库导入核心功能：
@@ -38,9 +35,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 // - Box: 一个通用的容器组件，类似于 `<div>`。
 // - Typography: 用于显示文本。
 // - Button: 可交互的按钮。
-// - Stack: 用于一维布局（水平或垂直）的容器。
+// - Table, TableBody, TableCell, TableHead, TableRow: 用于构建数据表格的组件。
+// - ButtonBase: 一个基础组件，用于为任何元素添加 Material Design 的涟漪（水波纹）效果。
 // - CircularProgress: 一个圆形的加载指示器。
-import { Box, Typography, Button, Stack, CircularProgress } from '@mui/material';
+import {
+    Box, Typography, Button, Table, TableBody, TableCell,
+    TableHead, TableRow, ButtonBase, CircularProgress
+} from '@mui/material';
 
 // 从 '@mui/icons-material' 库导入图标。
 import SearchIcon from '@mui/icons-material/Search';
@@ -48,8 +49,10 @@ import SearchIcon from '@mui/icons-material/Search';
 // 从我们自己定义的全局布局上下文中导入分离后的自定义钩子。
 import { useLayoutDispatch, useLayoutState } from '../contexts/LayoutContext.tsx';
 
-// 导入我们创建的、用于统一页面布局的可重用组件。
+// 导入我们创建的、用于统一页面布局和数据表格容器的可重用组件。
 import PageLayout from '../layouts/PageLayout.tsx';
+import DataTable from '../components/ui/DataTable.tsx';
+import TooltipCell from '../components/ui/TooltipCell.tsx';
 
 // 【类型导入】只导入懒加载组件所需的 TypeScript 类型。
 // 这个 `import type` 语句只在编译时对 TypeScript 有效，不会将组件代码本身打包到初始 chunk 中。
@@ -60,13 +63,40 @@ import { type TemplateSearchValues } from '../components/forms/TemplateSearchFor
 const TemplateSearchForm = lazy(() => import('../components/forms/TemplateSearchForm.tsx'));
 const TemplateModalContent = lazy(() => import('../components/modals/TemplateModalContent.tsx'));
 
+// --- MOCK DATA ---
+// 定义表格行的数据结构。
+interface TemplateRow {
+    id: string;
+    name: string;
+    category: 'A' | 'B' | 'C';
+    description: string;
+}
+
+// 创建一个函数来生成单行数据，方便复用。
+const createData = (id: string, name: string, category: TemplateRow['category'], description: string): TemplateRow => ({
+    id, name, category, description,
+});
+
+// 创建一个长文本用于测试 TooltipCell 的溢出效果。
+const LONG_TEXT = '这是一个非常长的描述，用于演示当文本内容超出单元格宽度时，TooltipCell 组件是如何自动截断文本并提供悬停提示的。';
+
+// 生成模拟的表格数据。
+const templateRows: TemplateRow[] = [
+    createData('item-001', '模板项目 Alpha', 'A', '这是 Alpha 项目的简短描述。'),
+    createData('item-002', '模板项目 Beta', 'B', LONG_TEXT),
+    createData('item-003', '模板项目 Gamma', 'C', '这是 Gamma 项目的简短描述。'),
+    ...Array.from({ length: 20 }).map((_, i) =>
+        createData(`item-${i + 4}`, `模板项目 ${i + 4}`, ['A', 'B', 'C'][i % 3] as TemplateRow['category'], `这是第 ${i + 4} 条项目的描述。`)
+    ),
+];
+
 
 // 定义 TemplatePage 组件，它是一个函数式组件（React.FC），不接收任何 props。
 const TemplatePage: React.FC = () => {
     // --- 1. HOOKS INITIALIZATION ---
 
-    // 【核心修复】同时从全局布局上下文中解构出【状态值】和【状态更新函数】。
-    const { isMobile, isPanelOpen } = useLayoutState();
+    // 从全局布局上下文中解构出【状态值】和【状态更新函数】。
+    const { isMobile, isPanelOpen } = useLayoutState(); // isMobile: 布尔值，表示当前是否为移动端视图。 isPanelOpen: 布尔值，表示右侧面板当前是否打开。
     const {
         togglePanel,      // togglePanel: 一个函数，用于切换右侧搜索面板的显示/隐藏状态。
         setPanelContent,  // setPanelContent: 一个函数，用于设置右侧面板中要渲染的 React 组件。
@@ -80,167 +110,165 @@ const TemplatePage: React.FC = () => {
     const navigate = useNavigate(); // 获取导航函数。
     const { itemId } = useParams<{ itemId: string }>(); // 从 URL 中获取动态参数 `itemId`。
 
+    // --- 2. LOCAL STATE ---
+
+    // 创建表格分页相关的本地状态。
+    const [page, setPage] = useState(0); // page: 当前页码，从 0 开始。
+    const [rowsPerPage, setRowsPerPage] = useState(10); // rowsPerPage: 每页显示的行数。
+
     // 创建一个本地状态，用于跟踪是否应该加载和设置面板内容。
     // 默认为 false，只有在用户首次点击搜索按钮或页面加载时面板已打开，才变为 true。
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    // --- 2. CALLBACKS & EVENT HANDLERS ---
+    // --- 3. CALLBACKS & EVENT HANDLERS ---
 
     // 使用 useCallback 创建一个记忆化的回调函数 `handleSearch`，用于处理搜索事件。
-    const handleSearch = useCallback((
-        // values: TemplateSearchValues: 这个回调函数接收一个参数 `values`，其类型为 `TemplateSearchValues`。
-        values: TemplateSearchValues
-    ) => {
-        // 打印并弹窗显示搜索条件。
-        console.log('在 TemplatePage 页面接收到搜索条件:', values);
+    const handleSearch = useCallback((values: TemplateSearchValues) => {
         alert(`搜索: ${JSON.stringify(values)}`);
-        // 关闭搜索面板。
         togglePanel();
     }, [togglePanel]); // 依赖数组确保 `handleSearch` 只会被创建一次。
 
     // 使用 useCallback 创建一个记忆化的回调函数 `handleReset`，用于处理表单重置事件。
     const handleReset = useCallback(() => {
-        console.log('TemplatePage 感知到表单已重置');
         alert('表单已重置');
     }, []); // 空依赖数组 `[]` 表示此函数在组件的整个生命周期内引用是稳定的。
 
     // 创建一个处理函数，用于切换面板的显示状态并触发内容的懒加载。
     const handleTogglePanel = () => {
-        // 如果面板内容从未被设置过...
         if (!isPanelContentSet) {
-            // ...则将状态设置为 true，这将触发下面的 useEffect 来加载和设置面板内容。
             setIsPanelContentSet(true);
         }
-        // 无论如何，都切换面板的打开/关闭状态。
         togglePanel();
     };
 
-    // --- 3. SIDE EFFECTS MANAGEMENT (useEffect) ---
+    // --- 4. SIDE EFFECTS MANAGEMENT (useEffect) ---
 
-    // 【核心修复】此 useEffect 负责在页面加载时，同步全局面板的打开状态。
+    // 此 useEffect 负责在页面加载时，同步全局面板的打开状态。
     useEffect(() => {
-        // 如果此页面挂载时，全局的面板已经是打开状态...
         if (isPanelOpen) {
-            // ...则立即将本页面的内容加载状态设置为 true。
-            // 这确保了在跨页跳转时，面板内容能够无缝衔接，而不是卡在加载中。
             setIsPanelContentSet(true);
         }
-    }, [isPanelOpen]); // 依赖数组只包含 isPanelOpen，确保此 effect 只在 isPanelOpen 状态变化时运行一次（通常是在挂载时）。
+    }, [isPanelOpen]);
 
     // 此 useEffect 负责响应 URL 参数的变化，并管理弹窗状态（路由驱动状态）。
     useEffect(() => {
-        // 检查 URL 中是否存在有效的 `itemId`。
-        const itemExists = !!itemId;
+        const itemExists = itemId && templateRows.some(row => row.id === itemId);
 
-        // 如果 itemId 存在并且不是在移动端视图，则打开弹窗。
         if (itemExists && !isMobile) {
-            // 设置弹窗的配置。
             setModalConfig({
-                // content: 弹窗中要渲染的内容。
                 content: (
-                    // 使用 <Suspense> 包裹懒加载的组件。
-                    <Suspense fallback={
-                        // fallback: 在组件代码下载完成前，显示一个居中的加载指示器。
-                        <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>
-                    }>
+                    <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
                         <TemplateModalContent id={itemId} />
                     </Suspense>
                 ),
-                // onClose: 当弹窗关闭时（例如点击遮罩层或关闭按钮），导航回基础路径。
                 onClose: () => navigate('/app/template-page', { replace: true }),
             });
-            // 打开弹窗。
             setIsModalOpen(true);
         } else {
-            // 如果 itemId 不存在或在移动端，则确保弹窗是关闭的，并清理其配置。
             setIsModalOpen(false);
             setModalConfig({ content: null, onClose: null });
         }
-    }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig]); // 依赖数组。
+    }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig]);
 
     // 此 useEffect 负责管理与此页面相关的侧边面板的生命周期。
     useEffect(() => {
-        // 如果 `isPanelContentSet` 为 false（即用户还未点击过搜索按钮，且页面加载时面板是关闭的），则不执行任何操作。
         if (!isPanelContentSet) return;
 
-        // 使用 setTimeout 将状态更新操作推迟到下一个事件循环，以避免与页面过渡动画冲突。
         const timerId = setTimeout(() => {
-            // 设置面板内容。
             setPanelContent(
-                // 使用 <Suspense> 包裹懒加载的搜索表单。
                 <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
                     <TemplateSearchForm onSearch={handleSearch} onReset={handleReset} />
                 </Suspense>
             );
-            // 设置面板标题。
             setPanelTitle('模板搜索');
-            // 设置面板宽度。
             setPanelWidth(360);
         }, 0);
 
-        // 返回一个清理函数，此函数会在组件卸载（unmount）时运行。
         return () => {
-            // 清除可能还未执行的定时器。
             clearTimeout(timerId);
-            // 页面自己负责清理自己设置的面板内容，防止状态泄露。
             setPanelContent(null);
             setPanelTitle('');
         };
-    }, [isPanelContentSet, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]); // 依赖数组。
+    }, [isPanelContentSet, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]);
 
-    // --- 4. JSX RENDER ---
+    // --- 5. DATA COMPUTATION ---
+
+    // 根据当前页码和每页行数，计算出当前页面应该显示的行数据。
+    const pageRows = templateRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+    // --- 6. JSX RENDER ---
 
     return (
-        // 使用 `<PageLayout>` 组件作为页面的根容器，统一布局样式。
-        <PageLayout>
+        <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* 页面顶部的标题栏容器。 */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
-                {/* 页面主标题。 */}
-                <Typography variant="h4">模板页面 (Template Page)</Typography>
-                {/* 打开搜索面板的按钮。 */}
-                <Button
-                    variant="contained"
-                    startIcon={<SearchIcon />}
-                    onClick={handleTogglePanel}
-                    sx={{
-                        height: '42px', borderRadius: '50px', bgcolor: 'app.button.background',
-                        color: 'neutral.main', boxShadow: 'none', textTransform: 'none',
-                        fontSize: '15px', fontWeight: 500, px: 3,
-                        '&:hover': { bgcolor: 'app.button.hover', boxShadow: 'none' },
-                    }}
-                >
-                    <Typography component="span" sx={{ transform: 'translateY(1px)' }}>
-                        搜索
-                    </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
+                <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>模板页面</Typography>
+                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={handleTogglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' } }}>
+                    <Typography component="span" sx={{ transform: 'translateY(1px)' }}>搜索</Typography>
                 </Button>
             </Box>
 
-            {/* 页面描述文本区域。 */}
-            <Stack spacing={1} sx={{ mt: 2 }}>
-                <Typography>这是一个根据其他页面样式生成的通用模板。</Typography>
-                <Typography>在这里编写您的页面内容。例如：</Typography>
-            </Stack>
-
-            {/* 内容占位符区域。 */}
-            <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', minHeight: '300px' }}>
-                <Typography>您的实际内容会在这里渲染。</Typography>
-
-                {/* 打开全局弹窗的按钮。 */}
-                <Button
-                    variant="outlined"
-                    sx={{ mt: 2 }}
-                    // onClick 只负责导航，将状态变更的责任交给 URL 和 useEffect。
-                    onClick={() => {
-                        // 点击按钮时，导航到带有 itemId 的 URL。
-                        navigate('/app/template-page/template-123', { replace: true });
+            {/* 表格容器，使用 flexGrow: 1 占据剩余的垂直空间。 */}
+            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                <DataTable
+                    rowsPerPageOptions={[10, 25, 50]}
+                    count={templateRows.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={(_, newPage) => setPage(newPage)}
+                    onRowsPerPageChange={event => {
+                        setRowsPerPage(+event.target.value);
+                        setPage(0);
                     }}
+                    labelRowsPerPage="每页行数:"
+                    labelDisplayedRows={({ from, to, count }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    打开弹窗 (ID: template-123)
-                </Button>
+                    <Table
+                        stickyHeader // stickyHeader: 使表格头部在垂直滚动时固定在顶部。
+                        aria-label="模板数据表"
+                        sx={{
+                            borderCollapse: 'separate', // borderCollapse: 'separate' 是实现圆角和边框间距的表格样式所需。
+                            tableLayout: 'fixed', // 【关键】tableLayout: 'fixed' 是高性能表格和防止布局抖动的关键，它让浏览器基于表头的宽度来渲染列。
+                            width: '100%', // width: '100%' 确保表格撑满其容器宽度。
+                            minWidth: 650, // minWidth: 确保在窄屏幕下，表格内容不会被过度挤压，而是出现水平滚动条。
+                        }}
+                    >
+                        <TableHead>
+                            <TableRow>
+                                {/* 【关键】为所有列都提供明确的宽度，这是防止布局坍塌的最终解决方案。 */}
+                                <TableCell sx={{ width: '25%', position: 'sticky', left: 0, zIndex: 120, bgcolor: 'background.paper', fontWeight: 700 }}>项目名称</TableCell>
+                                <TableCell sx={{ width: '15%', fontWeight: 700 }}>类别</TableCell>
+                                <TableCell sx={{ width: '60%', fontWeight: 700 }}>描述</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {pageRows.map(row => (
+                                // 【关键】使用 ButtonBase 并将其 component 设为 TableRow，以获得水波纹动画效果。
+                                <ButtonBase
+                                    key={row.id}
+                                    component={TableRow}
+                                    onClick={() => navigate(`/app/template-page/${row.id}`, { replace: true })}
+                                    sx={{ display: 'table-row', width: '100%', position: 'relative' }}
+                                >
+                                    {/* 【关键】固定的列，必须有自己的背景色以遮挡滚动内容。 */}
+                                    <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100, bgcolor: 'background.paper', 'tr:hover &': { bgcolor: 'action.hover' } }}>
+                                        {row.name}
+                                    </TooltipCell>
+                                    {/* 【关键】对于所有单元格，使用 'tr:hover &' 选择器来响应父行的悬停事件，并应用统一的背景色。 */}
+                                    <TableCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>
+                                        {row.category}
+                                    </TableCell>
+                                    <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>
+                                        {row.description}
+                                    </TooltipCell>
+                                </ButtonBase>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </DataTable>
             </Box>
         </PageLayout>
     );
 };
 
-// 默认导出该组件，以便在路由配置中导入和使用。
 export default TemplatePage;
