@@ -5,21 +5,22 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【跨页加载修复】修复了当面板已打开时，跳转到此页面，面板会卡在加载状态的问题。
+ * - 【表格交互终极修复】应用了与模板页面相同的终极修复方案，以同时实现布局稳定、水波纹动画和一致的悬停/高亮效果。
  * - **问题根源**:
- *   页面的内容加载逻辑依赖于一个本地状态 `isPanelContentSet`，而这个状态无法感知到面板在跳转前就已经打开的全局状态。
+ *   旧的实现方式直接在 `<ButtonBase>` 上使用 `:hover` 和 `bgcolor`，这与 `position: sticky` 列存在渲染冲突，会导致布局坍塌和颜色不一致。
  * - **解决方案**:
- *   1.  引入 `useLayoutState` 来获取全局的 `isPanelOpen` 状态。
- *   2.  添加一个新的 `useEffect`，它会在组件挂载时检查 `isPanelOpen`。
- *   3.  如果 `isPanelOpen` 为 `true`，则立即将本地的 `isPanelContentSet` 设置为 `true`，从而触发本页面搜索表单的加载和渲染。
+ *   1.  **移除 `useTheme`**: 清理了不再需要的 `useTheme` 钩子及其导入。
+ *   2.  **分离交互与样式**: `<ButtonBase>` 不再负责任何背景色样式，只用于提供水波纹动画。
+ *   3.  **在子级统一样式**: 在每个 `TableCell` 和 `TooltipCell` 的 `sx` 属性中，通过逻辑判断和 `'tr:hover &'` 选择器来统一处理“高亮”和“悬停”两种状态的背景色。
+ *   4.  **确保固定列背景**: 固定的“客户名称”列的背景色现在也由统一的逻辑控制，确保了在所有状态下（默认、高亮、悬停）的视觉效果都完全一致。
  * - **最终效果**:
- *   现在，当面板打开时，在具备搜索功能的页面之间跳转，面板内容能够正确、无缝地从一个表单过渡到另一个表单，不再卡在加载状态。
+ *   更新日志页面的表格现在拥有了与工单页面和模板页面完全相同的、健壮可靠的交互体验，并能正确显示高亮行。
  */
 import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, useTheme, ButtonBase, CircularProgress
+    TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
@@ -38,11 +39,9 @@ const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本，
 const rows: Row[] = [ create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({ length: 50 }).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)), ];
 
 const Changelog: React.FC = () => {
-    // 【核心修复】同时获取状态和派发函数
     const { isMobile, isPanelOpen } = useLayoutState();
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
-    const theme    = useTheme();
     const navigate = useNavigate();
     const { logId } = useParams<{ logId: string }>();
 
@@ -50,9 +49,7 @@ const Changelog: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    // 【核心修复】添加此 effect 以同步全局面板状态
     useEffect(() => {
-        // 如果此页面挂载时，面板已经是打开状态，则立即触发内容加载
         if (isPanelOpen) {
             setIsPanelContentSet(true);
         }
@@ -139,7 +136,7 @@ const Changelog: React.FC = () => {
                     labelRowsPerPage="每页行数:"
                     labelDisplayedRows={({ from, to, count }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    <Table stickyHeader aria-label="更新日志表" sx={{ borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed' }}>
+                    <Table stickyHeader aria-label="更新日志表" sx={{ borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed', minWidth: 800 }}>
                         <TableHead>
                             <TableRow>
                                 {isMobile ? (
@@ -168,20 +165,16 @@ const Changelog: React.FC = () => {
                                             display: 'table-row',
                                             width: '100%',
                                             position: 'relative',
-                                            bgcolor: isHighlighted ? theme.palette.action.selected : 'transparent',
-                                            '&:hover': {
-                                                backgroundColor: isHighlighted ? theme.palette.action.selected : theme.palette.action.hover,
-                                            },
                                         }}
                                     >
                                         {isMobile ? (
                                             <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
                                         ) : (
                                             <>
-                                                <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100 }}>{r.customerName}</TooltipCell>
-                                                <TooltipCell>{r.updateTime}</TooltipCell>
-                                                <TooltipCell>{r.updateType}</TooltipCell>
-                                                <TooltipCell>{r.updateContent}</TooltipCell>
+                                                <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100, bgcolor: isHighlighted ? 'action.selected' : 'background.paper', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.customerName}</TooltipCell>
+                                                <TooltipCell sx={{ bgcolor: isHighlighted ? 'action.selected' : 'transparent', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.updateTime}</TooltipCell>
+                                                <TooltipCell sx={{ bgcolor: isHighlighted ? 'action.selected' : 'transparent', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.updateType}</TooltipCell>
+                                                <TooltipCell sx={{ bgcolor: isHighlighted ? 'action.selected' : 'transparent', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.updateContent}</TooltipCell>
                                             </>
                                         )}
                                     </ButtonBase>

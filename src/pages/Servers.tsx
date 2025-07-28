@@ -5,21 +5,22 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【跨页加载修复】修复了当面板已打开时，跳转到此页面，面板会卡在加载状态的问题。
+ * - 【表格交互终极修复】应用了与模板页面相同的终极修复方案，以同时实现布局稳定、水波纹动画和一致的悬停效果。
  * - **问题根源**:
- *   页面的内容加载逻辑依赖于一个本地状态 `isPanelContentSet`，而这个状态无法感知到面板在跳转前就已经打开的全局状态。
+ *   旧的实现方式直接在 `<ButtonBase>` 上使用 `:hover` 伪类，这与 `position: sticky` 列在子组件状态更新时存在渲染冲突，会导致布局坍塌和悬停颜色不一致。
  * - **解决方案**:
- *   1.  引入 `useLayoutState` 来获取全局的 `isPanelOpen` 状态。
- *   2.  添加一个新的 `useEffect`，它会在组件挂载时检查 `isPanelOpen`。
- *   3.  如果 `isPanelOpen` 为 `true`，则立即将本地的 `isPanelContentSet` 设置为 `true`，从而触发本页面搜索表单的加载和渲染。
+ *   1.  **移除 `useTheme`**: 清理了不再需要的 `useTheme` 钩子及其导入。
+ *   2.  **分离交互与样式**: `<ButtonBase>` 不再负责任何背景色样式，只用于提供水波纹动画。
+ *   3.  **在子级统一样式**: 在每个 `TableCell` 和 `TooltipCell` 的 `sx` 属性中，使用 `'tr:hover &'` 选择器来响应父行的悬停事件，并统一应用 `action.hover` 背景色。
+ *   4.  **确保固定列背景**: 固定的“客户名称”列在默认状态下有自己的 `background.paper` 背景色以遮挡滚动内容，在悬停时其背景色也会被 `'tr:hover &'` 的规则覆盖，从而实现视觉统一。
  * - **最终效果**:
- *   现在，当面板打开时，在具备搜索功能的页面之间跳转，面板内容能够正确、无缝地从一个表单过渡到另一个表单，不再卡在加载状态。
+ *   服务器信息页面的表格现在拥有了与工单页面和模板页面完全相同的、健壮可靠的交互体验。
  */
 import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, useTheme, ButtonBase, CircularProgress
+    TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
@@ -42,7 +43,6 @@ const Servers: React.FC = () => {
     const { isMobile, isPanelOpen } = useLayoutState();
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
-    const theme    = useTheme();
     const navigate = useNavigate();
     const { serverId } = useParams<{ serverId: string }>();
 
@@ -50,9 +50,7 @@ const Servers: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    // 【核心修复】添加此 effect 以同步全局面板状态
     useEffect(() => {
-        // 如果此页面挂载时，面板已经是打开状态，则立即触发内容加载
         if (isPanelOpen) {
             setIsPanelContentSet(true);
         }
@@ -128,7 +126,7 @@ const Servers: React.FC = () => {
                     labelRowsPerPage="每页行数:"
                     labelDisplayedRows={({ from, to, count }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    <Table stickyHeader aria-label="服务器信息表" sx={{ borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed' }}>
+                    <Table stickyHeader aria-label="服务器信息表" sx={{ borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed', minWidth: 900 }}>
                         <TableHead>
                             <TableRow>
                                 {isMobile ? (
@@ -157,21 +155,18 @@ const Servers: React.FC = () => {
                                         display: 'table-row',
                                         width: '100%',
                                         position: 'relative',
-                                        '&:hover': {
-                                            backgroundColor: theme.palette.action.hover,
-                                        }
                                     }}
                                 >
                                     {isMobile ? (
                                         <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.serverName}</TooltipCell><TooltipCell>{r.role}</TooltipCell></>
                                     ) : (
                                         <>
-                                            <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100 }}>{r.customerName}</TooltipCell>
-                                            <TooltipCell>{r.serverName}</TooltipCell>
-                                            <TooltipCell>{r.ip}</TooltipCell>
-                                            <TooltipCell>{r.role}</TooltipCell>
-                                            <TooltipCell>{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>
-                                            <TooltipCell>{r.note || '-'}</TooltipCell>
+                                            <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100, bgcolor: 'background.paper', 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.customerName}</TooltipCell>
+                                            <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.serverName}</TooltipCell>
+                                            <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.ip}</TooltipCell>
+                                            <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.role}</TooltipCell>
+                                            <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>
+                                            <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.note || '-'}</TooltipCell>
                                         </>
                                     )}
                                 </ButtonBase>
