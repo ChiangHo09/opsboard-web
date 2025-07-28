@@ -5,49 +5,45 @@
  * 此文件定义了一个专用于【移动端】的工单详情页面。它现在负责处理从移动端到桌面端的视图切换。
  *
  * 本次修改内容:
- * - 【响应式逻辑修复】重新引入了 `useEffect` 来处理视图切换，并移除了导致空白页的渲染判断。
+ * - 【布局修复】彻底解决了移动端视图下边距过宽的问题。
  * - **问题根源**:
- *   此组件是唯一能在移动端详情视图下响应 `isMobile` 状态变化的地方。
+ *   错误地使用了为桌面端设计的 `<PageLayout>` 组件，该组件自身带有 `width: 80%` 和 `mx: 'auto'` 的样式，导致了不必要的外部边距。
  * - **解决方案**:
- *   1.  **引入 `useLayoutState`**: 获取实时的 `isMobile` 状态。
- *   2.  **添加 `useEffect`**: 在此组件内部，监听 `isMobile` 的变化。当 `isMobile` 变为 `false` 时，立即将用户重定向回桌面端的对应 URL。
- *   3.  **移除渲染阻断**: 删除了 `if (!isMobile) return null;` 的判断。这允许组件在 `isMobile` 变为 `false` 的瞬间仍然能够完成一次渲染，从而确保 `useEffect` 有机会执行导航操作，避免了空白页问题。
+ *   1.  将根组件从 `<PageLayout>` 替换为一个标准的 MUI `<Box>` 组件。
+ *   2.  将所有必要的布局样式（如 `display: 'flex'`）直接应用到这个 `<Box>` 上。
+ *   3.  为 `<Box>` 设置 `p: 3`，使其内边距在所有方向上都与搜索面板完全一致。
  * - **最终效果**:
- *   实现了从移动端详情页到桌面端弹窗视图的平滑、自动的重定向，完成了响应式切换的闭环。
+ *   移动端详情页现在是一个真正的全屏视图，其内容区的内边距与搜索面板精确匹配，视觉效果协调统一。
  */
 import React, { lazy, Suspense, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Typography, IconButton, CircularProgress } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import PageLayout from '../../layouts/PageLayout';
+// 【核心修复】不再需要 PageLayout
 import { useLayoutState } from '../../contexts/LayoutContext.tsx';
 
-// 懒加载详情内容组件以优化性能
 const TicketDetailContent = lazy(() => import('../../components/modals/TicketDetailContent.tsx'));
 
 const TicketDetailMobile: React.FC = () => {
     const navigate = useNavigate();
     const { ticketId } = useParams<{ ticketId: string }>();
-    // 【核心修复】获取实时的 isMobile 状态
     const { isMobile } = useLayoutState();
 
-    // 【核心修复】添加此 effect 来处理从移动端到桌面端的视图切换
     useEffect(() => {
-        // 如果 ticketId 存在，并且视图已经不再是移动端...
         if (ticketId && !isMobile) {
-            // ...则重定向到桌面端的弹窗路由，并替换当前历史记录
             navigate(`/app/tickets/${ticketId}`, { replace: true });
         }
-    }, [isMobile, ticketId, navigate]); // 依赖 isMobile 的变化
+    }, [isMobile, ticketId, navigate]);
 
     if (!ticketId) {
         return null;
     }
 
     return (
-        <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        // 【核心修复】使用 Box 替换 PageLayout，并设置 p: 3
+        <Box sx={{ boxSizing: 'border-box', height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, flexShrink: 0 }}>
-                <IconButton onClick={() => navigate(-1)} aria-label="返回">
+                <IconButton onClick={() => navigate(-1)} aria-label="返回" sx={{ ml: -1.5 }}>
                     <ArrowBackIcon />
                 </IconButton>
                 <Typography variant="h6" sx={{ ml: 1 }}>
@@ -64,7 +60,7 @@ const TicketDetailMobile: React.FC = () => {
                     <TicketDetailContent ticketId={ticketId} />
                 </Suspense>
             </Box>
-        </PageLayout>
+        </Box>
     );
 };
 
