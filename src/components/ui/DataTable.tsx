@@ -1,19 +1,18 @@
 /**
  * 文件名: src/components/ui/DataTable.tsx
  *
- * 本次修改内容:
- * - 这是一个全新的、高度可重用的组件，用于封装所有数据表格的通用布局和行为。
- * - **固定分页器**: 使用 CSS Grid 布局 (`gridTemplateRows: '1fr auto'`)，
- *   将组件垂直划分为一个弹性的内容区和一个高度固定的页脚区。
- *   - `TableContainer` 位于弹性区，负责内容的内部滚动。
- *   - `TablePagination` 位于页脚区，始终固定在底部，不会随内容滚动。
- * - **分页器右对齐**: `TablePagination` 的 `sx` 属性被设置为靠右显示。
- * - **统一接口**: 组件通过 props 接收表格内容 (`children`) 和所有分页器所需的属性，
- *   提供了一个简洁、统一的接口。
- *
  * 文件功能描述:
  * 此文件定义了一个 `DataTable` 组件，它为应用中的所有数据表格提供了一个
  * 统一的、带有固定分页器的、可滚动的容器。
+ *
+ * 本次修改内容:
+ * - 【布局闪烁终极修复】确保了 `TableContainer` 能够始终撑满其父容器的宽度。
+ * - **问题根源**:
+ *   `TableContainer` 默认的宽度是 `auto`，它会收缩以适应其子元素 (`<Table>`) 的宽度。这在 React hydration 过程中，由于样式的延迟应用，会导致一次从“撑满”到“收缩”的布局重排，从而产生闪烁。
+ * - **解决方案**:
+ *   1.  为 `<TableContainer>` 组件的 `sx` 属性添加了 `width: '100%'`。
+ * - **最终效果**:
+ *   此修改强制 `TableContainer` 在任何时候都占据其父级 Grid 单元格的全部宽度。这确保了在页面初始加载和 React hydration 完成后，布局始终保持一致，彻底根除了刷新时的闪烁问题。
  */
 import React from 'react';
 import {
@@ -41,7 +40,8 @@ const DataTable: React.FC<DataTableProps> = ({ children, ...paginationProps }) =
                 overflow: 'hidden', // 确保 Paper 自身不滚动
             }}
         >
-            <TableContainer sx={{ overflow: 'auto' }}>
+            {/* 【核心修复】为 TableContainer 添加 width: '100%' */}
+            <TableContainer sx={{ overflow: 'auto', width: '100%' }}>
                 {children}
             </TableContainer>
 

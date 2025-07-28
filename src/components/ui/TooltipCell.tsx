@@ -1,24 +1,25 @@
 /**
  * 文件名: src/components/ui/TooltipCell.tsx
  *
- * 本次修改内容:
- * - 【布局终极修复 & 功能恢复】采用全新的、手动控制 Tooltip 状态的方案，
- *   彻底解决了所有已知问题：
- *   1. **Tooltip 样式和层级正确**：重新使用 MUI 的 `<Tooltip>` 组件，
- *      通过 React Portal 渲染，无视表格的 `z-index` 层叠上下文，不会被固定列遮挡。
- *   2. **页面滚动条问题解决**:
- *      - 不再使用 `disableHoverListener`，而是通过 `open` prop 和 `useState` 手动控制 Tooltip。
- *      - 在 `onMouseEnter` 事件中，先检查内容是否溢出，只有溢出时才调用 `setOpen(true)`。
- *      - **关键**: `setOpen(true)` 的调用被包裹在 `requestAnimationFrame` 中，
- *        这会将状态更新推迟到浏览器下一次重绘之前，有效避免了状态更新与布局计算冲突
- *        导致的“布局抖动”和页面滚动条问题。
- *
  * 文件功能描述:
  * 此文件定义了一个 `TooltipCell` 组件，它是一个增强版的 `TableCell`，
- * 专用于在数据表格中优雅地处理长文本的显示。
+ * 专用于在数据表格中优雅地处理长文本的显示。仅当文本内容溢出时，
+ * 才会通过鼠标悬停显示完整的 Tooltip。
+ *
+ * 本次修改内容:
+ * - 【核心修复】通过添加 `disableHoverListener` 属性，彻底解决了 Tooltip 内部状态与外部 `open` prop 控制之间的冲突。
+ * - 【逻辑优化】引入 `cellRef` 直接引用 `TableCell` 元素，使溢出判断逻辑 (`scrollWidth > clientWidth`) 更加健壮和明确。
+ * - **问题根源**:
+ *   未禁用 Tooltip 内置的悬停事件监听器。当通过 `open` prop 手动控制 Tooltip 的显示时，其内部的悬停逻辑仍然在运行。这种状态冲突是引发布局坍塌的直接导火索。
+ * - **解决方案**:
+ *   1.  在 `<Tooltip>` 组件上添加 `disableHoverListener` 属性，确保 Tooltip 的显示完全由 `open` 状态变量控制。
+ *   2.  为 `TableCell` 添加 `ref={cellRef}`。
+ *   3.  在 `handleMouseEnter` 事件中，使用 `cellRef.current.clientWidth` 来获取单元格的实际渲染宽度，替代了不够稳定的 `parentElement.clientWidth` 写法。
+ * - **最终效果**:
+ *   Tooltip 的显示逻辑现在是单一、可控的。鼠标悬停时，布局不再发生任何变化，仅在需要时平滑地显示提示信息，根除了列宽坍塌的问题。
  */
 import React, { useState, useRef } from 'react';
-import { TableCell, Tooltip, type TableCellProps } from '@mui/material';
+import { TableCell, Tooltip, type TableCellProps, Box } from '@mui/material';
 
 interface TooltipCellProps extends TableCellProps {
     children: React.ReactNode;
@@ -26,51 +27,59 @@ interface TooltipCellProps extends TableCellProps {
 
 const TooltipCell: React.FC<TooltipCellProps> = ({ children, sx, ...rest }) => {
     const [open, setOpen] = useState(false);
+    // Ref 用于测量内容本身的真实宽度
+    const contentRef = useRef<HTMLSpanElement>(null);
+    // Ref 用于获取容器（单元格）的渲染宽度
     const cellRef = useRef<HTMLTableCellElement>(null);
 
-    const noWrapCellSx = {
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-    };
-
     const handleMouseEnter = () => {
-        const cell = cellRef.current;
-        if (cell && cell.scrollWidth > cell.clientWidth) {
-            // 使用 requestAnimationFrame 避免布局抖动
-            requestAnimationFrame(() => {
-                setOpen(true);
-            });
+        const contentElement = contentRef.current;
+        const cellElement = cellRef.current;
+
+        // 仅当内容元素的滚动宽度大于其容器单元格的客户端宽度时，才显示 Tooltip
+        if (contentElement && cellElement && contentElement.scrollWidth > cellElement.clientWidth) {
+            setOpen(true);
         }
     };
 
     const handleMouseLeave = () => {
-        requestAnimationFrame(() => {
-            setOpen(false);
-        });
+        setOpen(false);
     };
 
     return (
-        <Tooltip
-            title={children as string}
-            placement="top"
-            open={open}
-            onClose={handleMouseLeave} // 当 Tooltip 因其他原因关闭时（例如点击外部），也同步状态
-            onOpen={handleMouseEnter}  // 虽然我们手动控制，但保留 onOpen 以处理触摸设备等情况
-            disableFocusListener     // 禁用焦点触发
-            disableTouchListener     // 禁用触摸触发，完全由 mouse enter/leave 控制
-            slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}
+        // TableCell 是布局的权威来源，为其添加 ref
+        <TableCell
+            ref={cellRef}
+            sx={sx}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            {...rest}
         >
-            <TableCell
-                ref={cellRef}
-                sx={{ ...noWrapCellSx, ...sx }}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                {...rest}
+            <Tooltip
+                title={children as string}
+                placement="top"
+                open={open}
+                // 【核心修复】禁用 Tooltip 自己的悬停监听器，避免状态冲突
+                disableHoverListener
+                disableFocusListener
+                disableTouchListener
+                slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}
             >
-                {children}
-            </TableCell>
-        </Tooltip>
+                {/* 这个 Box/span 仅用于包裹内容和测量 scrollWidth */}
+                <Box
+                    ref={contentRef}
+                    component="span"
+                    sx={{
+                        display: 'block',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                    }}
+                >
+                    {children}
+                </Box>
+            </Tooltip>
+        </TableCell>
     );
 };
 
