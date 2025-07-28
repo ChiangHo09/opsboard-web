@@ -6,14 +6,15 @@
  * 它负责管理用户的登录状态，并根据该状态决定渲染登录页面还是受保护的主应用布局。
  *
  * 本次修改内容:
- * - 【路由修复】为所有支持详情弹窗的页面添加了嵌套的动态路由，以修复点击详情时错误跳转到 Dashboard 的问题。
+ * - 【移动端路由修复】为所有详情页面添加了专用的移动端路由。
  * - **问题根源**:
- *   `tickets` 和 `template-page` 等路由缺少对其详情路径（如 `/app/tickets/:ticketId`）的定义。这导致 React Router 无法匹配这些路径，从而触发了通配符 `*` 路由，重定向到了 Dashboard。
+ *   应用缺少处理移动端详情视图的路由规则。
  * - **解决方案**:
- *   1.  在 `tickets` 路由下，添加了嵌套的 `<Route path=":ticketId" element={null} />`。
- *   2.  （为保持一致性）新增了 `template-page` 路由，并为其添加了嵌套的 `<Route path=":itemId" element={null} />`。
+ *   1.  懒加载所有新创建的移动端详情页面组件（`TicketDetailMobile` 等）。
+ *   2.  为每个功能模块添加了新的、独立的移动端详情路由，例如 `/app/tickets/mobile/:ticketId`。
+ *   3.  这些新路由会渲染对应的移动端全屏详情页面组件。
  * - **最终效果**:
- *   现在所有详情页的 URL 都能被路由系统正确识别，点击详情条目后，页面会停留在原地并正确弹出模态框，不再发生意外跳转。
+ *   应用现在能够根据 URL 正确地渲染桌面端的弹窗或移动端的新页面，实现了完整的响应式详情查看流程。
  */
 import {BrowserRouter as Router, Routes, Route, Navigate} from 'react-router-dom';
 import {useState, useEffect, lazy} from 'react';
@@ -46,7 +47,13 @@ const Stats = lazy(() => import('./pages/Stats'));
 const Labs = lazy(() => import('./pages/Labs'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Search = lazy(() => import('./pages/Search'));
-const TemplatePage = lazy(() => import('./pages/TemplatePage')); // 导入模板页面
+const TemplatePage = lazy(() => import('./pages/TemplatePage'));
+
+// 【核心修复】懒加载所有新创建的移动端详情页面
+const TicketDetailMobile = lazy(() => import('./pages/mobile/TicketDetailMobile'));
+const ServerDetailMobile = lazy(() => import('./pages/mobile/ServerDetailMobile'));
+const ChangelogDetailMobile = lazy(() => import('./pages/mobile/ChangelogDetailMobile'));
+
 
 const STORAGE_KEY = 'fake_authed';
 
@@ -90,19 +97,26 @@ export default function App() {
                             <Route path="servers" element={<Servers/>}>
                                 <Route path=":serverId" element={null}/>
                             </Route>
+                            {/* 【核心修复】添加服务器详情的移动端路由 */}
+                            <Route path="servers/mobile/:serverId" element={<ServerDetailMobile />} />
+
                             <Route path="changelog" element={<Changelog/>}>
                                 <Route path=":logId" element={null}/>
                             </Route>
+                            {/* 【核心修复】添加更新日志详情的移动端路由 */}
+                            <Route path="changelog/mobile/:logId" element={<ChangelogDetailMobile />} />
+
                             <Route path="inspection-backup" element={<InspectionBackup/>}/>
-                            {/* 【核心修复】为 tickets 路由添加嵌套的详情路由 */}
                             <Route path="tickets" element={<Tickets/>}>
                                 <Route path=":ticketId" element={null}/>
                             </Route>
+                            {/* 【核心修复】添加工单详情的移动端路由 */}
+                            <Route path="tickets/mobile/:ticketId" element={<TicketDetailMobile />} />
+
                             <Route path="stats" element={<Stats/>}/>
                             <Route path="labs" element={<Labs/>}/>
                             <Route path="settings" element={<Settings/>}/>
                             <Route path="search" element={<Search/>}/>
-                            {/* 【核心修复】添加模板页面的路由，并为其添加嵌套的详情路由 */}
                             <Route path="template-page" element={<TemplatePage/>}>
                                 <Route path=":itemId" element={null}/>
                             </Route>

@@ -5,17 +5,12 @@
  * 此文件负责定义并渲染应用的“工单信息”页面。它提供了一个可搜索、可分页、支持详情查看的高级表格来展示工单数据。
  *
  * 本次修改内容:
- * - 【布局坍塌终极修复】通过为所有表格列提供明确的宽度定义，彻底解决了布局在鼠标悬停时坍塌的问题，同时保留了水波纹和一致的悬停效果。
- * - **问题根源**:
- *   在 `table-layout: fixed` 的表格中，如果存在一个没有明确宽度的“自动填充”列，并且该表格使用了非标准的行组件（如 `<ButtonBase>`），那么在行内组件发生状态更新时，浏览器的布局算法会发生错误，导致该列宽度瞬间坍塌为零。
+ * - 【响应式逻辑确认】此文件中的逻辑是正确的，它负责处理“桌面端 -> 移动端”的视图切换。
  * - **解决方案**:
- *   1.  **保留高级交互结构**: 继续使用 `<ButtonBase>` 结合 `'tr:hover &'` 的高级样式技巧，以同时满足“水波纹动画”和“一致的悬停颜色”这两个需求。
- *   2.  **消除布局歧义**: 在 `<TableHead>` 中，为之前没有宽度的“操作内容”列，明确指定其宽度（例如 `width: '60%'`），确保所有列的宽度总和为100%。
+ *   1.  **集中决策 (部分)**: 此组件内的 `useEffect` 负责监听 `ticketId` 和 `isMobile` 的变化。
+ *   2.  **单向重定向**: 当 `ticketId` 存在且 `isMobile` 变为 `true` 时，它会将用户重定向到移动端专用的详情路由。
  * - **最终效果**:
- *   通过为浏览器提供一个完全明确、无歧义的列宽布局指令，我们从根本上阻止了其渲染引擎在复杂交互下出错的可能。现在，应用的所有三个核心需求都得到了满足：
- *   1.  **布局绝对稳定**：鼠标悬停和移动不会再导致右侧出现空白。
- *   2.  **拥有水波纹动画**：点击行时有平滑的涟漪效果。
- *   3.  **悬停颜色完全一致**：鼠标悬停时，整行显示为统一、无色差的背景色。
+ *   确保了从桌面详情弹窗视图到移动端全屏页面的平滑过渡。
  */
 import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -25,18 +20,15 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '../contexts/LayoutContext.tsx';
-// 假设 TicketSearchForm 会导出此类型
 import {type TicketSearchValues} from '../components/forms/TicketSearchForm';
 import TooltipCell from '../components/ui/TooltipCell';
 import PageLayout from '../layouts/PageLayout';
 import DataTable from '../components/ui/DataTable';
 
-// 假设这些是为工单功能新创建的组件
 const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm'));
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
 
 
-// 1. 定义新的数据结构
 interface Row {
     id: string;
     customerName: string;
@@ -45,7 +37,6 @@ interface Row {
     operationContent: string;
 }
 
-// 2. 创建新的数据生成函数和演示数据
 const create = (id: string, customer: string, status: Row['status'], opType: Row['operationType'], content: string): Row => ({
     id,
     customerName: customer,
@@ -91,19 +82,14 @@ const Tickets: React.FC = () => {
         }
     }, [isPanelOpen]);
 
+    // Effect 1: 负责控制桌面端弹窗的显示与隐藏
     useEffect(() => {
         const ticketExists = ticketId && rows.some(row => row.id === ticketId);
         if (ticketExists && !isMobile) {
             setIsModalOpen(true);
             setModalConfig({
                 content: (
-                    <Suspense fallback={<Box sx={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}><CircularProgress/></Box>}>
+                    <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress/></Box>}>
                         <TicketDetailContent ticketId={ticketId}/>
                     </Suspense>
                 ),
@@ -115,6 +101,14 @@ const Tickets: React.FC = () => {
         }
     }, [ticketId, isMobile, navigate, setIsModalOpen, setModalConfig]);
 
+    // Effect 2: 负责处理从桌面端到移动端的视图重定向
+    useEffect(() => {
+        if (ticketId && isMobile) {
+            navigate(`/app/tickets/mobile/${ticketId}`, { replace: true });
+        }
+    }, [ticketId, isMobile, navigate]);
+
+
     const onSearch = useCallback((v: TicketSearchValues) => {
         alert(`搜索: ${JSON.stringify(v)}`);
         togglePanel();
@@ -125,23 +119,15 @@ const Tickets: React.FC = () => {
 
     useEffect(() => {
         if (!isPanelContentSet) return;
-
         const timerId = setTimeout(() => {
             setPanelContent(
-                <Suspense fallback={<Box sx={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                }}><CircularProgress/></Box>}>
+                <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress/></Box>}>
                     <TicketSearchForm onSearch={onSearch} onReset={onReset}/>
                 </Suspense>
             );
             setPanelTitle('工单搜索');
             setPanelWidth(360);
         }, 0);
-
         return () => {
             clearTimeout(timerId);
             setPanelContent(null);
@@ -162,15 +148,7 @@ const Tickets: React.FC = () => {
         <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
             <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>工单信息</Typography>
-                <Button variant="contained" size="large" startIcon={<SearchIcon/>} onClick={handleTogglePanel} sx={{
-                    height: 42,
-                    borderRadius: '50px',
-                    textTransform: 'none',
-                    px: 3,
-                    bgcolor: 'app.button.background',
-                    color: 'neutral.main',
-                    '&:hover': {bgcolor: 'app.button.hover'}
-                }}>
+                <Button variant="contained" size="large" startIcon={<SearchIcon/>} onClick={handleTogglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': {bgcolor: 'app.button.hover'} }}>
                     <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
                 </Button>
             </Box>
@@ -182,28 +160,16 @@ const Tickets: React.FC = () => {
                     rowsPerPage={rowsPerPage}
                     page={page}
                     onPageChange={(_, p) => setPage(p)}
-                    onRowsPerPageChange={e => {
-                        setRowsPerPage(+e.target.value);
-                        setPage(0);
-                    }}
+                    onRowsPerPageChange={e => { setRowsPerPage(+e.target.value); setPage(0); }}
                     labelRowsPerPage="每页行数:"
                     labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    <Table stickyHeader aria-label="工单信息表"
-                           sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%', minWidth: 700}}>
+                    <Table stickyHeader aria-label="工单信息表" sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%', minWidth: 700}}>
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{
-                                    width: '15%',
-                                    position: 'sticky',
-                                    left: 0,
-                                    zIndex: 120,
-                                    bgcolor: 'background.paper',
-                                    fontWeight: 700
-                                }}>客户名称</TableCell>
+                                <TableCell sx={{ width: '15%', position: 'sticky', left: 0, zIndex: 120, bgcolor: 'background.paper', fontWeight: 700 }}>客户名称</TableCell>
                                 <TableCell sx={{width: '10%', fontWeight: 700}}>状态</TableCell>
                                 <TableCell sx={{width: '15%', fontWeight: 700}}>操作类别</TableCell>
-                                {/* 【核心修复】为最后一列明确指定宽度，消除布局计算的歧义 */}
                                 <TableCell sx={{width: '60%', fontWeight: 700}}>操作内容</TableCell>
                             </TableRow>
                         </TableHead>
@@ -215,44 +181,14 @@ const Tickets: React.FC = () => {
                                     onClick={() => {
                                         navigate(`/app/tickets/${r.id}`, {replace: true});
                                     }}
-                                    sx={{
-                                        display: 'table-row',
-                                        width: '100%',
-                                        position: 'relative',
-                                    }}
+                                    sx={{ display: 'table-row', width: '100%', position: 'relative' }}
                                 >
-                                    <TooltipCell
-                                        sx={{
-                                            position: 'sticky',
-                                            left: 0,
-                                            zIndex: 100,
-                                            bgcolor: 'background.paper',
-                                            'tr:hover &': {
-                                                bgcolor: 'action.hover'
-                                            }
-                                        }}>{r.customerName}</TooltipCell>
-                                    <TableCell sx={{
-                                        'tr:hover &': {
-                                            bgcolor: 'action.hover'
-                                        }
-                                    }}>
-                                        <Chip
-                                            label={r.status}
-                                            color={r.status === '就绪' ? 'success' : 'warning'}
-                                            size="small"
-                                            sx={{fontWeight: 700}}
-                                        />
+                                    <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100, bgcolor: 'background.paper', 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.customerName}</TooltipCell>
+                                    <TableCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>
+                                        <Chip label={r.status} color={r.status === '就绪' ? 'success' : 'warning'} size="small" sx={{fontWeight: 700}} />
                                     </TableCell>
-                                    <TooltipCell sx={{
-                                        'tr:hover &': {
-                                            bgcolor: 'action.hover'
-                                        }
-                                    }}>{r.operationType}</TooltipCell>
-                                    <TooltipCell sx={{
-                                        'tr:hover &': {
-                                            bgcolor: 'action.hover'
-                                        }
-                                    }}>{r.operationContent}</TooltipCell>
+                                    <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.operationType}</TooltipCell>
+                                    <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>{r.operationContent}</TooltipCell>
                                 </ButtonBase>
                             ))}
                         </TableBody>

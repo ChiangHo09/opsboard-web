@@ -5,16 +5,11 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【表格交互终极修复】应用了与模板页面相同的终极修复方案，以同时实现布局稳定、水波纹动画和一致的悬停/高亮效果。
- * - **问题根源**:
- *   旧的实现方式直接在 `<ButtonBase>` 上使用 `:hover` 和 `bgcolor`，这与 `position: sticky` 列存在渲染冲突，会导致布局坍塌和颜色不一致。
+ * - 【响应式逻辑修复】应用了最终的、双向无缝切换的响应式详情查看逻辑。
  * - **解决方案**:
- *   1.  **移除 `useTheme`**: 清理了不再需要的 `useTheme` 钩子及其导入。
- *   2.  **分离交互与样式**: `<ButtonBase>` 不再负责任何背景色样式，只用于提供水波纹动画。
- *   3.  **在子级统一样式**: 在每个 `TableCell` 和 `TooltipCell` 的 `sx` 属性中，通过逻辑判断和 `'tr:hover &'` 选择器来统一处理“高亮”和“悬停”两种状态的背景色。
- *   4.  **确保固定列背景**: 固定的“客户名称”列的背景色现在也由统一的逻辑控制，确保了在所有状态下（默认、高亮、悬停）的视觉效果都完全一致。
- * - **最终效果**:
- *   更新日志页面的表格现在拥有了与工单页面和模板页面完全相同的、健壮可靠的交互体验，并能正确显示高亮行。
+ *   1.  **添加重定向 Effect**: 增加了一个 `useEffect`，当 URL 中存在 `logId` 且视图切换到移动端时，自动重定向到移动端专属的详情页。
+ *   2.  **简化点击事件**: 表格行的 `onClick` 事件现在只负责导航到桌面端弹窗路由，所有响应式决策都由 `useEffect` 处理。
+ *   3.  **分离弹窗控制**: 控制弹窗的 `useEffect` 逻辑保持不变，它只在非移动端视图下工作。
  */
 import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -75,6 +70,7 @@ const Changelog: React.FC = () => {
         }
     }, [isPanelOpen]);
 
+    // Effect 1: 负责控制桌面端弹窗的显示与隐藏
     useEffect(() => {
         const itemIndex = logId ? rows.findIndex(row => row.id === logId) : -1;
         const logExists = itemIndex !== -1;
@@ -107,6 +103,13 @@ const Changelog: React.FC = () => {
             }
         }
     }, [logId, isMobile, rowsPerPage, page, navigate, setIsModalOpen, setModalConfig]);
+
+    // 【核心修复】Effect 2: 负责处理从桌面端到移动端的视图重定向
+    useEffect(() => {
+        if (logId && isMobile) {
+            navigate(`/app/changelog/mobile/${logId}`, { replace: true });
+        }
+    }, [logId, isMobile, navigate]);
 
     const onSearch = useCallback((v: ChangelogSearchValues) => {
         alert(`搜索: ${JSON.stringify({
