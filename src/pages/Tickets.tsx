@@ -5,21 +5,23 @@
  * 此文件负责定义并渲染应用的“工单信息”页面。它提供了一个可搜索、可分页、支持详情查看的高级表格来展示工单数据。
  *
  * 本次修改内容:
- * - 【布局坍塌终极修复】用标准的 `<TableRow>` 替换了不稳定的 `<ButtonBase component={TableRow}>` 写法。
+ * - 【布局坍塌终极修复】通过为所有表格列提供明确的宽度定义，彻底解决了布局在鼠标悬停时坍塌的问题，同时保留了水波纹和一致的悬停效果。
  * - **问题根源**:
- *   使用 `<ButtonBase>` 伪装成 `<TableRow>` 是一种反模式，它破坏了 HTML 表格的语义结构。当其内部的 `TooltipCell` 状态更新并触发重渲染时，浏览器的表格布局算法会因错误的 DOM 结构而崩溃，导致列宽计算失败和布局坍塌。
+ *   在 `table-layout: fixed` 的表格中，如果存在一个没有明确宽度的“自动填充”列，并且该表格使用了非标准的行组件（如 `<ButtonBase>`），那么在行内组件发生状态更新时，浏览器的布局算法会发生错误，导致该列宽度瞬间坍塌为零。
  * - **解决方案**:
- *   1.  将每一行的数据渲染都包裹在语义正确的 `<TableRow>` 组件中。
- *   2.  将 `key` 和 `onClick` 事件直接绑定到 `<TableRow>` 上。
- *   3.  通过 `<TableRow>` 的 `sx` 属性来实现悬停样式 (`&:hover`) 和鼠标指针变化 (`cursor: 'pointer'`)，从而以一种稳健、标准的方式实现整行可点击的效果。
+ *   1.  **保留高级交互结构**: 继续使用 `<ButtonBase>` 结合 `'tr:hover &'` 的高级样式技巧，以同时满足“水波纹动画”和“一致的悬停颜色”这两个需求。
+ *   2.  **消除布局歧义**: 在 `<TableHead>` 中，为之前没有宽度的“操作内容”列，明确指定其宽度（例如 `width: '60%'`），确保所有列的宽度总和为100%。
  * - **最终效果**:
- *   表格的 DOM 结构现在是完全标准和稳定的。`TooltipCell` 的状态更新只会在一个结构正确的环境中触发重渲染，浏览器的布局计算不会再出错，彻底根除了鼠标移动时布局坍塌的问题。
+ *   通过为浏览器提供一个完全明确、无歧义的列宽布局指令，我们从根本上阻止了其渲染引擎在复杂交互下出错的可能。现在，应用的所有三个核心需求都得到了满足：
+ *   1.  **布局绝对稳定**：鼠标悬停和移动不会再导致右侧出现空白。
+ *   2.  **拥有水波纹动画**：点击行时有平滑的涟漪效果。
+ *   3.  **悬停颜色完全一致**：鼠标悬停时，整行显示为统一、无色差的背景色。
  */
 import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, useTheme, CircularProgress, Chip
+    TableHead, TableRow, ButtonBase, CircularProgress, Chip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '../contexts/LayoutContext.tsx';
@@ -76,7 +78,6 @@ const Tickets: React.FC = () => {
         setModalConfig
     } = useLayoutDispatch();
 
-    const theme = useTheme();
     const navigate = useNavigate();
     const {ticketId} = useParams<{ ticketId: string }>();
 
@@ -202,27 +203,39 @@ const Tickets: React.FC = () => {
                                 }}>客户名称</TableCell>
                                 <TableCell sx={{width: '10%', fontWeight: 700}}>状态</TableCell>
                                 <TableCell sx={{width: '15%', fontWeight: 700}}>操作类别</TableCell>
-                                <TableCell sx={{fontWeight: 700}}>操作内容</TableCell>
+                                {/* 【核心修复】为最后一列明确指定宽度，消除布局计算的歧义 */}
+                                <TableCell sx={{width: '60%', fontWeight: 700}}>操作内容</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                // 【核心修复】使用标准的 TableRow 并将交互属性直接应用在此
-                                <TableRow
+                                <ButtonBase
                                     key={r.id}
+                                    component={TableRow}
                                     onClick={() => {
                                         navigate(`/app/tickets/${r.id}`, {replace: true});
                                     }}
                                     sx={{
-                                        cursor: 'pointer', // 添加手型光标，提升用户体验
-                                        '&:hover': {
-                                            backgroundColor: theme.palette.action.hover,
-                                        }
+                                        display: 'table-row',
+                                        width: '100%',
+                                        position: 'relative',
                                     }}
                                 >
                                     <TooltipCell
-                                        sx={{position: 'sticky', left: 0, zIndex: 100, bgcolor: 'inherit'}}>{r.customerName}</TooltipCell>
-                                    <TableCell>
+                                        sx={{
+                                            position: 'sticky',
+                                            left: 0,
+                                            zIndex: 100,
+                                            bgcolor: 'background.paper',
+                                            'tr:hover &': {
+                                                bgcolor: 'action.hover'
+                                            }
+                                        }}>{r.customerName}</TooltipCell>
+                                    <TableCell sx={{
+                                        'tr:hover &': {
+                                            bgcolor: 'action.hover'
+                                        }
+                                    }}>
                                         <Chip
                                             label={r.status}
                                             color={r.status === '就绪' ? 'success' : 'warning'}
@@ -230,9 +243,17 @@ const Tickets: React.FC = () => {
                                             sx={{fontWeight: 700}}
                                         />
                                     </TableCell>
-                                    <TooltipCell>{r.operationType}</TooltipCell>
-                                    <TooltipCell>{r.operationContent}</TooltipCell>
-                                </TableRow>
+                                    <TooltipCell sx={{
+                                        'tr:hover &': {
+                                            bgcolor: 'action.hover'
+                                        }
+                                    }}>{r.operationType}</TooltipCell>
+                                    <TooltipCell sx={{
+                                        'tr:hover &': {
+                                            bgcolor: 'action.hover'
+                                        }
+                                    }}>{r.operationContent}</TooltipCell>
+                                </ButtonBase>
                             ))}
                         </TableBody>
                     </Table>
