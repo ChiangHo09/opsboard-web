@@ -11,15 +11,15 @@
  * 此文件提供了在通用模态框中显示的服务器详情内容的具体实现。
  */
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import {Box, Typography} from '@mui/material';
 
 interface ServerDetailContentProps {
     serverId: string;
 }
 
-const ServerDetailContent: React.FC<ServerDetailContentProps> = ({ serverId }) => {
+const ServerDetailContent: React.FC<ServerDetailContentProps> = ({serverId}) => {
     return (
-        <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box sx={{p: 4, display: 'flex', flexDirection: 'column', height: '100%'}}>
             <Typography
                 variant="h5"
                 sx={{
@@ -30,7 +30,7 @@ const ServerDetailContent: React.FC<ServerDetailContentProps> = ({ serverId }) =
             >
                 服务器详情: {serverId}
             </Typography>
-            <Box sx={{ flexGrow: 1, border: '1px dashed grey', p: 2, overflow: 'auto' }}>
+            <Box sx={{flexGrow: 1, border: '1px dashed grey', p: 2, overflow: 'auto'}}>
                 <Typography>这里是服务器 {serverId} 的详细信息占位符。</Typography>
             </Box>
         </Box>

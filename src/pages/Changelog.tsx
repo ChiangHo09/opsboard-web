@@ -16,15 +16,15 @@
  * - **最终效果**:
  *   更新日志页面的表格现在拥有了与工单页面和模板页面完全相同的、健壮可靠的交互体验，并能正确显示高亮行。
  */
-import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
+import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { useLayoutState, useLayoutDispatch } from '../contexts/LayoutContext.tsx';
-import { type ChangelogSearchValues } from '../components/forms/ChangelogSearchForm.tsx';
+import {useLayoutState, useLayoutDispatch} from '../contexts/LayoutContext.tsx';
+import {type ChangelogSearchValues} from '../components/forms/ChangelogSearchForm.tsx';
 import TooltipCell from '../components/ui/TooltipCell';
 import PageLayout from '../layouts/PageLayout';
 import DataTable from '../components/ui/DataTable';
@@ -33,17 +33,37 @@ const ChangelogSearchForm = lazy(() => import('../components/forms/ChangelogSear
 const ChangelogDetailContent = lazy(() => import('../components/modals/ChangelogDetailContent.tsx'));
 
 
-interface Row { id: string; customerName: string; updateTime: string; updateType: string; updateContent:string; }
-const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({ id, customerName: c, updateTime: t, updateType: typ, updateContent: ct });
+interface Row {
+    id: string;
+    customerName: string;
+    updateTime: string;
+    updateType: string;
+    updateContent: string;
+}
+
+const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({
+    id,
+    customerName: c,
+    updateTime: t,
+    updateType: typ,
+    updateContent: ct
+});
 const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本，需要足够多的内容才能在宽屏的50%列宽中产生溢出效果。我们再加一点，再加一点，现在应该足够长了。';
-const rows: Row[] = [ create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({ length: 50 }).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)), ];
+const rows: Row[] = [create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({length: 50}).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)),];
 
 const Changelog: React.FC = () => {
-    const { isMobile, isPanelOpen } = useLayoutState();
-    const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth, setIsModalOpen, setModalConfig } = useLayoutDispatch();
+    const {isMobile, isPanelOpen} = useLayoutState();
+    const {
+        togglePanel,
+        setPanelContent,
+        setPanelTitle,
+        setPanelWidth,
+        setIsModalOpen,
+        setModalConfig
+    } = useLayoutDispatch();
 
     const navigate = useNavigate();
-    const { logId } = useParams<{ logId: string }>();
+    const {logId} = useParams<{ logId: string }>();
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -63,15 +83,21 @@ const Changelog: React.FC = () => {
             setIsModalOpen(true);
             setModalConfig({
                 content: (
-                    <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
-                        <ChangelogDetailContent logId={logId as string} />
+                    <Suspense fallback={<Box sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}><CircularProgress/></Box>}>
+                        <ChangelogDetailContent logId={logId as string}/>
                     </Suspense>
                 ),
-                onClose: () => navigate('/app/changelog', { replace: true })
+                onClose: () => navigate('/app/changelog', {replace: true})
             });
         } else {
             setIsModalOpen(false);
-            setModalConfig({ content: null, onClose: null });
+            setModalConfig({content: null, onClose: null});
         }
 
         if (logExists) {
@@ -82,7 +108,14 @@ const Changelog: React.FC = () => {
         }
     }, [logId, isMobile, rowsPerPage, page, navigate, setIsModalOpen, setModalConfig]);
 
-    const onSearch = useCallback((v: ChangelogSearchValues) => { alert(`搜索: ${JSON.stringify({ ...v, startTime: v.startTime?.format('YYYY-MM-DD'), endTime:   v.endTime?.format('YYYY-MM-DD'), })}`); togglePanel(); }, [togglePanel]);
+    const onSearch = useCallback((v: ChangelogSearchValues) => {
+        alert(`搜索: ${JSON.stringify({
+            ...v,
+            startTime: v.startTime?.format('YYYY-MM-DD'),
+            endTime: v.endTime?.format('YYYY-MM-DD'),
+        })}`);
+        togglePanel();
+    }, [togglePanel]);
     const onReset = useCallback(() => alert('重置表单'), []);
 
     useEffect(() => {
@@ -92,8 +125,14 @@ const Changelog: React.FC = () => {
 
         const timerId = setTimeout(() => {
             setPanelContent(
-                <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
-                    <ChangelogSearchForm onSearch={onSearch} onReset={onReset} />
+                <Suspense fallback={<Box sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}><CircularProgress/></Box>}>
+                    <ChangelogSearchForm onSearch={onSearch} onReset={onReset}/>
                 </Suspense>
             );
             setPanelTitle('日志搜索');
@@ -117,36 +156,57 @@ const Changelog: React.FC = () => {
     };
 
     return (
-        <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
-                <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>更新日志</Typography>
-                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={handleTogglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' } }}>
-                    <Typography component="span" sx={{ transform: 'translateY(1px)' }}>搜索</Typography>
+        <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
+                <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>更新日志</Typography>
+                <Button variant="contained" size="large" startIcon={<SearchIcon/>} onClick={handleTogglePanel} sx={{
+                    height: 42,
+                    borderRadius: '50px',
+                    textTransform: 'none',
+                    px: 3,
+                    bgcolor: 'app.button.background',
+                    color: 'neutral.main',
+                    '&:hover': {bgcolor: 'app.button.hover'}
+                }}>
+                    <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
                 </Button>
             </Box>
 
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+            <Box sx={{flexGrow: 1, overflow: 'hidden'}}>
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
                     rowsPerPage={rowsPerPage}
                     page={page}
                     onPageChange={(_, p) => setPage(p)}
-                    onRowsPerPageChange={e => { setRowsPerPage(+e.target.value); setPage(0); }}
+                    onRowsPerPageChange={e => {
+                        setRowsPerPage(+e.target.value);
+                        setPage(0);
+                    }}
                     labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({ from, to, count }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    <Table stickyHeader aria-label="更新日志表" sx={{ borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed', minWidth: 800 }}>
+                    <Table stickyHeader aria-label="更新日志表"
+                           sx={{borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed', minWidth: 800}}>
                         <TableHead>
                             <TableRow>
                                 {isMobile ? (
-                                    <><TableCell sx={{ fontWeight: 700 }}>客户名称</TableCell><TableCell sx={{ fontWeight: 700 }}>更新时间</TableCell><TableCell sx={{ fontWeight: 700 }}>更新内容</TableCell></>
+                                    <><TableCell sx={{fontWeight: 700}}>客户名称</TableCell><TableCell
+                                        sx={{fontWeight: 700}}>更新时间</TableCell><TableCell
+                                        sx={{fontWeight: 700}}>更新内容</TableCell></>
                                 ) : (
                                     <>
-                                        <TableCell sx={{ width: '15%', position: 'sticky', left: 0, zIndex: 120, bgcolor: 'background.paper', fontWeight: 700 }}>客户名称</TableCell>
-                                        <TableCell sx={{ width: '20%', fontWeight: 700 }}>更新时间</TableCell>
-                                        <TableCell sx={{ width: '15%', fontWeight: 700 }}>更新类型</TableCell>
-                                        <TableCell sx={{ width: '50%', fontWeight: 700 }}>更新内容</TableCell>
+                                        <TableCell sx={{
+                                            width: '15%',
+                                            position: 'sticky',
+                                            left: 0,
+                                            zIndex: 120,
+                                            bgcolor: 'background.paper',
+                                            fontWeight: 700
+                                        }}>客户名称</TableCell>
+                                        <TableCell sx={{width: '20%', fontWeight: 700}}>更新时间</TableCell>
+                                        <TableCell sx={{width: '15%', fontWeight: 700}}>更新类型</TableCell>
+                                        <TableCell sx={{width: '50%', fontWeight: 700}}>更新内容</TableCell>
                                     </>
                                 )}
                             </TableRow>
@@ -159,7 +219,7 @@ const Changelog: React.FC = () => {
                                         key={r.id}
                                         component={TableRow}
                                         onClick={() => {
-                                            navigate(`/app/changelog/${r.id}`, { replace: true });
+                                            navigate(`/app/changelog/${r.id}`, {replace: true});
                                         }}
                                         sx={{
                                             display: 'table-row',
@@ -168,13 +228,29 @@ const Changelog: React.FC = () => {
                                         }}
                                     >
                                         {isMobile ? (
-                                            <><TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
+                                            <>
+                                                <TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
                                         ) : (
                                             <>
-                                                <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100, bgcolor: isHighlighted ? 'action.selected' : 'background.paper', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.customerName}</TooltipCell>
-                                                <TooltipCell sx={{ bgcolor: isHighlighted ? 'action.selected' : 'transparent', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.updateTime}</TooltipCell>
-                                                <TooltipCell sx={{ bgcolor: isHighlighted ? 'action.selected' : 'transparent', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.updateType}</TooltipCell>
-                                                <TooltipCell sx={{ bgcolor: isHighlighted ? 'action.selected' : 'transparent', 'tr:hover &': { bgcolor: isHighlighted ? 'action.selected' : 'action.hover' } }}>{r.updateContent}</TooltipCell>
+                                                <TooltipCell sx={{
+                                                    position: 'sticky',
+                                                    left: 0,
+                                                    zIndex: 100,
+                                                    bgcolor: isHighlighted ? 'action.selected' : 'background.paper',
+                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
+                                                }}>{r.customerName}</TooltipCell>
+                                                <TooltipCell sx={{
+                                                    bgcolor: isHighlighted ? 'action.selected' : 'transparent',
+                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
+                                                }}>{r.updateTime}</TooltipCell>
+                                                <TooltipCell sx={{
+                                                    bgcolor: isHighlighted ? 'action.selected' : 'transparent',
+                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
+                                                }}>{r.updateType}</TooltipCell>
+                                                <TooltipCell sx={{
+                                                    bgcolor: isHighlighted ? 'action.selected' : 'transparent',
+                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
+                                                }}>{r.updateContent}</TooltipCell>
                                             </>
                                         )}
                                     </ButtonBase>

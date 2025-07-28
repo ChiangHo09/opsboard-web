@@ -10,13 +10,13 @@
  * - 相应地，将页面标题恢复为深色（`neutral.main`），并将 Logo 恢复为其原始颜色（移除了白色滤镜），以确保在浅色背景上的可读性。
  * - 将登录按钮和输入框焦点颜色绑定到主题的 `primary.main` 颜色。
  */
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {useState, useRef, useEffect} from 'react';
+import {useNavigate} from 'react-router-dom';
 import {
     Box, Card, CardContent, TextField, Button,
     Typography, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles'; // 导入 useTheme Hook
+import {useTheme} from '@mui/material/styles'; // 导入 useTheme Hook
 import LoginIcon from '@mui/icons-material/Login';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import HoneypotInfo from './HoneypotInfo';
@@ -25,7 +25,7 @@ interface LoginProps {
     onFakeLogin: () => void;
 }
 
-export default function Login({ onFakeLogin }: LoginProps) {
+export default function Login({onFakeLogin}: LoginProps) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
@@ -60,18 +60,18 @@ export default function Login({ onFakeLogin }: LoginProps) {
             sx={{
                 height: '100vh',
                 display: 'flex',
-                flexDirection: { xs: 'column', md: 'row' },
+                flexDirection: {xs: 'column', md: 'row'},
                 alignItems: 'center',
-                justifyContent: { xs: 'space-evenly', md: 'center' },
+                justifyContent: {xs: 'space-evenly', md: 'center'},
                 bgcolor: 'app.background', // 【修改】使用主题的应用背景色
-                p: { xs: 2, md: 0 },
+                p: {xs: 2, md: 0},
             }}
         >
             <Box
                 sx={{
-                    flex: { xs: 'none', md: '0 0 60%' },
-                    width: { xs: '100%', md: '60%' },
-                    height: { xs: 'auto', md: '100%' },
+                    flex: {xs: 'none', md: '0 0 60%'},
+                    width: {xs: '100%', md: '60%'},
+                    height: {xs: 'auto', md: '100%'},
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -91,7 +91,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
                         src="/favicon.svg"
                         alt="logo"
                         sx={{
-                            height: { xs: '4rem', sm: '5rem', md: 120 },
+                            height: {xs: '4rem', sm: '5rem', md: 120},
                             width: 'auto',
                             // 【修改】移除滤镜，恢复 Logo 原始颜色
                         }}
@@ -99,7 +99,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
                     <Typography
                         variant="h4"
                         sx={{
-                            fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' },
+                            fontSize: {xs: '1.8rem', sm: '2.2rem', md: '2.5rem'},
                             fontWeight: 500,
                             color: 'neutral.main' // 【修改】恢复为深色标题
                         }}
@@ -111,9 +111,9 @@ export default function Login({ onFakeLogin }: LoginProps) {
 
             <Box
                 sx={{
-                    flex: { xs: 'none', md: '0 0 40%' },
-                    width: { xs: '100%', md: '40%' },
-                    height: { xs: 'auto', md: '100%' },
+                    flex: {xs: 'none', md: '0 0 40%'},
+                    width: {xs: '100%', md: '40%'},
+                    height: {xs: 'auto', md: '100%'},
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -140,21 +140,21 @@ export default function Login({ onFakeLogin }: LoginProps) {
                                 fullWidth margin="normal" label="密码" type="password"
                                 value={password} onChange={e => setPassword(e.target.value)} sx={tfSX}
                             />
-                            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                            <Box sx={{display: 'flex', gap: 1, mt: 2}}>
                                 <Button
                                     fullWidth
                                     variant="contained"
                                     color="primary" // 【修改】使用 primary color，更符合MUI规范
-                                    startIcon={<LoginIcon />}
+                                    startIcon={<LoginIcon/>}
                                     type="submit"
                                 >
                                     登录
                                 </Button>
                                 <Button
                                     variant="contained" color="error" onClick={handleOpenInfoDialog}
-                                    sx={{ flexShrink: 0, px: 2 }} aria-label="查看待办的安全实现"
+                                    sx={{flexShrink: 0, px: 2}} aria-label="查看待办的安全实现"
                                 >
-                                    <ReportProblemIcon />
+                                    <ReportProblemIcon/>
                                 </Button>
                             </Box>
                         </Box>
@@ -171,7 +171,7 @@ export default function Login({ onFakeLogin }: LoginProps) {
             >
                 <DialogTitle fontWeight="bold">TODO: 实施本地化机器人验证机制</DialogTitle>
                 <DialogContent dividers>
-                    <HoneypotInfo />
+                    <HoneypotInfo/>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseInfoDialog} autoFocus>

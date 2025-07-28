@@ -14,10 +14,10 @@
 import React from 'react';
 
 // 从 Material-UI 导入 Box 和 Typography 组件，用于布局和文本显示。
-import { Box, Typography } from '@mui/material';
+import {Box, Typography} from '@mui/material';
 
 // 从全局布局上下文中导入 useLayout 钩子，以访问共享状态（如此处的 isMobile）。
-import { useLayout } from '../../contexts/LayoutContext';
+import {useLayout} from '../../contexts/LayoutContext';
 
 // 定义此组件接收的 props 的接口（Interface）。
 interface TemplateModalContentProps {
@@ -26,9 +26,9 @@ interface TemplateModalContentProps {
 }
 
 // 定义 TemplateModalContent 组件，它是一个函数式组件（FC），并指定了其 props 类型。
-const TemplateModalContent: React.FC<TemplateModalContentProps> = ({ id }) => {
+const TemplateModalContent: React.FC<TemplateModalContentProps> = ({id}) => {
     // 从全局布局上下文中解构出 isMobile 状态，用于响应式布局。
-    const { isMobile } = useLayout();
+    const {isMobile} = useLayout();
 
     // 返回组件的 JSX 结构。
     return (

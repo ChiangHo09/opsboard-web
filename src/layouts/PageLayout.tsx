@@ -13,13 +13,13 @@
  * - **最终效果**: `PageLayout` 的职责更加单一和清晰，它只负责“约束内容宽度并提供内边距”，不再关心外部的 flex 布局，这使得整体结构更具可维护性。
  */
 import React from 'react';
-import { Box, type BoxProps } from '@mui/material';
+import {Box, type BoxProps} from '@mui/material';
 
 interface PageLayoutProps extends BoxProps {
     children: React.ReactNode;
 }
 
-const PageLayout: React.FC<PageLayoutProps> = ({ children, sx, ...rest }) => {
+const PageLayout: React.FC<PageLayoutProps> = ({children, sx, ...rest}) => {
     return (
         <Box
             sx={{

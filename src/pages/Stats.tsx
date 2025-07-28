@@ -11,13 +11,13 @@
  * - **最终效果**:
  *   通过让无面板的页面主动承担关闭职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
  */
-import React, { useEffect } from 'react';
-import { Typography } from '@mui/material';
-import { useLayoutDispatch } from '../contexts/LayoutContext.tsx';
+import React, {useEffect} from 'react';
+import {Typography} from '@mui/material';
+import {useLayoutDispatch} from '../contexts/LayoutContext.tsx';
 import PageLayout from '../layouts/PageLayout';
 
 const Stats: React.FC = () => {
-    const { closePanel } = useLayoutDispatch();
+    const {closePanel} = useLayoutDispatch();
 
     useEffect(() => {
         closePanel();
@@ -25,10 +25,10 @@ const Stats: React.FC = () => {
 
     return (
         <PageLayout>
-            <Typography variant="h4" sx={{ color: 'primary.main' }}>
+            <Typography variant="h4" sx={{color: 'primary.main'}}>
                 统计信息 (Stats)
             </Typography>
-            <Typography sx={{ mt: 2 }}>这里实现一些快速统计的内容，比如列表展示服务器磁盘空间、内存、操作系统</Typography>
+            <Typography sx={{mt: 2}}>这里实现一些快速统计的内容，比如列表展示服务器磁盘空间、内存、操作系统</Typography>
         </PageLayout>
     );
 };

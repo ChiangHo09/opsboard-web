@@ -8,7 +8,7 @@
  *****************************************************************/
 
 import React from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import {Navigate, Outlet, useLocation} from 'react-router-dom'
 
 const AppLayout: React.FC = () => {
     const location = useLocation()
@@ -16,16 +16,16 @@ const AppLayout: React.FC = () => {
 
     // 放行登录页
     if (location.pathname === '/login') {
-        return <Outlet />
+        return <Outlet/>
     }
 
     // 未登录时强制跳转登录页
     if (!token) {
-        return <Navigate to="/login" replace />
+        return <Navigate to="/login" replace/>
     }
 
     // 已登录，正常渲染子页面（MainLayout）
-    return <Outlet />
+    return <Outlet/>
 }
 
 export default AppLayout

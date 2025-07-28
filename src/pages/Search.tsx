@@ -11,13 +11,13 @@
  * - **最终效果**:
  *   通过让无面板的页面主动承担关闭职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
  */
-import React, { useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
-import { useLayoutDispatch } from '../contexts/LayoutContext.tsx';
+import React, {useEffect} from 'react';
+import {Box, Typography} from '@mui/material';
+import {useLayoutDispatch} from '../contexts/LayoutContext.tsx';
 import PageLayout from '../layouts/PageLayout';
 
 const Search: React.FC = () => {
-    const { closePanel } = useLayoutDispatch();
+    const {closePanel} = useLayoutDispatch();
 
     useEffect(() => {
         closePanel();
@@ -25,12 +25,12 @@ const Search: React.FC = () => {
 
     return (
         <PageLayout>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
-                <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4}}>
+                <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>
                     全局搜索 (Search)
                 </Typography>
             </Box>
-            <Typography sx={{ mt: 2 }}>这里实现搜索框与结果…</Typography>
+            <Typography sx={{mt: 2}}>这里实现搜索框与结果…</Typography>
         </PageLayout>
     );
 };

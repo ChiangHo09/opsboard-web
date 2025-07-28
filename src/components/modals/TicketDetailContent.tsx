@@ -16,10 +16,10 @@
 import React from 'react';
 
 // 从 Material-UI 导入 Box 和 Typography 组件，用于布局和文本显示。
-import { Box, Typography } from '@mui/material';
+import {Box, Typography} from '@mui/material';
 
 // 从全局布局上下文中导入 useLayout 钩子，以访问共享状态（如此处的 isMobile）。
-import { useLayout } from '../../contexts/LayoutContext';
+import {useLayout} from '../../contexts/LayoutContext';
 
 // 定义此组件接收的 props 的接口（Interface）。
 interface TicketDetailContentProps {
@@ -28,9 +28,9 @@ interface TicketDetailContentProps {
 }
 
 // 定义 TicketDetailContent 组件，它是一个函数式组件（FC），并指定了其 props 类型。
-const TicketDetailContent: React.FC<TicketDetailContentProps> = ({ ticketId }) => {
+const TicketDetailContent: React.FC<TicketDetailContentProps> = ({ticketId}) => {
     // 从全局布局上下文中解构出 isMobile 状态，用于响应式布局。
-    const { isMobile } = useLayout();
+    const {isMobile} = useLayout();
 
     // 返回组件的 JSX 结构。
     return (
@@ -70,7 +70,7 @@ const TicketDetailContent: React.FC<TicketDetailContentProps> = ({ ticketId }) =
                 <Typography>
                     这里是工单的详细信息占位符，ID 为 {ticketId}。
                 </Typography>
-                <Typography sx={{ mt: 2 }}>
+                <Typography sx={{mt: 2}}>
                     这里可以渲染更复杂的工单数据，例如操作步骤、日志、附件等。
                 </Typography>
             </Box>

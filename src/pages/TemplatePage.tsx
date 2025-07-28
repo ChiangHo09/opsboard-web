@@ -24,12 +24,12 @@
 // - useState: 一个 React Hook，用于在函数组件中添加和管理局部状态。
 // - lazy: 一个函数，允许你定义一个动态加载的组件。
 // - Suspense: 一个组件，让你可以在子组件加载完成前显示一个“后备”UI（如加载指示器）。
-import React, { useEffect, useCallback, useState, lazy, Suspense } from 'react';
+import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
 
 // 从 'react-router-dom' 库导入用于路由的钩子：
 // - useNavigate: 一个钩子，返回一个函数，允许我们以编程方式进行导航。
 // - useParams: 一个钩子，返回一个包含 URL 中动态参数的对象。
-import { useNavigate, useParams } from 'react-router-dom';
+import {useNavigate, useParams} from 'react-router-dom';
 
 // 从 '@mui/material' 库导入 UI 组件：
 // - Box: 一个通用的容器组件，类似于 `<div>`。
@@ -47,7 +47,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 
 // 从我们自己定义的全局布局上下文中导入分离后的自定义钩子。
-import { useLayoutDispatch, useLayoutState } from '../contexts/LayoutContext.tsx';
+import {useLayoutDispatch, useLayoutState} from '../contexts/LayoutContext.tsx';
 
 // 导入我们创建的、用于统一页面布局和数据表格容器的可重用组件。
 import PageLayout from '../layouts/PageLayout.tsx';
@@ -56,7 +56,7 @@ import TooltipCell from '../components/ui/TooltipCell.tsx';
 
 // 【类型导入】只导入懒加载组件所需的 TypeScript 类型。
 // 这个 `import type` 语句只在编译时对 TypeScript 有效，不会将组件代码本身打包到初始 chunk 中。
-import { type TemplateSearchValues } from '../components/forms/TemplateSearchForm.tsx';
+import {type TemplateSearchValues} from '../components/forms/TemplateSearchForm.tsx';
 
 // 【懒加载】使用 React.lazy 动态导入组件的实现。
 // 这会为这些组件创建独立的代码块（chunk），只有在它们首次被渲染时，浏览器才会去下载这些代码。
@@ -85,7 +85,7 @@ const templateRows: TemplateRow[] = [
     createData('item-001', '模板项目 Alpha', 'A', '这是 Alpha 项目的简短描述。'),
     createData('item-002', '模板项目 Beta', 'B', LONG_TEXT),
     createData('item-003', '模板项目 Gamma', 'C', '这是 Gamma 项目的简短描述。'),
-    ...Array.from({ length: 20 }).map((_, i) =>
+    ...Array.from({length: 20}).map((_, i) =>
         createData(`item-${i + 4}`, `模板项目 ${i + 4}`, ['A', 'B', 'C'][i % 3] as TemplateRow['category'], `这是第 ${i + 4} 条项目的描述。`)
     ),
 ];
@@ -96,7 +96,7 @@ const TemplatePage: React.FC = () => {
     // --- 1. HOOKS INITIALIZATION ---
 
     // 从全局布局上下文中解构出【状态值】和【状态更新函数】。
-    const { isMobile, isPanelOpen } = useLayoutState(); // isMobile: 布尔值，表示当前是否为移动端视图。 isPanelOpen: 布尔值，表示右侧面板当前是否打开。
+    const {isMobile, isPanelOpen} = useLayoutState(); // isMobile: 布尔值，表示当前是否为移动端视图。 isPanelOpen: 布尔值，表示右侧面板当前是否打开。
     const {
         togglePanel,      // togglePanel: 一个函数，用于切换右侧搜索面板的显示/隐藏状态。
         setPanelContent,  // setPanelContent: 一个函数，用于设置右侧面板中要渲染的 React 组件。
@@ -108,7 +108,7 @@ const TemplatePage: React.FC = () => {
 
     // 初始化路由相关的钩子。
     const navigate = useNavigate(); // 获取导航函数。
-    const { itemId } = useParams<{ itemId: string }>(); // 从 URL 中获取动态参数 `itemId`。
+    const {itemId} = useParams<{ itemId: string }>(); // 从 URL 中获取动态参数 `itemId`。
 
     // --- 2. LOCAL STATE ---
 
@@ -157,16 +157,22 @@ const TemplatePage: React.FC = () => {
         if (itemExists && !isMobile) {
             setModalConfig({
                 content: (
-                    <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
-                        <TemplateModalContent id={itemId} />
+                    <Suspense fallback={<Box sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}><CircularProgress/></Box>}>
+                        <TemplateModalContent id={itemId}/>
                     </Suspense>
                 ),
-                onClose: () => navigate('/app/template-page', { replace: true }),
+                onClose: () => navigate('/app/template-page', {replace: true}),
             });
             setIsModalOpen(true);
         } else {
             setIsModalOpen(false);
-            setModalConfig({ content: null, onClose: null });
+            setModalConfig({content: null, onClose: null});
         }
     }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig]);
 
@@ -176,8 +182,14 @@ const TemplatePage: React.FC = () => {
 
         const timerId = setTimeout(() => {
             setPanelContent(
-                <Suspense fallback={<Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><CircularProgress /></Box>}>
-                    <TemplateSearchForm onSearch={handleSearch} onReset={handleReset} />
+                <Suspense fallback={<Box sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}><CircularProgress/></Box>}>
+                    <TemplateSearchForm onSearch={handleSearch} onReset={handleReset}/>
                 </Suspense>
             );
             setPanelTitle('模板搜索');
@@ -199,17 +211,25 @@ const TemplatePage: React.FC = () => {
     // --- 6. JSX RENDER ---
 
     return (
-        <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
             {/* 页面顶部的标题栏容器。 */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
-                <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>模板页面</Typography>
-                <Button variant="contained" size="large" startIcon={<SearchIcon />} onClick={handleTogglePanel} sx={{ height: 42, borderRadius: '50px', textTransform: 'none', px: 3, bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': { bgcolor: 'app.button.hover' } }}>
-                    <Typography component="span" sx={{ transform: 'translateY(1px)' }}>搜索</Typography>
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
+                <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>模板页面</Typography>
+                <Button variant="contained" size="large" startIcon={<SearchIcon/>} onClick={handleTogglePanel} sx={{
+                    height: 42,
+                    borderRadius: '50px',
+                    textTransform: 'none',
+                    px: 3,
+                    bgcolor: 'app.button.background',
+                    color: 'neutral.main',
+                    '&:hover': {bgcolor: 'app.button.hover'}
+                }}>
+                    <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
                 </Button>
             </Box>
 
             {/* 表格容器，使用 flexGrow: 1 占据剩余的垂直空间。 */}
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+            <Box sx={{flexGrow: 1, overflow: 'hidden'}}>
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={templateRows.length}
@@ -221,7 +241,7 @@ const TemplatePage: React.FC = () => {
                         setPage(0);
                     }}
                     labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({ from, to, count }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
                     <Table
                         stickyHeader // stickyHeader: 使表格头部在垂直滚动时固定在顶部。
@@ -236,9 +256,16 @@ const TemplatePage: React.FC = () => {
                         <TableHead>
                             <TableRow>
                                 {/* 【关键】为所有列都提供明确的宽度，这是防止布局坍塌的最终解决方案。 */}
-                                <TableCell sx={{ width: '25%', position: 'sticky', left: 0, zIndex: 120, bgcolor: 'background.paper', fontWeight: 700 }}>项目名称</TableCell>
-                                <TableCell sx={{ width: '15%', fontWeight: 700 }}>类别</TableCell>
-                                <TableCell sx={{ width: '60%', fontWeight: 700 }}>描述</TableCell>
+                                <TableCell sx={{
+                                    width: '25%',
+                                    position: 'sticky',
+                                    left: 0,
+                                    zIndex: 120,
+                                    bgcolor: 'background.paper',
+                                    fontWeight: 700
+                                }}>项目名称</TableCell>
+                                <TableCell sx={{width: '15%', fontWeight: 700}}>类别</TableCell>
+                                <TableCell sx={{width: '60%', fontWeight: 700}}>描述</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -247,18 +274,24 @@ const TemplatePage: React.FC = () => {
                                 <ButtonBase
                                     key={row.id}
                                     component={TableRow}
-                                    onClick={() => navigate(`/app/template-page/${row.id}`, { replace: true })}
-                                    sx={{ display: 'table-row', width: '100%', position: 'relative' }}
+                                    onClick={() => navigate(`/app/template-page/${row.id}`, {replace: true})}
+                                    sx={{display: 'table-row', width: '100%', position: 'relative'}}
                                 >
                                     {/* 【关键】固定的列，必须有自己的背景色以遮挡滚动内容。 */}
-                                    <TooltipCell sx={{ position: 'sticky', left: 0, zIndex: 100, bgcolor: 'background.paper', 'tr:hover &': { bgcolor: 'action.hover' } }}>
+                                    <TooltipCell sx={{
+                                        position: 'sticky',
+                                        left: 0,
+                                        zIndex: 100,
+                                        bgcolor: 'background.paper',
+                                        'tr:hover &': {bgcolor: 'action.hover'}
+                                    }}>
                                         {row.name}
                                     </TooltipCell>
                                     {/* 【关键】对于所有单元格，使用 'tr:hover &' 选择器来响应父行的悬停事件，并应用统一的背景色。 */}
-                                    <TableCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>
+                                    <TableCell sx={{'tr:hover &': {bgcolor: 'action.hover'}}}>
                                         {row.category}
                                     </TableCell>
-                                    <TooltipCell sx={{ 'tr:hover &': { bgcolor: 'action.hover' } }}>
+                                    <TooltipCell sx={{'tr:hover &': {bgcolor: 'action.hover'}}}>
                                         {row.description}
                                     </TooltipCell>
                                 </ButtonBase>

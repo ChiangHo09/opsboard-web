@@ -12,9 +12,9 @@
  * - **最终效果**:
  *   `MainLayout` 的职责更单一，代码更简洁，并且消除了所有因时序问题导致的竞态条件。
  */
-import { useState, type JSX, Suspense } from 'react';
-import { useLocation, useOutlet } from 'react-router-dom';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import {useState, type JSX, Suspense} from 'react';
+import {useLocation, useOutlet} from 'react-router-dom';
+import {motion, AnimatePresence, type Variants} from 'framer-motion';
 import {
     Box,
     IconButton,
@@ -24,21 +24,21 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 
 import SideNav from '../components/SideNav';
-import { LayoutProvider, useLayout } from '../contexts/LayoutContext.tsx';
+import {LayoutProvider, useLayout} from '../contexts/LayoutContext.tsx';
 import RightSearchPanel from '../components/RightSearchPanel';
 import Modal from '../components/Modal';
-import { pageVariants, pageTransition } from '../utils/pageAnimations';
+import {pageVariants, pageTransition} from '../utils/pageAnimations';
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
 const mobilePanelVariants: Variants = {
-    initial: { opacity: 0, scale: 0.98 },
-    animate: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' } },
-    exit:    { opacity: 0, scale: 0.98, transition: { duration: 0.2, ease: 'easeIn' } },
+    initial: {opacity: 0, scale: 0.98},
+    animate: {opacity: 1, scale: 1, transition: {duration: 0.2, ease: 'easeOut'}},
+    exit: {opacity: 0, scale: 0.98, transition: {duration: 0.2, ease: 'easeIn'}},
 };
 
-function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX.Element {
+function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
     const location = useLocation();
     const currentOutlet = useOutlet();
     const basePath = location.pathname.split('/').slice(0, 3).join('/');
@@ -83,13 +83,13 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                 sx={{
                     flexGrow: 1,
                     height: '100%',
-                    pt: { xs: `${MOBILE_TOP_BAR_HEIGHT}px`, md: 3 },
-                    pb: { xs: 0, md: 3 },
-                    pr: { xs: 0, md: 3 },
+                    pt: {xs: `${MOBILE_TOP_BAR_HEIGHT}px`, md: 3},
+                    pb: {xs: 0, md: 3},
+                    pr: {xs: 0, md: 3},
                     pl: 0,
                     boxSizing: 'border-box',
                     display: 'flex',
-                    flexDirection: { xs: 'column', md: 'row' },
+                    flexDirection: {xs: 'column', md: 'row'},
                     overflow: 'hidden',
                     position: 'relative',
                     transition: 'padding-top 0.2s',
@@ -99,7 +99,7 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                     sx={{
                         flexGrow: 1,
                         bgcolor: 'background.paper',
-                        borderRadius: { xs: '16px 16px 0 0', md: 2 },
+                        borderRadius: {xs: '16px 16px 0 0', md: 2},
                         boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
@@ -111,8 +111,14 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                 >
                     <Suspense
                         fallback={
-                            <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                <CircularProgress />
+                            <Box sx={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}>
+                                <CircularProgress/>
                             </Box>
                         }
                     >
@@ -160,20 +166,51 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
                                     flexDirection: 'column',
                                 }}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0, }}>
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    mb: 2,
+                                    flexShrink: 0,
+                                }}>
                                     <Typography variant="h6" noWrap>{panelTitle}</Typography>
                                     <IconButton size="small" onClick={togglePanel} aria-label="close search panel">
-                                        <CloseIcon />
+                                        <CloseIcon/>
                                     </IconButton>
                                 </Box>
-                                <Box sx={{ mt: 2, flexGrow: 1, overflowY: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', }}>
+                                <Box sx={{
+                                    mt: 2,
+                                    flexGrow: 1,
+                                    overflowY: 'hidden',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                }}>
                                     <AnimatePresence mode="wait">
                                         {isPanelOpen && !panelContent ? (
-                                            <MotionBox key="loading-mobile-panel-content" variants={pageVariants} transition={pageTransition} initial="initial" animate="animate" exit="exit" sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', }}>
-                                                <CircularProgress />
+                                            <MotionBox key="loading-mobile-panel-content" variants={pageVariants}
+                                                       transition={pageTransition} initial="initial" animate="animate"
+                                                       exit="exit" sx={{
+                                                width: '100%',
+                                                height: '100%',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                            }}>
+                                                <CircularProgress/>
                                             </MotionBox>
                                         ) : isPanelOpen && panelContent ? (
-                                            <MotionBox key={basePath} variants={pageVariants} transition={pageTransition} initial="initial" animate="animate" exit="exit" sx={{ width: '100%', height: '100%', boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', }}>
+                                            <MotionBox key={basePath} variants={pageVariants}
+                                                       transition={pageTransition} initial="initial" animate="animate"
+                                                       exit="exit" sx={{
+                                                width: '100%',
+                                                height: '100%',
+                                                boxSizing: 'border-box',
+                                                overflowY: 'auto',
+                                                overflowX: 'hidden',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                            }}>
                                                 {panelContent}
                                             </MotionBox>
                                         ) : null}
@@ -200,10 +237,10 @@ function MainContentWrapper({ onFakeLogout }: { onFakeLogout: () => void }): JSX
     );
 }
 
-export default function MainLayout({ onFakeLogout }: { onFakeLogout: () => void }): JSX.Element {
+export default function MainLayout({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
     return (
         <LayoutProvider>
-            <MainContentWrapper onFakeLogout={onFakeLogout} />
+            <MainContentWrapper onFakeLogout={onFakeLogout}/>
         </LayoutProvider>
     );
 }

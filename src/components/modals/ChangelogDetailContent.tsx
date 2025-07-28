@@ -9,18 +9,18 @@
  * 此文件提供了在通用模态框中显示的更新日志详情内容的具体实现。
  */
 import React from 'react';
-import { Box, Typography } from '@mui/material';
-import { useLayout } from '../../contexts/LayoutContext';
+import {Box, Typography} from '@mui/material';
+import {useLayout} from '../../contexts/LayoutContext';
 
 interface ChangelogDetailContentProps {
     logId: string;
 }
 
-const ChangelogDetailContent: React.FC<ChangelogDetailContentProps> = ({ logId }) => {
-    const { isMobile } = useLayout();
+const ChangelogDetailContent: React.FC<ChangelogDetailContentProps> = ({logId}) => {
+    const {isMobile} = useLayout();
 
     return (
-        <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box sx={{p: 4, display: 'flex', flexDirection: 'column', height: '100%'}}>
             <Typography
                 variant="h5"
                 sx={{
@@ -31,7 +31,7 @@ const ChangelogDetailContent: React.FC<ChangelogDetailContentProps> = ({ logId }
             >
                 日志详情: {logId}
             </Typography>
-            <Box sx={{ flexGrow: 1, border: '1px dashed grey', p: 2, overflow: 'auto' }}>
+            <Box sx={{flexGrow: 1, border: '1px dashed grey', p: 2, overflow: 'auto'}}>
                 <Typography>这里是日志 ID 为 {logId} 的详细信息占位符。</Typography>
             </Box>
         </Box>

@@ -12,8 +12,8 @@
  *   通过将面板管理的责任完全下放到各个页面组件，我们不再需要这个在布局层进行通信的标志。
  * - **结果**: 上下文的接口更简洁，整体状态管理逻辑更清晰。
  */
-import React, { createContext, useState, useContext, useMemo, useCallback, type ReactNode, useEffect } from 'react';
-import { useTheme, useMediaQuery } from '@mui/material';
+import React, {createContext, useState, useContext, useMemo, useCallback, type ReactNode, useEffect} from 'react';
+import {useTheme, useMediaQuery} from '@mui/material';
 
 // 定义【状态值】的接口
 interface LayoutStateContextType {
@@ -43,10 +43,15 @@ interface LayoutDispatchContextType {
 const LayoutStateContext = createContext<LayoutStateContextType | undefined>(undefined);
 const LayoutDispatchContext = createContext<LayoutDispatchContextType | undefined>(undefined);
 
-export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const LayoutProvider: React.FC<{ children: ReactNode }> = ({children}) => {
     const [isPanelOpen, setIsPanelOpen] = useState<boolean>(() => {
-        try { const item = window.localStorage.getItem('panelOpen'); return item ? JSON.parse(item) : false; }
-        catch (error) { console.error(error); return false; }
+        try {
+            const item = window.localStorage.getItem('panelOpen');
+            return item ? JSON.parse(item) : false;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
     });
     const [panelContent, setPanelContent] = useState<ReactNode | null>(null);
     const [panelTitle, setPanelTitle] = useState<string>('');
@@ -60,12 +65,19 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
-        try { window.localStorage.setItem('panelOpen', JSON.stringify(isPanelOpen)); }
-        catch (error) { console.error(error); }
+        try {
+            window.localStorage.setItem('panelOpen', JSON.stringify(isPanelOpen));
+        } catch (error) {
+            console.error(error);
+        }
     }, [isPanelOpen]);
 
-    const togglePanel = useCallback(() => { setIsPanelOpen(prev => !prev); }, []);
-    const closePanel = useCallback(() => { setIsPanelOpen(false); }, []);
+    const togglePanel = useCallback(() => {
+        setIsPanelOpen(prev => !prev);
+    }, []);
+    const closePanel = useCallback(() => {
+        setIsPanelOpen(false);
+    }, []);
     const setModalConfig = useCallback((config: { content: ReactNode | null; onClose: (() => void) | null }) => {
         setModalContent(config.content);
         setOnModalClose(() => config.onClose);
@@ -100,13 +112,17 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
 export const useLayoutState = (): LayoutStateContextType => {
     const context = useContext(LayoutStateContext);
-    if (!context) { throw new Error('useLayoutState 必须在 LayoutProvider 内部使用'); }
+    if (!context) {
+        throw new Error('useLayoutState 必须在 LayoutProvider 内部使用');
+    }
     return context;
 };
 
 export const useLayoutDispatch = (): LayoutDispatchContextType => {
     const context = useContext(LayoutDispatchContext);
-    if (!context) { throw new Error('useLayoutDispatch 必须在 LayoutProvider 内部使用'); }
+    if (!context) {
+        throw new Error('useLayoutDispatch 必须在 LayoutProvider 内部使用');
+    }
     return context;
 };
 

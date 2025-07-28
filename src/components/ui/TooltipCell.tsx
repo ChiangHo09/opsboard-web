@@ -18,14 +18,14 @@
  * - **最终效果**:
  *   Tooltip 的显示逻辑现在是单一、可控的。鼠标悬停时，布局不再发生任何变化，仅在需要时平滑地显示提示信息，根除了列宽坍塌的问题。
  */
-import React, { useState, useRef } from 'react';
-import { TableCell, Tooltip, type TableCellProps, Box } from '@mui/material';
+import React, {useState, useRef} from 'react';
+import {TableCell, Tooltip, type TableCellProps, Box} from '@mui/material';
 
 interface TooltipCellProps extends TableCellProps {
     children: React.ReactNode;
 }
 
-const TooltipCell: React.FC<TooltipCellProps> = ({ children, sx, ...rest }) => {
+const TooltipCell: React.FC<TooltipCellProps> = ({children, sx, ...rest}) => {
     const [open, setOpen] = useState(false);
     // Ref 用于测量内容本身的真实宽度
     const contentRef = useRef<HTMLSpanElement>(null);
@@ -63,7 +63,7 @@ const TooltipCell: React.FC<TooltipCellProps> = ({ children, sx, ...rest }) => {
                 disableHoverListener
                 disableFocusListener
                 disableTouchListener
-                slotProps={{ tooltip: { className: 'tooltip-sidenav' } }}
+                slotProps={{tooltip: {className: 'tooltip-sidenav'}}}
             >
                 {/* 这个 Box/span 仅用于包裹内容和测量 scrollWidth */}
                 <Box

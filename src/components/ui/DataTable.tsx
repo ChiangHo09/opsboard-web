@@ -28,7 +28,7 @@ interface DataTableProps extends Omit<TablePaginationProps, 'component'> {
     children: React.ReactNode; // 用于接收 <Table> 组件
 }
 
-const DataTable: React.FC<DataTableProps> = ({ children, ...paginationProps }) => {
+const DataTable: React.FC<DataTableProps> = ({children, ...paginationProps}) => {
     return (
         <Paper
             elevation={0}
@@ -41,7 +41,7 @@ const DataTable: React.FC<DataTableProps> = ({ children, ...paginationProps }) =
             }}
         >
             {/* 【核心修复】为 TableContainer 添加 width: '100%' */}
-            <TableContainer sx={{ overflow: 'auto', width: '100%' }}>
+            <TableContainer sx={{overflow: 'auto', width: '100%'}}>
                 {children}
             </TableContainer>
 

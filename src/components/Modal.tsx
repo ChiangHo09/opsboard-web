@@ -8,22 +8,26 @@
  * 文件功能描述:
  * 此文件定义了一个全局通用的模态框（弹窗）组件，负责处理弹窗的“外壳”、动画和关闭逻辑。
  */
-import React, { useEffect } from 'react'; // 【核心修复】修正了 import 语句
-import { Box, IconButton, useTheme } from '@mui/material';
+import React, {useEffect} from 'react'; // 【核心修复】修正了 import 语句
+import {Box, IconButton, useTheme} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { motion, type Variants } from 'framer-motion';
-import { useLayout } from '../contexts/LayoutContext';
+import {motion, type Variants} from 'framer-motion';
+import {useLayout} from '../contexts/LayoutContext';
 
-const backdropVariants: Variants = { visible: { opacity: 1 }, hidden: { opacity: 0 } };
-const modalContentVariants: Variants = { hidden: { opacity: 0, scale: 0.95 }, visible: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' } }, exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15, ease: 'easeIn' } } };
+const backdropVariants: Variants = {visible: {opacity: 1}, hidden: {opacity: 0}};
+const modalContentVariants: Variants = {
+    hidden: {opacity: 0, scale: 0.95},
+    visible: {opacity: 1, scale: 1, transition: {duration: 0.2, ease: 'easeOut'}},
+    exit: {opacity: 0, scale: 0.95, transition: {duration: 0.15, ease: 'easeIn'}}
+};
 
 interface ModalProps {
     onClose: () => void;
     children: React.ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
-    const { isMobile } = useLayout();
+const Modal: React.FC<ModalProps> = ({onClose, children}) => {
+    const {isMobile} = useLayout();
     const theme = useTheme();
 
     useEffect(() => {
@@ -35,7 +39,7 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
     }, [onClose]);
 
     return (
-        <Box sx={{ position: 'absolute', inset: 0, zIndex: 1200 }}>
+        <Box sx={{position: 'absolute', inset: 0, zIndex: 1200}}>
             <motion.div
                 key="backdrop"
                 variants={backdropVariants}
@@ -50,7 +54,7 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
                     backdropFilter: isMobile ? 'none' : 'blur(4px)',
                 }}
             />
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box sx={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                 <motion.div
                     key="modal"
                     variants={modalContentVariants}
@@ -65,9 +69,18 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
                         maxHeight: isMobile ? '100%' : 800,
                     }}
                 >
-                    <Box sx={{ width: '100%', height: '100%', bgcolor: 'background.paper', borderRadius: isMobile ? 0 : 2, boxShadow: isMobile ? 'none' : 24, display: 'flex', flexDirection: 'column' }}>
-                        <IconButton onClick={onClose} sx={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }} aria-label="关闭">
-                            <CloseIcon />
+                    <Box sx={{
+                        width: '100%',
+                        height: '100%',
+                        bgcolor: 'background.paper',
+                        borderRadius: isMobile ? 0 : 2,
+                        boxShadow: isMobile ? 'none' : 24,
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        <IconButton onClick={onClose} sx={{position: 'absolute', top: 12, right: 12, zIndex: 1}}
+                                    aria-label="关闭">
+                            <CloseIcon/>
                         </IconButton>
                         {children}
                     </Box>

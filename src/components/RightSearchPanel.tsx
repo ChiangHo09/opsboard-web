@@ -15,11 +15,11 @@
  * - **最终效果**: 侧边面板的内容切换动画现在看起来更加平缓，其视觉“幅度”与主工作区的动画体验保持了一致。
  */
 import React from 'react';
-import { Box, Typography, IconButton, CircularProgress } from '@mui/material';
+import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { motion, type Variants, AnimatePresence } from 'framer-motion';
+import {motion, type Variants, AnimatePresence} from 'framer-motion';
 // 仍然导入 pageTransition 以保持动画节奏统一
-import { pageTransition } from '../utils/pageAnimations';
+import {pageTransition} from '../utils/pageAnimations';
 
 export interface RightSearchPanelProps {
     open: boolean;
@@ -59,8 +59,8 @@ export default function RightSearchPanel({
                                          }: RightSearchPanelProps) {
 
     const panelVariants: Variants = {
-        open: { width: width, transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] } },
-        closed: { width: 0, transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] } },
+        open: {width: width, transition: {duration: 0.28, ease: [0.4, 0, 0.2, 1]}},
+        closed: {width: 0, transition: {duration: 0.28, ease: [0.4, 0, 0.2, 1]}},
     };
 
     const animationKey = contentKey || title || 'default-panel-content';
@@ -96,9 +96,9 @@ export default function RightSearchPanel({
                     size="small"
                     onClick={onClose}
                     aria-label="close search panel"
-                    sx={{ position: 'absolute', top: 24, right: 24, zIndex: 2 }}
+                    sx={{position: 'absolute', top: 24, right: 24, zIndex: 2}}
                 >
-                    <CloseIcon />
+                    <CloseIcon/>
                 </IconButton>
 
                 <Box
@@ -119,9 +119,15 @@ export default function RightSearchPanel({
                                 initial="initial"
                                 animate="animate"
                                 exit="exit"
-                                sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                                sx={{
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                }}
                             >
-                                <CircularProgress />
+                                <CircularProgress/>
                             </MotionBox>
                         ) : open && children ? (
                             <MotionBox
@@ -138,10 +144,10 @@ export default function RightSearchPanel({
                                     flexDirection: 'column',
                                 }}
                             >
-                                <Typography variant="h6" noWrap sx={{ mb: 4, pr: 4, flexShrink: 0 }}>
+                                <Typography variant="h6" noWrap sx={{mb: 4, pr: 4, flexShrink: 0}}>
                                     {title}
                                 </Typography>
-                                <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                                <Box sx={{flexGrow: 1, overflowY: 'auto', overflowX: 'hidden'}}>
                                     {children}
                                 </Box>
                             </MotionBox>

@@ -13,7 +13,7 @@
 // 从 'framer-motion' 库中导入所需的类型。
 // - Variants: 用于定义组件在不同动画状态（如 initial, animate, exit）下的样式集合。
 // - Transition: 用于定义动画的过渡属性，如持续时间、缓动函数等。
-import { type Variants, type Transition } from 'framer-motion';
+import {type Variants, type Transition} from 'framer-motion';
 
 /**
  * pageVariants 常量:

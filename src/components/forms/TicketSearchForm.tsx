@@ -17,12 +17,12 @@
 // 从 'react' 库导入核心功能：
 // - useState: 用于在组件中管理局部状态。
 // - FC (FunctionComponent): 用于为函数式组件提供 TypeScript 类型定义。
-import { useState, type FC } from 'react';
+import {useState, type FC} from 'react';
 
 // 从 Material-UI 库导入 UI 组件：
 // - Box, TextField, Button, Stack, Typography: 用于构建表单布局和元素。
 // - MenuItem: 用于定义下拉选择框中的选项。
-import { Box, TextField, Button, Stack, Typography, MenuItem } from '@mui/material';
+import {Box, TextField, Button, Stack, Typography, MenuItem} from '@mui/material';
 
 // 定义此表单组件将回传给父组件的数据结构接口。
 export interface TicketSearchValues {
@@ -41,7 +41,7 @@ interface TicketSearchFormProps {
 }
 
 // 定义 TicketSearchForm 组件。
-const TicketSearchForm: FC<TicketSearchFormProps> = ({ onSearch, onReset }) => {
+const TicketSearchForm: FC<TicketSearchFormProps> = ({onSearch, onReset}) => {
     // --- 1. STATE MANAGEMENT ---
     // 为表单的每个字段创建独立的 state。
     const [region, setRegion] = useState('');
@@ -77,9 +77,9 @@ const TicketSearchForm: FC<TicketSearchFormProps> = ({ onSearch, onReset }) => {
     // --- 3. JSX RENDER ---
     return (
         // 使用 Stack 组件作为表单的根容器，方便地控制子元素间距和布局。
-        <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Stack spacing={2} sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
             {/* 这个 Box 是可滚动的内容区域 */}
-            <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, mr: -1 }}>
+            <Box sx={{flexGrow: 1, overflowY: 'auto', pr: 1, mr: -1}}>
                 {/* 区域输入框 */}
                 <TextField
                     fullWidth         // fullWidth: 使输入框占据父容器的全部宽度。
@@ -131,7 +131,7 @@ const TicketSearchForm: FC<TicketSearchFormProps> = ({ onSearch, onReset }) => {
             </Box>
 
             {/* 底部操作按钮区域 */}
-            <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', flexShrink: 0 }}>
+            <Stack direction="row" spacing={2} sx={{justifyContent: 'center', flexShrink: 0}}>
                 {/* 仅当 onReset prop 存在时才渲染“重置”按钮 */}
                 {onReset && (
                     <Button
@@ -149,7 +149,7 @@ const TicketSearchForm: FC<TicketSearchFormProps> = ({ onSearch, onReset }) => {
                             }
                         }}
                     >
-                        <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>
+                        <Typography component="span" sx={{transform: 'translateY(1px)', fontWeight: 500}}>
                             重置
                         </Typography>
                     </Button>
@@ -171,7 +171,7 @@ const TicketSearchForm: FC<TicketSearchFormProps> = ({ onSearch, onReset }) => {
                         }
                     }}
                 >
-                    <Typography component="span" sx={{ transform: 'translateY(1px)', fontWeight: 500 }}>
+                    <Typography component="span" sx={{transform: 'translateY(1px)', fontWeight: 500}}>
                         搜索
                     </Typography>
                 </Button>
