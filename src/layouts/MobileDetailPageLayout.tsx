@@ -6,50 +6,50 @@
  * UI 结构和业务逻辑，包括全屏布局、带关闭按钮的标题栏、以及从移动端到桌面端的自动重定向功能。
  *
  * 本次修改内容:
- * - 【动画终极修复】确保了移动端详情页的进入/退出动画与移动端搜索面板完全一致。
+ * - 【TypeScript 终极修复】通过使用更准确的泛型约束，彻底解决了所有类型不匹配的错误。
  * - **问题根源**:
- *   之前的实现错误地使用了基于“垂直位移”的 `panelContentVariants` 动画，而不是搜索面板所使用的、基于“缩放”的 `mobileOverlayVariants` 动画，并且可能错误地覆盖了过渡时长，导致动画效果不一致且速度过快。
+ *   之前的泛型约束 `T extends Record<string, unknown>` 错误地要求传入的 props 类型必须包含一个“索引签名”，而我们具体的 props 类型（如 `{ logId: string }`）并不满足此条件。
  * - **解决方案**:
- *   1.  从集中的 `animations.ts` 工具文件中，导入正确的、专用于移动端覆盖层的 `mobileOverlayVariants`。
- *   2.  将此动画变体应用到页面的根 `MotionBox` 组件上。
- *   3.  【关键】移除了所有独立的 `transition` 属性，完全依赖 `mobileOverlayVariants` 内部定义的精确时长和缓动曲线。
+ *   1.  将泛型约束从 `T extends Record<string, unknown>` 修改为 `T extends object`。
+ *   2.  这个新的约束只要求 `T` 是一个对象即可，这与我们所有具体的 props 接口（`...Props`）都完全兼容。
  * - **最终效果**:
- *   所有移动端详情页现在都拥有了与搜索面板完全相同的、平滑且节奏正确的缩放动画，
- *   实现了整个应用在移动端覆盖层体验上的视觉和交互的绝对统一。
+ *   TypeScript 现在能够正确地验证所有传入的组件及其 props，所有类型错误都已消除，
+ *   通用布局组件现在真正实现了类型安全和高度可复用性。
  */
-import { Suspense, useEffect, type LazyExoticComponent, type FC } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Box, Typography, IconButton, CircularProgress } from '@mui/material';
+import {Suspense, useEffect, type LazyExoticComponent, type FC} from 'react';
+import {useNavigate, useParams} from 'react-router-dom';
+import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { motion } from 'framer-motion';
-import { useLayoutState } from '../contexts/LayoutContext.tsx';
-// 【核心修复】导入正确的、用于移动端覆盖层的动画变体
-import { mobileOverlayVariants } from '../utils/animations';
+import {useLayoutState} from '../contexts/LayoutContext.tsx';
+import {mobileOverlayVariants} from '../utils/animations';
+import {motion} from 'framer-motion';
 
 const MotionBox = motion(Box);
 
-interface MobileDetailPageLayoutProps<T extends Record<string, unknown>> {
+// 【核心修复】将泛型约束 T 修改为 extends object
+interface MobileDetailPageLayoutProps<T extends object> {
     title: string;
     backPath: string;
     paramName: keyof T & string;
     DetailContentComponent: LazyExoticComponent<FC<T>>;
 }
 
-const MobileDetailPageLayout = <T extends Record<string, unknown>>({
-                                                                       title,
-                                                                       backPath,
-                                                                       paramName,
-                                                                       DetailContentComponent,
-                                                                   }: MobileDetailPageLayoutProps<T>) => {
+// 【核心修复】将泛型约束 T 修改为 extends object
+const MobileDetailPageLayout = <T extends object>({
+                                                      title,
+                                                      backPath,
+                                                      paramName,
+                                                      DetailContentComponent,
+                                                  }: MobileDetailPageLayoutProps<T>) => {
     const navigate = useNavigate();
     const params = useParams();
-    const { isMobile } = useLayoutState();
+    const {isMobile} = useLayoutState();
 
     const id = params[paramName];
 
     useEffect(() => {
         if (id && !isMobile) {
-            navigate(`${backPath}/${id}`, { replace: true });
+            navigate(`${backPath}/${id}`, {replace: true});
         }
     }, [isMobile, id, navigate, backPath]);
 
@@ -57,32 +57,37 @@ const MobileDetailPageLayout = <T extends Record<string, unknown>>({
         return null;
     }
 
-    const contentProps = { [paramName]: id } as T;
+    const contentProps = {[paramName]: id} as T;
 
     return (
-        // 【核心修复】应用正确的 mobileOverlayVariants 动画，并移除独立的 transition 属性
         <MotionBox
-            sx={{ boxSizing: 'border-box', height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}
+            sx={{boxSizing: 'border-box', height: '100%', display: 'flex', flexDirection: 'column', p: 3}}
             variants={mobileOverlayVariants}
             initial="initial"
             animate="animate"
             exit="exit"
         >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
                 <Typography variant="h6">{title}</Typography>
                 <IconButton
                     onClick={() => navigate(backPath)}
                     aria-label="关闭"
-                    sx={{ mr: -1.5 }}
+                    sx={{mr: -1.5}}
                 >
-                    <CloseIcon />
+                    <CloseIcon/>
                 </IconButton>
             </Box>
 
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+            <Box sx={{flexGrow: 1, overflow: 'hidden'}}>
                 <Suspense fallback={
-                    <Box sx={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                        <CircularProgress />
+                    <Box sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}>
+                        <CircularProgress/>
                     </Box>
                 }>
                     <DetailContentComponent {...contentProps} />

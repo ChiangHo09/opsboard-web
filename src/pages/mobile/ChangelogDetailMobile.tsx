@@ -6,16 +6,19 @@
  * 它通过调用通用的 MobileDetailPageLayout 组件来渲染页面。
  *
  * 本次修改内容:
- * - 【代码重构】使用通用的 MobileDetailPageLayout 替换了所有重复的 JSX 和逻辑。
+ * - 【TypeScript 类型修复】在调用通用布局组件时，显式地传递了泛型参数。
  */
-import React, { lazy } from 'react';
+import React, {lazy} from 'react';
 import MobileDetailPageLayout from '../../layouts/MobileDetailPageLayout';
+// 【核心修复】导入详情内容组件的 props 类型
+import {type ChangelogDetailContentProps} from '../../components/modals/ChangelogDetailContent';
 
 const ChangelogDetailContent = lazy(() => import('../../components/modals/ChangelogDetailContent.tsx'));
 
 const ChangelogDetailMobile: React.FC = () => {
     return (
-        <MobileDetailPageLayout
+        // 【核心修复】显式地为泛型组件传递 props 类型
+        <MobileDetailPageLayout<ChangelogDetailContentProps>
             title="日志详情"
             backPath="/app/changelog"
             paramName="logId"
