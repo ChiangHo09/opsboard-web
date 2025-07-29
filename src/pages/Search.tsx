@@ -13,8 +13,8 @@
  */
 import React, {useEffect} from 'react';
 import {Box, Typography} from '@mui/material';
-import {useLayoutDispatch} from '../contexts/LayoutContext.tsx';
-import PageLayout from '../layouts/PageLayout';
+import {useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import PageLayout from '@/layouts/PageLayout';
 
 const Search: React.FC = () => {
     const {closePanel} = useLayoutDispatch();

@@ -39,8 +39,8 @@ import UpdateIcon from '@mui/icons-material/Update';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 
 import {useNavigate} from 'react-router-dom';
-import {useLayoutDispatch} from '../contexts/LayoutContext.tsx';
-import PageLayout from '../layouts/PageLayout';
+import {useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import PageLayout from '@/layouts/PageLayout';
 
 // ... (StatCard, recentActivities 等组件和数据保持不变)
 

@@ -18,7 +18,7 @@ import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {motion, type Variants, AnimatePresence} from 'framer-motion';
 // 【核心修复】从新的动画工具文件中导入配置
-import { pageTransition, panelContentVariants } from '../utils/animations';
+import { pageTransition, panelContentVariants } from '@/utils/animations';
 
 export interface RightSearchPanelProps {
     open: boolean;

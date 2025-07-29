@@ -18,14 +18,14 @@ import {
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import {useLayoutState, useLayoutDispatch} from '../contexts/LayoutContext.tsx';
-import {type ChangelogSearchValues} from '../components/forms/ChangelogSearchForm.tsx';
-import TooltipCell from '../components/ui/TooltipCell';
-import PageLayout from '../layouts/PageLayout';
-import DataTable from '../components/ui/DataTable';
+import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
+import TooltipCell from '@/components/ui/TooltipCell';
+import PageLayout from '@/layouts/PageLayout';
+import DataTable from '@/components/ui/DataTable';
 
-const ChangelogSearchForm = lazy(() => import('../components/forms/ChangelogSearchForm.tsx'));
-const ChangelogDetailContent = lazy(() => import('../components/modals/ChangelogDetailContent.tsx'));
+const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
+const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
 
 interface Row {

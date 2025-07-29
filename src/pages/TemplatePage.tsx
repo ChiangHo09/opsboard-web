@@ -22,14 +22,14 @@ import {
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import {useLayoutDispatch, useLayoutState} from '../contexts/LayoutContext.tsx';
-import PageLayout from '../layouts/PageLayout.tsx';
-import DataTable from '../components/ui/DataTable.tsx';
-import TooltipCell from '../components/ui/TooltipCell.tsx';
-import {type TemplateSearchValues} from '../components/forms/TemplateSearchForm.tsx';
+import {useLayoutDispatch, useLayoutState} from '@/contexts/LayoutContext.tsx';
+import PageLayout from '@/layouts/PageLayout.tsx';
+import DataTable from '@/components/ui/DataTable.tsx';
+import TooltipCell from '@/components/ui/TooltipCell.tsx';
+import {type TemplateSearchValues} from '@/components/forms/TemplateSearchForm.tsx';
 
-const TemplateSearchForm = lazy(() => import('../components/forms/TemplateSearchForm.tsx'));
-const TemplateModalContent = lazy(() => import('../components/modals/TemplateModalContent.tsx'));
+const TemplateSearchForm = lazy(() => import('@/components/forms/TemplateSearchForm.tsx'));
+const TemplateModalContent = lazy(() => import('@/components/modals/TemplateModalContent.tsx'));
 
 interface TemplateRow {
     id: string;

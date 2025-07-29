@@ -1,3 +1,17 @@
+/**
+ * 文件名: tsconfig.app.json
+ *
+ * 文件功能描述:
+ * 此文件是专门为应用程序源代码（即 'src' 目录下的代码）提供的 TypeScript 编译配置。
+ * 它定义了所有与 React 应用开发相关的编译选项、模块解析规则以及代码质量检查的严格等级。
+ *
+ * 本次修改内容:
+ * - 【新增配置】在现有的严格配置基础上，添加了 "baseUrl" 和 "paths" 选项以实现绝对路径别名。
+ * - "baseUrl": "."      -> 设置模块解析的基础目录为项目根目录。
+ * - "paths": { "@/*": ["src/*"] } -> 定义了别名规则，将 `@/` 指向 `src/` 目录。
+ *   这使得在代码中可以使用例如 `import Component from '@/components/Component'`
+ *   的写法，代替了深层次的相对路径 `../../...`，从而优化了代码的可读性和可维护性。
+ */
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
@@ -19,10 +33,15 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+
+    /* Path Aliasing - 新增的配置 */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src"]
 }

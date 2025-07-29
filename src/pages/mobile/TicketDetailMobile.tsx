@@ -16,11 +16,11 @@
  *   通过为泛型组件提供明确的类型，我们解决了所有类型不匹配的错误，实现了完全的类型安全。
  */
 import React, {lazy} from 'react';
-import MobileDetailPageLayout from '../../layouts/MobileDetailPageLayout';
+import MobileDetailPageLayout from '@/layouts/MobileDetailPageLayout';
 // 【核心修复】导入详情内容组件的 props 类型
-import {type TicketDetailContentProps} from '../../components/modals/TicketDetailContent';
+import {type TicketDetailContentProps} from '@/components/modals/TicketDetailContent';
 
-const TicketDetailContent = lazy(() => import('../../components/modals/TicketDetailContent.tsx'));
+const TicketDetailContent = lazy(() => import('@/components/modals/TicketDetailContent.tsx'));
 
 const TicketDetailMobile: React.FC = () => {
     return (

@@ -1,4 +1,4 @@
-/*
+/**
  * 文件名: src/components/SideNav.tsx
  *
  * 代码功能:
@@ -36,7 +36,7 @@ import {
 } from '@mui/icons-material';
 import {motion, AnimatePresence} from 'framer-motion';
 import type {ReactElement, MouseEvent, JSX} from 'react';
-import {useLayout} from '../contexts/LayoutContext';
+import {useLayout} from '@/contexts/LayoutContext';
 
 const W_COLLAPSED = 64;
 const W_EXPANDED = 220;

@@ -20,8 +20,8 @@ import {Suspense, useEffect, type LazyExoticComponent, type FC} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import {useLayoutState} from '../contexts/LayoutContext.tsx';
-import {mobileOverlayVariants} from '../utils/animations';
+import {useLayoutState} from '@/contexts/LayoutContext.tsx';
+import {mobileOverlayVariants} from '@/utils/animations';
 import {motion} from 'framer-motion';
 
 const MotionBox = motion(Box);

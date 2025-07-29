@@ -12,7 +12,7 @@ import React, {useEffect} from 'react'; // 【核心修复】修正了 import �
 import {Box, IconButton, useTheme} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {motion, type Variants} from 'framer-motion';
-import {useLayout} from '../contexts/LayoutContext';
+import {useLayout} from '@/contexts/LayoutContext';
 
 const backdropVariants: Variants = {visible: {opacity: 1}, hidden: {opacity: 0}};
 const modalContentVariants: Variants = {

@@ -9,10 +9,10 @@
  * - 【最终确认】此文件已使用了正确的 `paramName: "itemId"`，与路由配置和内容组件的 props 完全匹配，无需进一步修改。
  */
 import React, {lazy} from 'react';
-import MobileDetailPageLayout from '../../layouts/MobileDetailPageLayout';
-import {type TemplateModalContentProps} from '../../components/modals/TemplateModalContent';
+import MobileDetailPageLayout from '@/layouts/MobileDetailPageLayout';
+import {type TemplateModalContentProps} from '@/components/modals/TemplateModalContent';
 
-const TemplateModalContent = lazy(() => import('../../components/modals/TemplateModalContent.tsx'));
+const TemplateModalContent = lazy(() => import('@/components/modals/TemplateModalContent.tsx'));
 
 const TemplateDetailMobile: React.FC = () => {
     return (

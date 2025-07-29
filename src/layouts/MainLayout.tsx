@@ -28,12 +28,12 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-import SideNav from '../components/SideNav';
+import SideNav from '@/components/SideNav';
 // 【核心修复】导入 useLayoutDispatch 以获取状态更新函数
-import {LayoutProvider, useLayout, useLayoutDispatch} from '../contexts/LayoutContext.tsx';
-import RightSearchPanel from '../components/RightSearchPanel';
-import Modal from '../components/Modal';
-import {pageVariants, pageTransition, mobileOverlayVariants} from '../utils/animations';
+import {LayoutProvider, useLayout, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import RightSearchPanel from '@/components/RightSearchPanel';
+import Modal from '@/components/Modal';
+import {pageVariants, pageTransition, mobileOverlayVariants} from '@/utils/animations';
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;

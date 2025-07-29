@@ -18,11 +18,11 @@
 import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
 import {Box, Typography, Button, CircularProgress} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import {useLayoutState, useLayoutDispatch} from '../contexts/LayoutContext.tsx';
-import {type InspectionBackupSearchValues} from '../components/forms/InspectionBackupSearchForm.tsx';
-import PageLayout from '../layouts/PageLayout';
+import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import {type InspectionBackupSearchValues} from '@/components/forms/InspectionBackupSearchForm.tsx';
+import PageLayout from '@/layouts/PageLayout';
 
-const InspectionBackupSearchForm = lazy(() => import('../components/forms/InspectionBackupSearchForm.tsx'));
+const InspectionBackupSearchForm = lazy(() => import('@/components/forms/InspectionBackupSearchForm.tsx'));
 
 const InspectionBackup: React.FC = () => {
     const {isPanelOpen} = useLayoutState();

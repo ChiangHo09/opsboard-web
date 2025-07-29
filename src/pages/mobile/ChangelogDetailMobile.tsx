@@ -9,11 +9,11 @@
  * - 【TypeScript 类型修复】在调用通用布局组件时，显式地传递了泛型参数。
  */
 import React, {lazy} from 'react';
-import MobileDetailPageLayout from '../../layouts/MobileDetailPageLayout';
+import MobileDetailPageLayout from '@/layouts/MobileDetailPageLayout';
 // 【核心修复】导入详情内容组件的 props 类型
-import {type ChangelogDetailContentProps} from '../../components/modals/ChangelogDetailContent';
+import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
 
-const ChangelogDetailContent = lazy(() => import('../../components/modals/ChangelogDetailContent.tsx'));
+const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
 const ChangelogDetailMobile: React.FC = () => {
     return (

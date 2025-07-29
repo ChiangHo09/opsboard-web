@@ -18,15 +18,15 @@ import {
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import {useLayoutState, useLayoutDispatch} from '../contexts/LayoutContext.tsx';
-import {type ServerSearchValues} from '../components/forms/ServerSearchForm';
-import TooltipCell from '../components/ui/TooltipCell';
-import PageLayout from '../layouts/PageLayout';
-import DataTable from '../components/ui/DataTable';
+import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
+import TooltipCell from '@/components/ui/TooltipCell';
+import PageLayout from '@/layouts/PageLayout';
+import DataTable from '@/components/ui/DataTable';
 
 // 使用 React.lazy 动态导入组件
-const ServerSearchForm = lazy(() => import('../components/forms/ServerSearchForm'));
-const ServerDetailContent = lazy(() => import('../components/modals/ServerDetailContent'));
+const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
+const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
 
 
 interface Row {
