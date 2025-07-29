@@ -6,15 +6,16 @@
  * 它还负责所有页面切换的动画编排。
  *
  * 本次修改内容:
- * - 【代码简化】移除了所有用于处理面板跨页跳转的复杂 `useEffect` 逻辑。
+ * - 【动画重构】更新了移动端面板动画的导入方式，使其从集中的 `animations.ts` 文件中获取。
  * - **解决方案**:
- *   面板的打开、关闭和内容管理现在完全由各个页面组件自己负责。`MainLayout` 不再需要猜测子组件的意图。
+ *   1.  移除了在组件内部本地定义的 `mobilePanelVariants`。
+ *   2.  从 `src/utils/animations.ts` 中导入了共享的 `mobileOverlayVariants`。
  * - **最终效果**:
- *   `MainLayout` 的职责更单一，代码更简洁，并且消除了所有因时序问题导致的竞态条件。
+ *   此组件的动画逻辑现在是可复用且集中管理的，确保了与其他移动端覆盖层（如详情页）的动画效果完全一致。
  */
 import {useState, type JSX, Suspense} from 'react';
 import {useLocation, useOutlet} from 'react-router-dom';
-import {motion, AnimatePresence, type Variants} from 'framer-motion';
+import {motion, AnimatePresence} from 'framer-motion';
 import {
     Box,
     IconButton,
@@ -27,16 +28,11 @@ import SideNav from '../components/SideNav';
 import {LayoutProvider, useLayout} from '../contexts/LayoutContext.tsx';
 import RightSearchPanel from '../components/RightSearchPanel';
 import Modal from '../components/Modal';
-import {pageVariants, pageTransition} from '../utils/pageAnimations';
+// 【核心修复】从动画工具文件中导入所有需要的动画配置
+import {pageVariants, pageTransition, mobileOverlayVariants} from '../utils/animations';
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
-
-const mobilePanelVariants: Variants = {
-    initial: {opacity: 0, scale: 0.98},
-    animate: {opacity: 1, scale: 1, transition: {duration: 0.2, ease: 'easeOut'}},
-    exit: {opacity: 0, scale: 0.98, transition: {duration: 0.2, ease: 'easeIn'}},
-};
 
 function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
     const location = useLocation();
@@ -50,9 +46,6 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
     } = useLayout();
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
-
-    // 【核心修复】移除所有用于智能关闭面板的 useEffect 逻辑。
-    // 该职责现在完全下放到各个页面组件。
 
     const modalJSX = (
         <AnimatePresence>
@@ -152,7 +145,8 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                     <AnimatePresence>
                         {isMobile && isPanelOpen && (
                             <MotionBox
-                                variants={mobilePanelVariants}
+                                // 【核心修复】应用从外部导入的动画变体
+                                variants={mobileOverlayVariants}
                                 initial="initial"
                                 animate="animate"
                                 exit="exit"

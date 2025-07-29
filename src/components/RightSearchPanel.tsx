@@ -6,20 +6,19 @@
  * 它的职责是管理自身的展开/收起动画，并为动态的内部内容提供一个动画插槽。
  *
  * 本次修改内容:
- * - 【动画效果优化】解决了侧边面板内容动画的“幅度”和“时长”在视觉上比主工作区更大的问题。
- * - **问题定位**: 此问题由动画的视觉感知差异引起。共享的 `pageVariants` 使用固定的20px位移，这个位移在狭窄的侧边面板中显得过于夸张。
+ * - 【动画重构】更新了动画配置的导入方式，使其从新的、集中的 `animations.ts` 工具文件中获取。
  * - **解决方案**:
- *   1.  在 `RightSearchPanel.tsx` 内部，定义了一套专属的、位移幅度更小的动画变体 `panelContentVariants`。
- *   2.  将动画的垂直位移 `y` 从 `20` / `-20` 减半为 `10` / `-10`，使其动画效果在视觉上更加微妙和收敛。
- *   3.  将这个新的 `panelContentVariants` 应用到面板内部所有内容的动画上，同时保持 `transition` 配置与全局 `pageTransition` 一致，以确保动画的节奏和缓动曲线是统一的。
- * - **最终效果**: 侧边面板的内容切换动画现在看起来更加平缓，其视觉“幅度”与主工作区的动画体验保持了一致。
+ *   1.  移除了在组件内部本地定义的 `panelContentVariants`。
+ *   2.  从 `src/utils/animations.ts` 中导入了共享的 `panelContentVariants` 和 `pageTransition`。
+ * - **最终效果**:
+ *   此组件的动画逻辑现在是可复用且集中管理的，为在其他组件中应用相同的动画效果铺平了道路。
  */
 import React from 'react';
 import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {motion, type Variants, AnimatePresence} from 'framer-motion';
-// 仍然导入 pageTransition 以保持动画节奏统一
-import {pageTransition} from '../utils/pageAnimations';
+// 【核心修复】从新的动画工具文件中导入配置
+import { pageTransition, panelContentVariants } from '../utils/animations';
 
 export interface RightSearchPanelProps {
     open: boolean;
@@ -31,23 +30,6 @@ export interface RightSearchPanelProps {
 }
 
 const MotionBox = motion(Box);
-
-// 【核心修复】为面板内容定义一套专属的、更微妙的动画
-const panelContentVariants: Variants = {
-    initial: {
-        opacity: 0,
-        y: 10, // 幅度减半，视觉效果更平缓
-    },
-    animate: {
-        opacity: 1,
-        y: 0,
-    },
-    exit: {
-        opacity: 0,
-        y: -10, // 幅度减半，视觉效果更平缓
-    },
-};
-
 
 export default function RightSearchPanel({
                                              open,
@@ -114,7 +96,7 @@ export default function RightSearchPanel({
                         {open && !children ? (
                             <MotionBox
                                 key="loading-panel-content"
-                                variants={panelContentVariants} // 应用专属动画
+                                variants={panelContentVariants}
                                 transition={pageTransition}
                                 initial="initial"
                                 animate="animate"
@@ -132,7 +114,7 @@ export default function RightSearchPanel({
                         ) : open && children ? (
                             <MotionBox
                                 key={animationKey}
-                                variants={panelContentVariants} // 应用专属动画
+                                variants={panelContentVariants}
                                 transition={pageTransition}
                                 initial="initial"
                                 animate="animate"

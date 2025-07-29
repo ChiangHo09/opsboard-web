@@ -6,22 +6,28 @@
  * UI 结构和业务逻辑，包括全屏布局、带关闭按钮的标题栏、以及从移动端到桌面端的自动重定向功能。
  *
  * 本次修改内容:
- * - 【ESLint 修复】遵循了 `no-explicit-any` 规则，将泛型约束中的 `any` 类型替换为更安全的 `unknown`。
+ * - 【动画终极修复】确保了移动端详情页的进入/退出动画与移动端搜索面板完全一致。
  * - **问题根源**:
- *   代码中使用了 `Record<string, any>`，这违反了 ESLint 对显式使用 `any` 类型的禁令。
+ *   之前的实现错误地使用了基于“垂直位移”的 `panelContentVariants` 动画，而不是搜索面板所使用的、基于“缩放”的 `mobileOverlayVariants` 动画，并且可能错误地覆盖了过渡时长，导致动画效果不一致且速度过快。
  * - **解决方案**:
- *   1.  将泛型约束 `T extends Record<string, any>` 修改为 `T extends Record<string, unknown>`。
- *   2.  这向 TypeScript 和 ESLint 表明，我们接受一个“值类型未知”的对象，而不是一个“放弃所有类型检查”的对象，这是一种更安全的做法。
+ *   1.  从集中的 `animations.ts` 工具文件中，导入正确的、专用于移动端覆盖层的 `mobileOverlayVariants`。
+ *   2.  将此动画变体应用到页面的根 `MotionBox` 组件上。
+ *   3.  【关键】移除了所有独立的 `transition` 属性，完全依赖 `mobileOverlayVariants` 内部定义的精确时长和缓动曲线。
  * - **最终效果**:
- *   代码现在完全符合严格的 ESLint 规则，消除了所有警告，同时保持了代码的类型安全和灵活性。
+ *   所有移动端详情页现在都拥有了与搜索面板完全相同的、平滑且节奏正确的缩放动画，
+ *   实现了整个应用在移动端覆盖层体验上的视觉和交互的绝对统一。
  */
 import { Suspense, useEffect, type LazyExoticComponent, type FC } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Typography, IconButton, CircularProgress } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { motion } from 'framer-motion';
 import { useLayoutState } from '../contexts/LayoutContext.tsx';
+// 【核心修复】导入正确的、用于移动端覆盖层的动画变体
+import { mobileOverlayVariants } from '../utils/animations';
 
-// 【核心修复】将泛型约束中的 any 替换为 unknown
+const MotionBox = motion(Box);
+
 interface MobileDetailPageLayoutProps<T extends Record<string, unknown>> {
     title: string;
     backPath: string;
@@ -29,7 +35,6 @@ interface MobileDetailPageLayoutProps<T extends Record<string, unknown>> {
     DetailContentComponent: LazyExoticComponent<FC<T>>;
 }
 
-// 【核心修复】将泛型约束中的 any 替换为 unknown
 const MobileDetailPageLayout = <T extends Record<string, unknown>>({
                                                                        title,
                                                                        backPath,
@@ -55,7 +60,14 @@ const MobileDetailPageLayout = <T extends Record<string, unknown>>({
     const contentProps = { [paramName]: id } as T;
 
     return (
-        <Box sx={{ boxSizing: 'border-box', height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
+        // 【核心修复】应用正确的 mobileOverlayVariants 动画，并移除独立的 transition 属性
+        <MotionBox
+            sx={{ boxSizing: 'border-box', height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}
+            variants={mobileOverlayVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+        >
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0 }}>
                 <Typography variant="h6">{title}</Typography>
                 <IconButton
@@ -76,7 +88,7 @@ const MobileDetailPageLayout = <T extends Record<string, unknown>>({
                     <DetailContentComponent {...contentProps} />
                 </Suspense>
             </Box>
-        </Box>
+        </MotionBox>
     );
 };
 
