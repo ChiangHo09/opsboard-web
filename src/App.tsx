@@ -3,23 +3,12 @@
  *
  * 文件功能描述:
  * 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
- * 它负责设置 React Router、TanStack Query、MUI 主题、全局通知系统，
- * 以及最重要的——全局错误边界，以确保应用的整体稳定性和一致性。
  *
  * 本次修改内容:
- * - 【TS 类型终极修复】根据 TanStack Query v5 的 API 规范，修正了全局错误处理的配置方式。
- * - **问题根源**:
- *   在 TanStack Query v5 中，`onError` 回调已从 `defaultOptions` 中移除。
- * - **解决方案**:
- *   1.  导入 `QueryCache`。
- *   2.  在创建 `QueryClient` 时，为其传递一个 `queryCache` 选项。
- *   3.  `queryCache` 的值是一个新的 `QueryCache` 实例，并将全局的 `onError` 回调函数配置在其构造函数中。
- * - **最终效果**:
- *   代码现在完全符合 TanStack Query v5 的 API，所有 TypeScript 错误均已解决。
+ * - 【组件写法现代化】移除了 `AppLogic` 和 `App` 组件的 `React.FC` 写法，
+ *   采用了现代的函数组件定义方式，并显式注解了 `: JSX.Element` 返回值类型。
  */
-import React from 'react';
 import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom';
-// 【核心修复】导入 QueryCache
 import {QueryClient, QueryClientProvider, QueryCache} from '@tanstack/react-query';
 import {ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -49,10 +38,11 @@ import ServerDetailMobile from './pages/mobile/ServerDetailMobile';
 import ChangelogDetailMobile from './pages/mobile/ChangelogDetailMobile';
 import TicketDetailMobile from './pages/mobile/TicketDetailMobile';
 import TemplateDetailMobile from './pages/mobile/TemplateDetailMobile';
+import type { JSX } from 'react';
 
 
-// 这是一个内部组件，用于访问在 Provider 树中定义的 hooks
-const AppLogic: React.FC = () => {
+// 【核心修改】移除 React.FC，使用现代写法
+const AppLogic = (): JSX.Element => {
     const showNotification = useNotification();
     const {closePanel} = useLayoutDispatch();
 
@@ -63,7 +53,6 @@ const AppLogic: React.FC = () => {
         window.location.href = '/login';
     };
 
-    // 【核心修复】使用 QueryCache 来配置全局 onError 回调
     const queryClient = new QueryClient({
         queryCache: new QueryCache({
             onError: (error: unknown) => {
@@ -83,7 +72,7 @@ const AppLogic: React.FC = () => {
         }),
         defaultOptions: {
             queries: {
-                retry: false, // 仍然可以在这里设置其他默认选项
+                retry: false,
             },
         },
     });
@@ -120,8 +109,8 @@ const AppLogic: React.FC = () => {
     );
 };
 
-
-const App: React.FC = () => {
+// 【核心修改】移除 React.FC，使用现代写法
+const App = (): JSX.Element => {
     return (
         <ErrorBoundary fallback={<GlobalErrorFallback/>}>
             <ThemeProvider theme={theme}>
