@@ -1,22 +1,19 @@
 /**
- * 文件名：Login.tsx
+ * 文件名：src/pages/Login.tsx
  * 描述：
  *     此文件定义了应用的登录页面，包含用户输入表单和品牌标识。
- *     它采用了响应式设计，以适应桌面和移动设备。
  *
  * 本次修改：
- * - 【问题修复】根据用户要求，将登录页面的背景色与应用主背景色（侧边栏颜色）统一。
- * - 将背景色从独立的蓝色修改为引用自主题的 `app.background`。
- * - 相应地，将页面标题恢复为深色（`neutral.main`），并将 Logo 恢复为其原始颜色（移除了白色滤镜），以确保在浅色背景上的可读性。
- * - 将登录按钮和输入框焦点颜色绑定到主题的 `primary.main` 颜色。
+ * - 【组件写法现代化】移除了 `export default function` 的写法，采用了现代的、
+ *   不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import {useState, useRef, useEffect} from 'react';
+import {useState, useRef, useEffect, type JSX} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {
     Box, Card, CardContent, TextField, Button,
     Typography, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
-import {useTheme} from '@mui/material/styles'; // 导入 useTheme Hook
+import {useTheme} from '@mui/material/styles';
 import LoginIcon from '@mui/icons-material/Login';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import HoneypotInfo from './HoneypotInfo';
@@ -25,13 +22,14 @@ interface LoginProps {
     onFakeLogin: () => void;
 }
 
-export default function Login({onFakeLogin}: LoginProps) {
+// 【核心修改】使用现代写法定义 Login 组件
+const Login = ({onFakeLogin}: LoginProps): JSX.Element => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
     const navigate = useNavigate();
     const cardRef = useRef<HTMLDivElement>(null);
-    const theme = useTheme(); // 获取主题对象
+    const theme = useTheme();
 
     useEffect(() => {
         cardRef.current?.focus();
@@ -48,10 +46,10 @@ export default function Login({onFakeLogin}: LoginProps) {
 
     const tfSX = {
         '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: theme.palette.primary.main, // 使用主题的主色
+            borderColor: theme.palette.primary.main,
         },
         '& .MuiInputLabel-root.Mui-focused': {
-            color: theme.palette.primary.main, // 使用主题的主色
+            color: theme.palette.primary.main,
         },
     } as const;
 
@@ -63,7 +61,7 @@ export default function Login({onFakeLogin}: LoginProps) {
                 flexDirection: {xs: 'column', md: 'row'},
                 alignItems: 'center',
                 justifyContent: {xs: 'space-evenly', md: 'center'},
-                bgcolor: 'app.background', // 【修改】使用主题的应用背景色
+                bgcolor: 'app.background',
                 p: {xs: 2, md: 0},
             }}
         >
@@ -93,7 +91,6 @@ export default function Login({onFakeLogin}: LoginProps) {
                         sx={{
                             height: {xs: '4rem', sm: '5rem', md: 120},
                             width: 'auto',
-                            // 【修改】移除滤镜，恢复 Logo 原始颜色
                         }}
                     />
                     <Typography
@@ -101,7 +98,7 @@ export default function Login({onFakeLogin}: LoginProps) {
                         sx={{
                             fontSize: {xs: '1.8rem', sm: '2.2rem', md: '2.5rem'},
                             fontWeight: 500,
-                            color: 'neutral.main' // 【修改】恢复为深色标题
+                            color: 'neutral.main'
                         }}
                     >
                         运维信息表
@@ -144,7 +141,7 @@ export default function Login({onFakeLogin}: LoginProps) {
                                 <Button
                                     fullWidth
                                     variant="contained"
-                                    color="primary" // 【修改】使用 primary color，更符合MUI规范
+                                    color="primary"
                                     startIcon={<LoginIcon/>}
                                     type="submit"
                                 >
@@ -181,4 +178,6 @@ export default function Login({onFakeLogin}: LoginProps) {
             </Dialog>
         </Box>
     );
-}
+};
+
+export default Login;

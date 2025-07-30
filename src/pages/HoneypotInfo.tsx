@@ -1,11 +1,26 @@
-/*
- *  src/pages/HoneypotInfo.tsx
- *  - 作为一个独立的组件，提供“蜜罐+时间戳”验证机制的展示内容
+/**
+ * 文件名: src/pages/HoneypotInfo.tsx
+ *
+ * 文件功能描述:
+ * - 作为一个独立的组件，提供“蜜罐+时间戳”验证机制的展示内容。
+ *
+ * 本次修改内容:
+ * - 【组件写法现代化】移除了 `export default function` 的写法，并为内部的 `CodeBlock`
+ *   组件和 `HoneypotInfo` 组件本身采用了现代的、不使用 `React.FC` 的类型定义方式。
+ * - 1. **CodeBlock**: 为其 props 定义了独立的 `CodeBlockProps` 接口，并显式注解了
+ *      props 类型和 `: JSX.Element` 返回值类型。它需要接收 children，因此在接口中明确定义。
+ * - 2. **HoneypotInfo**: 将其改造为 `const HoneypotInfo = (): JSX.Element => { ... }` 的形式。
  */
 import {Box, Typography, Divider} from '@mui/material';
+import {type ReactNode, type JSX} from 'react';
 
-// CodeBlock 辅助组件与内容紧密相关，因此定义在这里
-const CodeBlock = ({children}: { children: string }) => (
+// 【核心修改】为 CodeBlock 的 props 定义一个接口
+interface CodeBlockProps {
+    children: ReactNode;
+}
+
+// 【核心修改】使用现代写法定义 CodeBlock 组件
+const CodeBlock = ({children}: CodeBlockProps): JSX.Element => (
     <Box component="pre" sx={{
         bgcolor: '#f5f5f5', p: 2, borderRadius: 1, overflowX: 'auto',
         fontFamily: 'monospace', fontSize: '14px', whiteSpace: 'pre-wrap',
@@ -15,10 +30,9 @@ const CodeBlock = ({children}: { children: string }) => (
     </Box>
 );
 
-// 这是我们将要导出的内容组件
-export default function HoneypotInfo() {
+// 【核心修改】使用现代写法定义 HoneypotInfo 组件
+const HoneypotInfo = (): JSX.Element => {
     return (
-        // 使用一个 Fragment 或 Box 来包裹所有内容
         <Box>
             <Typography variant="subtitle1" color="text.secondary" sx={{mb: 2}}>
                 本备忘录用于记录“蜜罐 (Honeypot)”与“时间戳 (Timestamp)”组合验证的原理和实现方式，以防止自动化脚本攻击。
@@ -117,4 +131,6 @@ app.post('/api/login', (req, res) => {
             </CodeBlock>
         </Box>
     );
-}
+};
+
+export default HoneypotInfo;

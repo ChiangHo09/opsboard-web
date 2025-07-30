@@ -5,14 +5,14 @@
  * - 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
  *
  * 本次修改内容:
- * - 【跳转逻辑终极修复】此页面现在负责在挂载时，主动关闭任何可能处于打开状态的搜索面板。
- * - **解决方案**:
- *   1.  在 `useEffect` 中，除了原有的逻辑，现在会直接调用从 `useLayoutDispatch` 中获取的 `closePanel()` 函数。
- *   2.  这确保了无论从哪个页面跳转到 `Dashboard`，如果搜索面板是打开的，它都会被可靠地关闭。
- * - **最终效果**:
- *   通过让无面板的页面主动承担关闭职责，我们获得了一个简单、健壮且无竞态条件的解决方案。
+ * - 【组件写法现代化】移除了 `export default function` 的写法，并为内部的 `StatCard`
+ *   组件和 `Dashboard` 组件本身采用了现代的、不使用 `React.FC` 的类型定义方式。
+ * - 1. **StatCard**: 为其 props 定义了独立的 `StatCardProps` 接口，并显式注解了
+ *      props 类型和 `: JSX.Element` 返回值类型。
+ * - 2. **Dashboard**: 将其改造为 `const Dashboard = (): JSX.Element => { ... }` 的形式，
+ *      并添加了 `export default`。
  */
-import React, {useEffect} from 'react';
+import React, {useEffect, type JSX, type ReactNode} from 'react';
 import {
     Box,
     Typography,
@@ -42,19 +42,16 @@ import {useNavigate} from 'react-router-dom';
 import {useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import PageLayout from '@/layouts/PageLayout';
 
-// ... (StatCard, recentActivities 等组件和数据保持不变)
+// 【核心修改】为 StatCard 的 props 定义一个接口
+interface StatCardProps {
+    icon: ReactNode;
+    title: string;
+    value: string;
+    onClick?: () => void;
+}
 
-const StatCard = ({
-                      icon,
-                      title,
-                      value,
-                      onClick
-                  }: {
-    icon: React.ReactNode,
-    title: string,
-    value: string,
-    onClick?: () => void
-}) => (
+// 【核心修改】使用现代写法定义 StatCard 组件
+const StatCard = ({icon, title, value, onClick}: StatCardProps): JSX.Element => (
     <Card
         component={onClick ? ButtonBase : 'div'}
         onClick={onClick}
@@ -81,6 +78,7 @@ const StatCard = ({
         </CardContent>
     </Card>
 );
+
 const recentActivities = [
     {id: 'log001', customer: '客户a', action: '新增了用户导出功能...', time: '2小时前'},
     {id: 'log002', customer: '客户b', action: '修复了一个潜在的XSS漏洞。', time: '昨天'},
@@ -88,13 +86,12 @@ const recentActivities = [
     {id: 'log004', customer: '客户c', action: '常规维护，更新了服务器操作系统补丁。', time: '3天前'},
 ];
 
-export default function Dashboard() {
+// 【核心修改】使用现代写法定义 Dashboard 组件
+const Dashboard = (): JSX.Element => {
     const nickname = 'chiangho';
     const navigate = useNavigate();
-    // 【核心修复】从 dispatch 中获取 closePanel 函数
     const {closePanel} = useLayoutDispatch();
 
-    // 胶囊按钮样式
     const quickBtnSX = {
         height: 44,
         minWidth: 160,
@@ -121,13 +118,11 @@ export default function Dashboard() {
         },
     } as const;
 
-    // 【核心修复】对于不使用面板的页面，在挂载时应主动关闭任何可能打开的面板。
     useEffect(() => {
         closePanel();
     }, [closePanel]);
 
-    // 按钮文字样式
-    const label = (icon: React.ReactNode, text: string) => (
+    const label = (icon: ReactNode, text: string) => (
         <>
             {icon}
             <Typography
@@ -140,7 +135,6 @@ export default function Dashboard() {
         </>
     );
 
-    // 统计卡片数据
     const statCards = [
         {
             key: 'servers',
@@ -165,7 +159,6 @@ export default function Dashboard() {
         },
     ];
 
-    // 动画参数（弹簧型）
     const motionTransition: Transition = {
         type: 'spring',
         stiffness: 500,
@@ -321,4 +314,6 @@ export default function Dashboard() {
             </Stack>
         </PageLayout>
     );
-}
+};
+
+export default Dashboard;

@@ -5,14 +5,10 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【错误处理】为 `onSearch` 事件处理器增加了统一的错误处理逻辑。
- * - **解决方案**:
- *   1.  导入了 `useNotification` 钩子和 `handleAsyncError` 工具函数。
- *   2.  使用 `try...catch` 块包裹了 `onSearch` 回调函数的核心逻辑。
- *   3.  在 `catch` 块中，调用 `handleAsyncError`，确保任何在搜索操作中发生的意外错误
- *       都会被捕获，并通过全局通知系统向用户反馈，从而提升应用的健壮性。
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 `: JSX.Element` 返回值类型。
  */
-import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
+import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
@@ -33,7 +29,7 @@ import DataTable from '@/components/ui/DataTable';
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
 
-const Servers: React.FC = () => {
+const Servers = (): JSX.Element => {
     const {isMobile, isPanelOpen} = useLayoutState();
     const {
         togglePanel,
@@ -58,7 +54,6 @@ const Servers: React.FC = () => {
         DetailContentComponent: ServerDetailContent,
     });
 
-    // 此 Effect 负责在通过 URL 直接打开详情时，自动跳转到数据所在的页码
     useEffect(() => {
         if (serverId && rows.length > 0) {
             const itemIndex = rows.findIndex(row => row.id === serverId);

@@ -2,14 +2,13 @@
  * 文件名: src/pages/Changelog.tsx
  *
  * 代码功能:
- * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
+ * 此文件定义了应用的“更新日志”页面。
  *
  * 本次修改内容:
- * - 【代码清理】移除了在 `onSearch` 事件处理器中用于测试的 `try...catch` 块和错误抛出逻辑。
- * - **最终效果**: `onSearch` 函数恢复了其原始的、简洁的实现，不再需要 `handleAsyncError`
- *   或 `useNotification`，相关的导入也已被移除，使组件更加纯粹。
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 `: JSX.Element` 返回值类型。
  */
-import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
+import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
@@ -17,14 +16,10 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
-// 【修改】移除不再需要的导入
-// import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
 import {fetchChangelogs, type ChangelogRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
-// 【修改】移除不再需要的导入
-// import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -32,7 +27,7 @@ import DataTable from '@/components/ui/DataTable';
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
-const Changelog: React.FC = () => {
+const Changelog = (): JSX.Element => {
     const {isMobile, isPanelOpen} = useLayoutState();
     const {
         togglePanel,
@@ -40,8 +35,6 @@ const Changelog: React.FC = () => {
         setPanelTitle,
         setPanelWidth,
     } = useLayoutDispatch();
-    // 【修改】移除不再需要的 useNotification
-    // const showNotification = useNotification();
 
     const navigate = useNavigate();
     const {logId} = useParams<{ logId: string }>();
@@ -82,7 +75,6 @@ const Changelog: React.FC = () => {
         }
     }, [isPanelOpen]);
 
-    // 【核心修改】移除 try...catch 和错误模拟逻辑
     const onSearch = useCallback((v: ChangelogSearchValues) => {
         alert(`搜索: ${JSON.stringify({
             ...v,
