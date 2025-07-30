@@ -1,6 +1,17 @@
-import React from 'react';
+/**
+ * 文件名: src/components/ReactLogoAnim.tsx
+ *
+ * 文件功能描述:
+ * 一个简单的 SVG 动画组件。
+ *
+ * 本次修改内容:
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
+ */
+import {type JSX, type SVGProps } from 'react';
 
-const ReactLogoAnim: React.FC<React.SVGProps<SVGSVGElement>> = (props) => {
+// 【核心修改】移除 React.FC，使用现代写法
+const ReactLogoAnim = (props: SVGProps<SVGSVGElement>): JSX.Element => {
     return (
         <svg
             {...props}

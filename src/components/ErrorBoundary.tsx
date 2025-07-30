@@ -7,7 +7,7 @@
  * 防止整个应用因此崩溃（白屏），并渲染一个备用的“降级”UI。
  *
  * 本次修改内容:
- * - 【全新文件】创建此组件以作为应用错误处理策略的基石。
+ * - 无需修改。此类组件的写法是 React 的标准，不涉及 React.FC。
  */
 import {Component, type ErrorInfo, type ReactNode} from 'react';
 
@@ -26,6 +26,7 @@ class ErrorBoundary extends Component<Props, State> {
     };
 
     // 当后代组件抛出错误后，此生命周期方法会被调用
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public static getDerivedStateFromError(_: Error): State {
         // 更新 state，使得下一次渲染可以显示降级后的 UI
         return {hasError: true};
@@ -48,4 +49,4 @@ class ErrorBoundary extends Component<Props, State> {
     }
 }
 
-export default ErrorBoundary;
+export default ErrorBoundary

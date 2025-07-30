@@ -1,23 +1,17 @@
 /**
  * 文件名: src/components/RightSearchPanel.tsx
  *
- * 代码功能:
- * 此文件定义了 RightSearchPanel 组件，它是一个纯粹的、带动画的右侧“容器”或“壳”。
- * 它的职责是管理自身的展开/收起动画，并为动态的内部内容提供一个动画插槽。
+ * 文件功能描述:
+ * 此文件定义了 RightSearchPanel 组件，一个带动画的右侧容器。
  *
  * 本次修改内容:
- * - 【动画重构】更新了动画配置的导入方式，使其从新的、集中的 `animations.ts` 工具文件中获取。
- * - **解决方案**:
- *   1.  移除了在组件内部本地定义的 `panelContentVariants`。
- *   2.  从 `src/utils/animations.ts` 中导入了共享的 `panelContentVariants` 和 `pageTransition`。
- * - **最终效果**:
- *   此组件的动画逻辑现在是可复用且集中管理的，为在其他组件中应用相同的动画效果铺平了道路。
+ * - 【组件写法现代化】移除了 `export default function` 的写法，采用了现代的、
+ *   不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import React from 'react';
+import {type JSX, type ReactNode } from 'react';
 import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {motion, type Variants, AnimatePresence} from 'framer-motion';
-// 【核心修复】从新的动画工具文件中导入配置
 import { pageTransition, panelContentVariants } from '@/utils/animations';
 
 export interface RightSearchPanelProps {
@@ -25,20 +19,21 @@ export interface RightSearchPanelProps {
     onClose: () => void;
     title?: string;
     width?: number;
-    children: React.ReactNode;
+    children: ReactNode;
     contentKey?: string | number;
 }
 
 const MotionBox = motion(Box);
 
-export default function RightSearchPanel({
-                                             open,
-                                             onClose,
-                                             title = '搜索',
-                                             width = 360,
-                                             children,
-                                             contentKey,
-                                         }: RightSearchPanelProps) {
+// 【核心修改】使用现代写法
+const RightSearchPanel = ({
+                              open,
+                              onClose,
+                              title = '搜索',
+                              width = 360,
+                              children,
+                              contentKey,
+                          }: RightSearchPanelProps): JSX.Element => {
 
     const panelVariants: Variants = {
         open: {width: width, transition: {duration: 0.28, ease: [0.4, 0, 0.2, 1]}},
@@ -139,4 +134,6 @@ export default function RightSearchPanel({
             </Box>
         </MotionBox>
     );
-}
+};
+
+export default RightSearchPanel;

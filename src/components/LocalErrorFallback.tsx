@@ -3,17 +3,17 @@
  *
  * 文件功能描述:
  * 此文件定义了局部错误边界的备用（Fallback）UI组件。
- * 当应用中某个特定的、被错误边界包裹的功能模块（如主内容区、侧面板）发生渲染错误时，
- * 此组件将被显示。它的目的是在不中断整个应用流程的情况下，向用户指明哪个部分出了问题。
  *
  * 本次修改内容:
- * - 【全新文件】为局部错误边界提供一个信息清晰且侵入性较低的降级UI。
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 `: JSX.Element` 返回值类型。
  */
-import React from 'react';
 import {Box, Typography} from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import type { JSX } from 'react';
 
-const LocalErrorFallback: React.FC = () => {
+// 【核心修改】移除 React.FC，添加 : JSX.Element 返回值类型
+const LocalErrorFallback = (): JSX.Element => {
     return (
         <Box
             sx={{

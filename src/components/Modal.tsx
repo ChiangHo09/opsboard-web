@@ -1,14 +1,14 @@
 /**
  * 文件名: src/components/Modal.tsx
  *
- * 本次修改内容:
- * - 【问题修复】解决了由于 `import` 语句语法错误导致的大量连锁编译错误。
- * - 修正了 `import React, { useEffect } from 'react';` 这一行，确保其语法正确。
- *
  * 文件功能描述:
- * 此文件定义了一个全局通用的模态框（弹窗）组件，负责处理弹窗的“外壳”、动画和关闭逻辑。
+ * 此文件定义了一个全局通用的模态框（弹窗）组件。
+ *
+ * 本次修改内容:
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import React, {useEffect} from 'react'; // 【核心修复】修正了 import 语句
+import {useEffect, type JSX, type ReactNode} from 'react';
 import {Box, IconButton, useTheme} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {motion, type Variants} from 'framer-motion';
@@ -23,10 +23,11 @@ const modalContentVariants: Variants = {
 
 interface ModalProps {
     onClose: () => void;
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({onClose, children}) => {
+// 【核心修改】移除 React.FC，使用现代写法
+const Modal = ({onClose, children}: ModalProps): JSX.Element => {
     const {isMobile} = useLayout();
     const theme = useTheme();
 

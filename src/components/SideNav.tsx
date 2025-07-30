@@ -2,13 +2,11 @@
  * 文件名: src/components/SideNav.tsx
  *
  * 代码功能:
- * 此文件定义了应用的侧边导航栏组件（SideNav），负责应用的页面路由导航，支持展开、折叠以及移动端适配。
+ * 此文件定义了应用的侧边导航栏组件（SideNav）。
  *
  * 本次修改内容:
- * - 【核心问题修复】修复了 TS2746 错误。
- * - 问题原因：在 `accountMenu` 变量中，“退出登录”的 <MenuItem> 组件内部直接放置了 <LogoutIcon> 组件和一个文本节点，这构成了多个子元素，违反了 <MenuItem> 的 props 类型定义。
- * - 解决方案：使用 React Fragment (`<>...</>`) 将图标和文本包裹起来，使其对于 <MenuItem> 来说成为一个单一的子元素，从而修复了类型错误。
- * - 【新增修复】修复非移动端两个按钮的多个子元素问题，使用 Box 容器包裹
+ * - 【组件写法现代化】移除了 `export default function` 的写法，采用了现代的、
+ *   不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
 import React, {useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
@@ -78,7 +76,8 @@ interface SideNavProps {
     onFakeLogout: () => void;
 }
 
-export default function SideNav({open, onToggle, onFakeLogout}: SideNavProps) {
+// 【核心修改】使用现代写法
+const SideNav = ({open, onToggle, onFakeLogout}: SideNavProps): JSX.Element => {
     const {pathname} = useLocation();
     const nav = useNavigate();
     const theme = useTheme();
@@ -167,7 +166,6 @@ export default function SideNav({open, onToggle, onFakeLogout}: SideNavProps) {
                 }}
                 sx={{color: 'error.main', borderRadius: 1.5, mx: 1, mt: 1}}
             >
-                {/* ✅ 使用 Fragment 将图标和文本包裹起来 */}
                 <>
                     <LogoutIcon fontSize="small" sx={{mr: 1.5}}/>
                     退出登录
@@ -200,7 +198,7 @@ export default function SideNav({open, onToggle, onFakeLogout}: SideNavProps) {
                         {bottomNavItems.filter(item => item.isMobileTopBarItem).map(item => (
                             <IconButton key={item.path} onClick={() => nav(item.path)} aria-label={item.label}>
                                 <Tooltip
-                                    title={item.label}  // ✅ 修复引号闭合问题
+                                    title={item.label}
                                     placement="bottom"
                                     slotProps={{tooltip: {className: 'tooltip-sidenav'}}}
                                 >
@@ -420,4 +418,6 @@ export default function SideNav({open, onToggle, onFakeLogout}: SideNavProps) {
             </React.Fragment>
         );
     }
-}
+};
+
+export default SideNav;

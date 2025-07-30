@@ -3,17 +3,17 @@
  *
  * 文件功能描述:
  * 此文件定义了全局错误边界的备用（Fallback）UI组件。
- * 当应用发生无法恢复的顶层渲染错误时，此组件将被显示，为用户提供一个清晰的指引，
- * 并防止出现白屏。它的设计原则是“绝对简单”，不依赖任何可能出错的复杂逻辑或状态。
  *
  * 本次修改内容:
- * - 【全新文件】为全局错误边界提供一个稳定、可靠的降级UI。
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 `: JSX.Element` 返回值类型。
  */
-import React from 'react';
 import {Box, Typography, Button} from '@mui/material';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import type { JSX } from 'react';
 
-const GlobalErrorFallback: React.FC = () => {
+// 【核心修改】移除 React.FC，添加 : JSX.Element 返回值类型
+const GlobalErrorFallback = (): JSX.Element => {
     return (
         <Box
             sx={{
