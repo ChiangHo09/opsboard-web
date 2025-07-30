@@ -5,24 +5,25 @@
  * 此文件负责定义并渲染应用的“工单信息”页面。它提供了一个可搜索、可分页、支持详情查看的高级表格来展示工单数据。
  *
  * 本次修改内容:
- * - 【数据获取重构】使用 TanStack Query 替代了本地硬编码的数据。
- * - 1. **移除静态数据**: 删除了组件内部硬编码的 `rows` 数组和相关创建函数。
- * - 2. **引入 API 调用**: 导入了 `fetchTickets` 函数，该函数负责从模拟 API 获取工单数据。
- * - 3. **集成 `useQuery`**: 使用 `@tanstack/react-query` 的 `useQuery` Hook 来声明式地获取数据。
- * - 4. **处理加载与错误状态**: 在数据加载时显示一个全表格范围的 `CircularProgress` 指示器，并在获取失败时显示错误信息。
- * - 5. **更新依赖逻辑**: 将所有依赖 `rows` 数组的逻辑（如弹窗存在性检查、分页）都更新为使用从 `useQuery` 返回的 `data`。
+ * - 【代码清理】移除了在 `useLayoutState` 中对 `isMobile` 变量的解构。
+ * - **问题根源**:
+ *   在将响应式逻辑抽象到 `useResponsiveDetailView` Hook 后，此组件内不再直接使用 `isMobile` 变量，
+ *   导致了 "unused variable" 的 lint 错误。
+ * - **解决方案**:
+ *   从 `useLayoutState()` 的返回结果中只解构组件实际需要的 `isPanelOpen` 变量，保持代码整洁。
  */
-import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
+import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
     TableHead, TableRow, ButtonBase, CircularProgress, Chip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import {useQuery} from '@tanstack/react-query';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type TicketSearchValues} from '@/components/forms/TicketSearchForm';
 import {fetchTickets, type TicketRow} from '@/api';
+import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
+import {type TicketDetailContentProps} from '@/components/modals/TicketDetailContent';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -31,14 +32,13 @@ const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
 
 const Tickets: React.FC = () => {
-    const {isMobile, isPanelOpen} = useLayoutState();
+    // 【核心修复】不再需要 isMobile，将其从解构中移除
+    const {isPanelOpen} = useLayoutState();
     const {
         togglePanel,
         setPanelContent,
         setPanelTitle,
         setPanelWidth,
-        setIsModalOpen,
-        setModalConfig
     } = useLayoutDispatch();
 
     const navigate = useNavigate();
@@ -48,49 +48,32 @@ const Tickets: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    const {data: rows = [], isLoading, isError, error} = useQuery<TicketRow[], Error>({
+    const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
+        paramName: 'ticketId',
+        baseRoute: '/app/tickets',
         queryKey: ['tickets'],
         queryFn: fetchTickets,
+        DetailContentComponent: TicketDetailContent,
     });
+
+    // 此 Effect 负责在通过 URL 直接打开详情时，自动跳转到数据所在的页码
+    useEffect(() => {
+        if (ticketId && rows.length > 0) {
+            const itemIndex = rows.findIndex(row => row.id === ticketId);
+            if (itemIndex !== -1) {
+                const targetPage = Math.floor(itemIndex / rowsPerPage);
+                if (page !== targetPage) {
+                    setPage(targetPage);
+                }
+            }
+        }
+    }, [ticketId, rows, rowsPerPage, page]);
 
     useEffect(() => {
         if (isPanelOpen) {
             setIsPanelContentSet(true);
         }
     }, [isPanelOpen]);
-
-    // Effect 1: 负责控制桌面端弹窗的显示与隐藏
-    useEffect(() => {
-        const ticketExists = ticketId && rows.some(row => row.id === ticketId);
-        if (ticketExists && !isMobile) {
-            setIsModalOpen(true);
-            setModalConfig({
-                content: (
-                    <Suspense fallback={<Box sx={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}><CircularProgress/></Box>}>
-                        <TicketDetailContent ticketId={ticketId}/>
-                    </Suspense>
-                ),
-                onClose: () => navigate('/app/tickets', {replace: true})
-            });
-        } else {
-            setIsModalOpen(false);
-            setModalConfig({content: null, onClose: null});
-        }
-    }, [ticketId, isMobile, navigate, setIsModalOpen, setModalConfig, rows]);
-
-    // Effect 2: 负责处理从桌面端到移动端的视图重定向
-    useEffect(() => {
-        if (ticketId && isMobile) {
-            navigate(`/app/tickets/mobile/${ticketId}`, {replace: true});
-        }
-    }, [ticketId, isMobile, navigate]);
-
 
     const onSearch = useCallback((v: TicketSearchValues) => {
         alert(`搜索: ${JSON.stringify(v)}`);

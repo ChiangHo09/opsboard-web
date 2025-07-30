@@ -5,24 +5,24 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【数据获取重构】使用 TanStack Query 替代了本地硬编码的数据。
- * - 1. **移除静态数据**: 删除了组件内部硬编码的 `rows` 数组。
- * - 2. **引入 API 调用**: 导入了 `fetchServers` 函数，该函数负责从模拟 API 获取服务器数据。
- * - 3. **集成 `useQuery`**: 使用 `@tanstack/react-query` 的 `useQuery` Hook 来声明式地获取数据。
- * - 4. **处理加载与错误状态**: 在数据加载时显示一个全表格范围的 `CircularProgress` 指示器，并在获取失败时显示错误信息。
- * - 5. **更新依赖逻辑**: 将所有依赖 `rows` 数组的逻辑（如弹窗存在性检查、分页）都更新为使用从 `useQuery` 返回的 `data`。
+ * - 【逻辑抽象】使用新建的 `useResponsiveDetailView` 自定义 Hook 替代了本地的 `useEffect` 逻辑。
+ * - 1. **移除重复 Effect**: 删除了之前用于管理弹窗显示和移动端重定向的两个 `useEffect`。
+ * - 2. **引入自定义 Hook**: 导入并调用 `useResponsiveDetailView` Hook，并向其提供了本页面所需的全部配置。
+ * - 3. **简化组件**: 页面组件的职责更加纯粹，主要关注于渲染表格和处理搜索面板的交互。
+ * - 4. **保留分页同步**: 保留了一个 `useEffect`，用于在通过 URL 直接访问详情时，将表格自动翻到对应页。
  */
-import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
+import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import {useQuery} from '@tanstack/react-query';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
 import {fetchServers, type ServerRow} from '@/api';
+import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
+import {type ServerDetailContentProps} from '@/components/modals/ServerDetailContent';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -37,8 +37,6 @@ const Servers: React.FC = () => {
         setPanelContent,
         setPanelTitle,
         setPanelWidth,
-        setIsModalOpen,
-        setModalConfig
     } = useLayoutDispatch();
 
     const navigate = useNavigate();
@@ -48,48 +46,32 @@ const Servers: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    const {data: rows = [], isLoading, isError, error} = useQuery<ServerRow[], Error>({
+    const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
+        paramName: 'serverId',
+        baseRoute: '/app/servers',
         queryKey: ['servers'],
         queryFn: fetchServers,
+        DetailContentComponent: ServerDetailContent,
     });
+
+    // 此 Effect 负责在通过 URL 直接打开详情时，自动跳转到数据所在的页码
+    useEffect(() => {
+        if (serverId && rows.length > 0) {
+            const itemIndex = rows.findIndex(row => row.id === serverId);
+            if (itemIndex !== -1) {
+                const targetPage = Math.floor(itemIndex / rowsPerPage);
+                if (page !== targetPage) {
+                    setPage(targetPage);
+                }
+            }
+        }
+    }, [serverId, rows, rowsPerPage, page]);
 
     useEffect(() => {
         if (isPanelOpen) {
             setIsPanelContentSet(true);
         }
     }, [isPanelOpen]);
-
-    // Effect 1: 负责控制桌面端弹窗的显示与隐藏
-    useEffect(() => {
-        const serverExists = serverId && rows.some(row => row.id === serverId);
-        if (serverExists && !isMobile) {
-            setIsModalOpen(true);
-            setModalConfig({
-                content: (
-                    <Suspense fallback={<Box sx={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}><CircularProgress/></Box>}>
-                        <ServerDetailContent serverId={serverId}/>
-                    </Suspense>
-                ),
-                onClose: () => navigate('/app/servers', {replace: true})
-            });
-        } else {
-            setIsModalOpen(false);
-            setModalConfig({content: null, onClose: null});
-        }
-    }, [serverId, isMobile, navigate, setIsModalOpen, setModalConfig, rows]);
-
-    // Effect 2: 负责处理从桌面端到移动端的视图重定向
-    useEffect(() => {
-        if (serverId && isMobile) {
-            navigate(`/app/servers/mobile/${serverId}`, {replace: true});
-        }
-    }, [serverId, isMobile, navigate]);
 
     const onSearch = useCallback((v: ServerSearchValues) => {
         alert(`搜索: ${JSON.stringify(v)}`);

@@ -5,24 +5,25 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【数据获取重构】使用 TanStack Query 替代了本地硬编码的数据。
- * - 1. **移除静态数据**: 删除了组件内部硬编码的 `rows` 数组。
- * - 2. **引入 API 调用**: 导入了 `fetchChangelogs` 函数，该函数负责从模拟 API 获取日志数据。
- * - 3. **集成 `useQuery`**: 使用 `@tanstack/react-query` 的 `useQuery` Hook 来声明式地获取数据。
- * - 4. **处理加载与错误状态**: 在数据加载时显示一个全表格范围的 `CircularProgress` 指示器，并在获取失败时显示错误信息。
- * - 5. **更新依赖逻辑**: 将所有依赖 `rows` 数组的逻辑（如弹窗存在性检查、分页）都更新为使用从 `useQuery` 返回的 `data`。
+ * - 【逻辑抽象】使用新建的 `useResponsiveDetailView` 自定义 Hook 替代了本地的 `useEffect` 逻辑。
+ * - 1. **移除重复 Effect**: 删除了之前用于管理弹窗显示和移动端重定向的两个 `useEffect`。
+ * - 2. **引入自定义 Hook**: 导入并调用 `useResponsiveDetailView` Hook，并向其提供了本页面所需的全部配置（路由名、参数名、API函数、详情组件等）。
+ * - 3. **简化组件**: 页面组件现在不再需要直接从 `useLayoutDispatch` 获取 `setIsModalOpen` 和 `setModalConfig`，
+ *   其职责更加纯粹，主要关注于渲染表格和处理搜索面板的交互。
+ * - 4. **保留分页同步**: 保留了一个 `useEffect`，用于在通过 URL 直接访问详情时，将表格自动翻到对应页。
  */
-import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
+import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import {useQuery} from '@tanstack/react-query';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
 import {fetchChangelogs, type ChangelogRow} from '@/api';
+import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
+import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -37,8 +38,6 @@ const Changelog: React.FC = () => {
         setPanelContent,
         setPanelTitle,
         setPanelWidth,
-        setIsModalOpen,
-        setModalConfig
     } = useLayoutDispatch();
 
     const navigate = useNavigate();
@@ -48,57 +47,39 @@ const Changelog: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    const {data: rows = [], isLoading, isError, error} = useQuery<ChangelogRow[], Error>({
+    // 【核心改造】使用自定义 Hook 封装数据获取和响应式视图逻辑
+    const {
+        data: rows = [],
+        isLoading,
+        isError,
+        error
+    } = useResponsiveDetailView<ChangelogRow, ChangelogDetailContentProps>({
+        paramName: 'logId',
+        baseRoute: '/app/changelog',
         queryKey: ['changelogs'],
         queryFn: fetchChangelogs,
+        DetailContentComponent: ChangelogDetailContent,
     });
+
+    // 此 Effect 负责在通过 URL 直接打开详情时，自动跳转到数据所在的页码
+    useEffect(() => {
+        if (logId && rows.length > 0) {
+            const itemIndex = rows.findIndex(row => row.id === logId);
+            if (itemIndex !== -1) {
+                const targetPage = Math.floor(itemIndex / rowsPerPage);
+                if (page !== targetPage) {
+                    setPage(targetPage);
+                }
+            }
+        }
+    }, [logId, rows, rowsPerPage, page]);
+
 
     useEffect(() => {
         if (isPanelOpen) {
             setIsPanelContentSet(true);
         }
     }, [isPanelOpen]);
-
-    // Effect 1: 负责控制桌面端弹窗的显示与隐藏
-    useEffect(() => {
-        const itemIndex = logId ? rows.findIndex(row => row.id === logId) : -1;
-        const logExists = itemIndex !== -1;
-
-        if (logExists && !isMobile) {
-            setIsModalOpen(true);
-            setModalConfig({
-                content: (
-                    <Suspense fallback={<Box sx={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}><CircularProgress/></Box>}>
-                        <ChangelogDetailContent logId={logId as string}/>
-                    </Suspense>
-                ),
-                onClose: () => navigate('/app/changelog', {replace: true})
-            });
-        } else {
-            setIsModalOpen(false);
-            setModalConfig({content: null, onClose: null});
-        }
-
-        if (logExists) {
-            const targetPage = Math.floor(itemIndex / rowsPerPage);
-            if (page !== targetPage) {
-                setPage(targetPage);
-            }
-        }
-    }, [logId, isMobile, rowsPerPage, page, navigate, setIsModalOpen, setModalConfig, rows]);
-
-    // Effect 2: 负责处理从桌面端到移动端的视图重定向
-    useEffect(() => {
-        if (logId && isMobile) {
-            navigate(`/app/changelog/mobile/${logId}`, {replace: true});
-        }
-    }, [logId, isMobile, navigate]);
 
     const onSearch = useCallback((v: ChangelogSearchValues) => {
         alert(`搜索: ${JSON.stringify({
