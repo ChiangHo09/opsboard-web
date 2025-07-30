@@ -1,24 +1,19 @@
 /**
  * 文件名: src/components/forms/InspectionBackupSearchForm.tsx
  *
- * 本次修改内容:
- * - 【全局配置】移除了此组件内部的 `LocalizationProvider` 及其相关导入。
- * - 该功能现已提升至 `MainLayout.tsx` 进行全局统一配置，此组件会自动继承中文本地化设置。
- *
  * 文件功能描述:
  * 此文件定义了“巡检备份”功能的搜索表单组件。
+ *
+ * 本次修改内容:
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import {useState, type FC} from 'react';
+import {useState, type JSX} from 'react';
 import {
     Box, TextField, Button, Stack, InputLabel, MenuItem, FormControl, Select, Typography
 } from '@mui/material';
-// 【修改】移除 LocalizationProvider 相关导入
-// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-// import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import {DatePicker} from '@mui/x-date-pickers/DatePicker';
-import {Dayjs} from 'dayjs';
-
-// 【修改】移除 dayjs locale 导入
+import {type Dayjs} from 'dayjs';
 
 export interface InspectionBackupSearchValues {
     region: string;
@@ -34,7 +29,8 @@ interface InspectionBackupSearchFormProps {
     onReset?: () => void;
 }
 
-const InspectionBackupSearchForm: FC<InspectionBackupSearchFormProps> = ({onSearch, onReset}) => {
+// 【核心修改】移除 React.FC，使用现代写法
+const InspectionBackupSearchForm = ({onSearch, onReset}: InspectionBackupSearchFormProps): JSX.Element => {
     const [region, setRegion] = useState<string>('');
     const [startTime, setStartTime] = useState<Dayjs | null>(null);
     const [endTime, setEndTime] = useState<Dayjs | null>(null);
@@ -76,7 +72,6 @@ const InspectionBackupSearchForm: FC<InspectionBackupSearchFormProps> = ({onSear
                     </Select>
                 </FormControl>
 
-                {/* 【修改】移除 LocalizationProvider 包裹 */}
                 <DatePicker label="起始时间" value={startTime} onChange={(newValue) => setStartTime(newValue)}
                             format="YYYY-MM-DD" slotProps={{textField: {fullWidth: true, margin: 'normal'}}}/>
                 <DatePicker label="截止时间" value={endTime} onChange={(newValue) => setEndTime(newValue)}

@@ -3,17 +3,22 @@
  *
  * 文件功能描述:
  * 此文件是 TemplateSearchForm 组件的集成测试集。
- * 它模拟用户的真实交互（输入文本、点击按钮），并验证组件是否
- * 能正确地管理其内部状态，并最终调用外部传入的回调函数，
- * 从而确保整个表单功能的正确性。
+ *
+ * 本次修改内容:
+ * - 【测试类型终极修复】在文件顶部直接导入 `@testing-library/jest-dom`。
+ * - **原因**: 当全局 TypeScript 配置无法让编辑器正确识别 jest-dom 的
+ *   自定义断言（如 .toBeInTheDocument）时，直接在测试文件中导入可以
+ *   强制 TypeScript 加载其类型定义，从而解决 TS2339 错误。
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// 【核心修复】直接在此处导入，为当前文件提供类型定义
+import '@testing-library/jest-dom';
 import TemplateSearchForm from '../TemplateSearchForm';
-import { ThemeProvider } from '@mui/material/styles';
-import theme from '@/theme.ts'; // 导入您的主题，以确保组件能正确渲染
+import {ThemeProvider} from '@mui/material/styles';
+import theme from '@/theme'; // 修正了导入路径，移除 .ts 后缀
 
 // 由于我们的组件依赖于MUI主题，创建一个辅助函数来包裹被测试的组件
 const renderWithTheme = (ui: React.ReactElement) => {
@@ -23,15 +28,17 @@ const renderWithTheme = (ui: React.ReactElement) => {
 describe('TemplateSearchForm', () => {
     // 测试用例 1: 验证组件是否能被正确渲染
     it('should render all form fields and buttons correctly', () => {
-        renderWithTheme(<TemplateSearchForm onSearch={() => {}} onReset={() => {}} />);
+        renderWithTheme(<TemplateSearchForm onSearch={() => {
+        }} onReset={() => {
+        }}/>);
 
         // 使用 getByLabelText 查找输入框，这是推荐的、面向可访问性的查询方式
         expect(screen.getByLabelText('示例字段 1')).toBeInTheDocument();
         expect(screen.getByLabelText('示例字段 2')).toBeInTheDocument();
 
         // 使用 getByRole 查找按钮，name 是其可访问的名称
-        expect(screen.getByRole('button', { name: /重置/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /搜索/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: /重置/i})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: /搜索/i})).toBeInTheDocument();
     });
 
     // 测试用例 2: 验证用户输入和表单提交
@@ -39,12 +46,12 @@ describe('TemplateSearchForm', () => {
         const user = userEvent.setup(); // 设置 userEvent
         const mockOnSearch = jest.fn(); // 创建一个模拟的 onSearch 函数
 
-        renderWithTheme(<TemplateSearchForm onSearch={mockOnSearch} />);
+        renderWithTheme(<TemplateSearchForm onSearch={mockOnSearch}/>);
 
         // 1. 查找元素
         const input1 = screen.getByLabelText('示例字段 1');
         const input2 = screen.getByLabelText('示例字段 2');
-        const searchButton = screen.getByRole('button', { name: /搜索/i });
+        const searchButton = screen.getByRole('button', {name: /搜索/i});
 
         // 2. 模拟用户交互
         await user.type(input1, 'Hello');
@@ -66,10 +73,11 @@ describe('TemplateSearchForm', () => {
         const user = userEvent.setup();
         const mockOnReset = jest.fn();
 
-        renderWithTheme(<TemplateSearchForm onSearch={() => {}} onReset={mockOnReset} />);
+        renderWithTheme(<TemplateSearchForm onSearch={() => {
+        }} onReset={mockOnReset}/>);
 
         const input1 = screen.getByLabelText('示例字段 1');
-        const resetButton = screen.getByRole('button', { name: /重置/i });
+        const resetButton = screen.getByRole('button', {name: /重置/i});
 
         // 先输入一些内容
         await user.type(input1, 'Some text');

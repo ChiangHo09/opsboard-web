@@ -7,7 +7,7 @@
  * 是否能够正确地执行其核心逻辑（如记录日志、调用通知回调）。
  */
 
-import { handleAsyncError } from '../errorHandler';
+import {handleAsyncError} from '../errorHandler';
 
 // 使用 describe 来组织一组相关的测试
 describe('handleAsyncError', () => {
@@ -16,7 +16,8 @@ describe('handleAsyncError', () => {
     // 在每个测试运行之前，创建一个 console.error 的“间谍”
     // 这允许我们检查它是否被调用，同时 .mockImplementation(() => {}) 可以阻止它在测试报告中打印日志
     beforeEach(() => {
-        consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {
+        });
     });
 
     // 在每个测试运行之后，恢复 console.error 的原始功能，防止测试之间相互影响
@@ -51,7 +52,7 @@ describe('handleAsyncError', () => {
 
     // 测试用例 3: 当传入未知类型时
     it('should use a generic message for unknown error types', () => {
-        const unknownError = { code: 500 };
+        const unknownError = {code: 500};
         const mockShowNotification = jest.fn();
 
         handleAsyncError(unknownError, mockShowNotification);

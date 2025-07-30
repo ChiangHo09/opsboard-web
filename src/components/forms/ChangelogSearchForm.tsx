@@ -1,22 +1,17 @@
 /**
  * 文件名: src/components/forms/ChangelogSearchForm.tsx
  *
- * 本次修改内容:
- * - 【全局配置】移除了此组件内部的 `LocalizationProvider` 及其相关导入。
- * - 该功能现已提升至 `MainLayout.tsx` 进行全局统一配置，此组件会自动继承中文本地化设置。
- *
  * 文件功能描述:
  * 此文件定义了更新日志搜索表单组件（ChangelogSearchForm）。
+ *
+ * 本次修改内容:
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import React, {useState} from 'react';
+import {useState, type JSX} from 'react';
 import {Box, TextField, Button, Stack} from '@mui/material';
-// 【修改】移除 LocalizationProvider 相关导入
-// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-// import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import {DatePicker} from '@mui/x-date-pickers/DatePicker';
-import {Dayjs} from 'dayjs';
-
-// 【修改】移除 dayjs locale 导入
+import {type Dayjs} from 'dayjs';
 
 export interface ChangelogSearchValues {
     region: string;
@@ -31,7 +26,8 @@ interface ChangelogSearchFormProps {
     onReset?: () => void;
 }
 
-const ChangelogSearchForm: React.FC<ChangelogSearchFormProps> = ({onSearch, onReset}) => {
+// 【核心修改】移除 React.FC，使用现代写法
+const ChangelogSearchForm = ({onSearch, onReset}: ChangelogSearchFormProps): JSX.Element => {
     const [region, setRegion] = useState<string>('');
     const [serverType, setServerType] = useState<string>('');
     const [updateCategory, setUpdateCategory] = useState<string>('');
@@ -61,7 +57,6 @@ const ChangelogSearchForm: React.FC<ChangelogSearchFormProps> = ({onSearch, onRe
                 <TextField fullWidth margin="normal" label="更新类别" variant="outlined" value={updateCategory}
                            onChange={(e) => setUpdateCategory(e.target.value)}/>
 
-                {/* 【修改】移除 LocalizationProvider 包裹 */}
                 <DatePicker label="起始时间" value={startTime} onChange={(newValue) => setStartTime(newValue)}
                             format="YYYY-MM-DD" slotProps={{textField: {fullWidth: true, margin: 'normal'}}}/>
                 <DatePicker label="截止时间" value={endTime} onChange={(newValue) => setEndTime(newValue)}

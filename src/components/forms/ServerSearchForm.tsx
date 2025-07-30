@@ -1,12 +1,12 @@
 /**
- * 文件名：ServerSearchForm.tsx
+ * 文件名：src/components/forms/ServerSearchForm.tsx
  * 描述：此文件定义了服务器搜索表单组件（ServerSearchForm）。
  *
  * 本次修改：
- * - 【核心简化】移除了本地的 `textFieldSx` 样式对象。因为相关的焦点样式（边框和标签颜色）现在已通过 `theme.ts` 在全局统一配置，不再需要局部覆盖。
- * - 【颜色常量化】更新了底部操作按钮的样式，使其颜色值从硬编码改为引用自全局主题（`theme.palette`），以实现颜色的统一管理。
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
+ *   并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import React, {useState} from 'react';
+import {useState, type JSX} from 'react';
 import {Box, TextField, Button, Stack, Typography} from '@mui/material';
 
 export interface ServerSearchValues {
@@ -21,7 +21,8 @@ interface ServerSearchFormProps {
     onReset?: () => void;
 }
 
-const ServerSearchForm: React.FC<ServerSearchFormProps> = ({onSearch, onReset}) => {
+// 【核心修改】移除 React.FC，使用现代写法
+const ServerSearchForm = ({onSearch, onReset}: ServerSearchFormProps): JSX.Element => {
     const [customerName, setCustomerName] = useState('');
     const [serverName, setServerName] = useState('');
     const [ip, setIp] = useState('');
@@ -40,8 +41,6 @@ const ServerSearchForm: React.FC<ServerSearchFormProps> = ({onSearch, onReset}) 
             onReset();
         }
     };
-
-    // 【移除】不再需要本地的 textFieldSx，样式已在 theme.ts 中全局定义
 
     return (
         <Stack spacing={2} sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
@@ -88,11 +87,11 @@ const ServerSearchForm: React.FC<ServerSearchFormProps> = ({onSearch, onReset}) 
                         sx={{
                             height: 48,
                             borderRadius: 99,
-                            borderColor: 'neutral.main', // 使用主题颜色
-                            color: 'neutral.main',       // 使用主题颜色
+                            borderColor: 'neutral.main',
+                            color: 'neutral.main',
                             '&:hover': {
-                                bgcolor: 'custom.hoverOpacity', // 使用主题颜色
-                                borderColor: 'neutral.main',    // 使用主题颜色
+                                bgcolor: 'custom.hoverOpacity',
+                                borderColor: 'neutral.main',
                             }
                         }}
                     >
@@ -108,11 +107,11 @@ const ServerSearchForm: React.FC<ServerSearchFormProps> = ({onSearch, onReset}) 
                     sx={{
                         height: 48,
                         borderRadius: 99,
-                        bgcolor: 'neutral.main',        // 使用主题颜色
-                        color: 'neutral.contrastText',  // 使用主题颜色
+                        bgcolor: 'neutral.main',
+                        color: 'neutral.contrastText',
                         boxShadow: 'none',
                         '&:hover': {
-                            bgcolor: 'neutral.dark',    // 使用主题颜色
+                            bgcolor: 'neutral.dark',
                             boxShadow: 'none',
                         }
                     }}
