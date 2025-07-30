@@ -5,11 +5,12 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【响应式逻辑修复】应用了最终的、双向无缝切换的响应式详情查看逻辑。
- * - **解决方案**:
- *   1.  **添加重定向 Effect**: 增加了一个 `useEffect`，当 URL 中存在 `logId` 且视图切换到移动端时，自动重定向到移动端专属的详情页。
- *   2.  **简化点击事件**: 表格行的 `onClick` 事件现在只负责导航到桌面端弹窗路由，所有响应式决策都由 `useEffect` 处理。
- *   3.  **分离弹窗控制**: 控制弹窗的 `useEffect` 逻辑保持不变，它只在非移动端视图下工作。
+ * - 【数据获取重构】使用 TanStack Query 替代了本地硬编码的数据。
+ * - 1. **移除静态数据**: 删除了组件内部硬编码的 `rows` 数组。
+ * - 2. **引入 API 调用**: 导入了 `fetchChangelogs` 函数，该函数负责从模拟 API 获取日志数据。
+ * - 3. **集成 `useQuery`**: 使用 `@tanstack/react-query` 的 `useQuery` Hook 来声明式地获取数据。
+ * - 4. **处理加载与错误状态**: 在数据加载时显示一个全表格范围的 `CircularProgress` 指示器，并在获取失败时显示错误信息。
+ * - 5. **更新依赖逻辑**: 将所有依赖 `rows` 数组的逻辑（如弹窗存在性检查、分页）都更新为使用从 `useQuery` 返回的 `data`。
  */
 import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -18,33 +19,16 @@ import {
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import {useQuery} from '@tanstack/react-query';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
+import {fetchChangelogs, type ChangelogRow} from '@/api';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
-
-
-interface Row {
-    id: string;
-    customerName: string;
-    updateTime: string;
-    updateType: string;
-    updateContent: string;
-}
-
-const create = (id: string, c: string, t: string, typ: string, ct: string): Row => ({
-    id,
-    customerName: c,
-    updateTime: t,
-    updateType: typ,
-    updateContent: ct
-});
-const LONG_TEXT = '这是一个用于测试 hover 效果的特别长的文本，需要足够多的内容才能在宽屏的50%列宽中产生溢出效果。我们再加一点，再加一点，现在应该足够长了。';
-const rows: Row[] = [create('log001', '客户a', '2025-07-21 10:30', '功能更新', LONG_TEXT), create('log002', '客户b', '2025-07-20 15:00', '安全修复', LONG_TEXT), ...Array.from({length: 50}).map((_, i) => create(`log${i + 4}`, `测试客户${(i % 5) + 1}`, `2025-06-${20 - (i % 20)} 14:00`, i % 2 === 0 ? 'Bug 修复' : '常规维护', `（第 ${i + 4} 条）${LONG_TEXT}`)),];
 
 const Changelog: React.FC = () => {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -63,6 +47,11 @@ const Changelog: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
+
+    const {data: rows = [], isLoading, isError, error} = useQuery<ChangelogRow[], Error>({
+        queryKey: ['changelogs'],
+        queryFn: fetchChangelogs,
+    });
 
     useEffect(() => {
         if (isPanelOpen) {
@@ -102,12 +91,12 @@ const Changelog: React.FC = () => {
                 setPage(targetPage);
             }
         }
-    }, [logId, isMobile, rowsPerPage, page, navigate, setIsModalOpen, setModalConfig]);
+    }, [logId, isMobile, rowsPerPage, page, navigate, setIsModalOpen, setModalConfig, rows]);
 
-    // 【核心修复】Effect 2: 负责处理从桌面端到移动端的视图重定向
+    // Effect 2: 负责处理从桌面端到移动端的视图重定向
     useEffect(() => {
         if (logId && isMobile) {
-            navigate(`/app/changelog/mobile/${logId}`, { replace: true });
+            navigate(`/app/changelog/mobile/${logId}`, {replace: true});
         }
     }, [logId, isMobile, navigate]);
 
@@ -175,7 +164,31 @@ const Changelog: React.FC = () => {
                 </Button>
             </Box>
 
-            <Box sx={{flexGrow: 1, overflow: 'hidden'}}>
+            <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
+                {isLoading && (
+                    <Box sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        bgcolor: 'rgba(255, 255, 255, 0.7)',
+                        zIndex: 10
+                    }}>
+                        <CircularProgress/>
+                    </Box>
+                )}
+                {isError && (
+                    <Box sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}>
+                        <Typography color="error">加载失败: {error.message}</Typography>
+                    </Box>
+                )}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}

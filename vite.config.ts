@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => {
     // 开发服务器
     server: {
       host: '0.0.0.0',      // 允许局域网 / Docker 访问
-      port: 3000,           // 开发端口
+      port: 5173,           // 开发端口
       open: true,           // 启动后自动打开浏览器
       strictPort: true,     // 若端口被占用则直接报错，不自动递增
     },

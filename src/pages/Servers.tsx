@@ -5,11 +5,12 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【响应式逻辑修复】应用了最终的、双向无缝切换的响应式详情查看逻辑。
- * - **解决方案**:
- *   1.  **添加重定向 Effect**: 增加了一个 `useEffect`，当 URL 中存在 `serverId` 且视图切换到移动端时，自动重定向到移动端专属的详情页。
- *   2.  **简化点击事件**: 表格行的 `onClick` 事件现在只负责导航到桌面端弹窗路由，所有响应式决策都由 `useEffect` 处理。
- *   3.  **分离弹窗控制**: 控制弹窗的 `useEffect` 逻辑保持不变，它只在非移动端视图下工作。
+ * - 【数据获取重构】使用 TanStack Query 替代了本地硬编码的数据。
+ * - 1. **移除静态数据**: 删除了组件内部硬编码的 `rows` 数组。
+ * - 2. **引入 API 调用**: 导入了 `fetchServers` 函数，该函数负责从模拟 API 获取服务器数据。
+ * - 3. **集成 `useQuery`**: 使用 `@tanstack/react-query` 的 `useQuery` Hook 来声明式地获取数据。
+ * - 4. **处理加载与错误状态**: 在数据加载时显示一个全表格范围的 `CircularProgress` 指示器，并在获取失败时显示错误信息。
+ * - 5. **更新依赖逻辑**: 将所有依赖 `rows` 数组的逻辑（如弹窗存在性检查、分页）都更新为使用从 `useQuery` 返回的 `data`。
  */
 import React, {useEffect, useCallback, useState, lazy, Suspense} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -18,40 +19,16 @@ import {
     TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import {useQuery} from '@tanstack/react-query';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
+import {fetchServers, type ServerRow} from '@/api';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 
-// 使用 React.lazy 动态导入组件
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
-
-
-interface Row {
-    id: string;
-    customerName: string;
-    serverName: string;
-    ip: string;
-    role: string;
-    note?: string;
-    dep?: string;
-    custNote?: string;
-}
-
-const create = (id: string, c: string, s: string, ip: string, role: string, note?: string, dep?: string, cn?: string): Row => ({
-    id,
-    customerName: c,
-    serverName: s,
-    ip,
-    role,
-    note,
-    dep,
-    custNote: cn
-});
-const LONG_NOTE = '这是一段非常非常长的使用备注，用于测试在表格单元格中的文本溢出和 Tooltip 显示效果。我们需要确保这段文本足够长，以便在不同屏幕宽度下都能被截断。';
-const rows: Row[] = [create('srv001', '客户a', 'APP-SERVER-A', '192.168.1.10', '应用', LONG_NOTE), create('srv002', '客户a', 'DB-SERVER-AB', '192.168.1.20', '数据库', LONG_NOTE, '共享', '客户 a/b 共用'), ...Array.from({length: 100}).map((_, i) => create(`test${i + 1}`, `测试客户${i + 1}`, `TestServer${i + 1}`, `10.0.0.${i + 1}`, i % 2 === 0 ? '应用' : '数据库', `（第 ${i + 1} 条）${LONG_NOTE}`, i % 3 === 0 ? '测试版' : undefined)),];
 
 const Servers: React.FC = () => {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -70,6 +47,11 @@ const Servers: React.FC = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
+
+    const {data: rows = [], isLoading, isError, error} = useQuery<ServerRow[], Error>({
+        queryKey: ['servers'],
+        queryFn: fetchServers,
+    });
 
     useEffect(() => {
         if (isPanelOpen) {
@@ -100,12 +82,12 @@ const Servers: React.FC = () => {
             setIsModalOpen(false);
             setModalConfig({content: null, onClose: null});
         }
-    }, [serverId, isMobile, navigate, setIsModalOpen, setModalConfig]);
+    }, [serverId, isMobile, navigate, setIsModalOpen, setModalConfig, rows]);
 
-    // 【核心修复】Effect 2: 负责处理从桌面端到移动端的视图重定向
+    // Effect 2: 负责处理从桌面端到移动端的视图重定向
     useEffect(() => {
         if (serverId && isMobile) {
-            navigate(`/app/servers/mobile/${serverId}`, { replace: true });
+            navigate(`/app/servers/mobile/${serverId}`, {replace: true});
         }
     }, [serverId, isMobile, navigate]);
 
@@ -113,6 +95,7 @@ const Servers: React.FC = () => {
         alert(`搜索: ${JSON.stringify(v)}`);
         togglePanel();
     }, [togglePanel]);
+
     const onReset = useCallback(() => {
         alert('重置搜索表单');
         setPage(0);
@@ -171,7 +154,31 @@ const Servers: React.FC = () => {
                 </Button>
             </Box>
 
-            <Box sx={{flexGrow: 1, overflow: 'hidden'}}>
+            <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
+                {isLoading && (
+                    <Box sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        bgcolor: 'rgba(255, 255, 255, 0.7)',
+                        zIndex: 10
+                    }}>
+                        <CircularProgress/>
+                    </Box>
+                )}
+                {isError && (
+                    <Box sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}>
+                        <Typography color="error">加载失败: {error.message}</Typography>
+                    </Box>
+                )}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
