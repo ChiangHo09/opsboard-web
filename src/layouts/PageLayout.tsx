@@ -2,24 +2,24 @@
  * 文件名: src/layouts/PageLayout.tsx
  *
  * 代码功能:
- * 此文件定义了一个可重用的 `PageLayout` 组件，用于统一所有标准内容页面的
- * 基础布局和样式。它封装了响应式的宽度、最大宽度、居中对齐和垂直内边距的逻辑。
+ * 此文件定义了一个可重用的 `PageLayout` 组件，用于统一所有标准内容页面的基础布局和样式。
  *
  * 本次修改内容:
- * - 【结构性重构】简化了组件的职责。
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式。
  * - **解决方案**:
- *   1.  移除了 `display: 'flex'`, `flexDirection: 'column'`, 和 `flex: '1 1 auto'` 样式。
- *   2.  这些关于“如何填充父容器”的布局职责现在完全由 `MainLayout.tsx` 中的动画容器 `<MotionBox>` 来承担。
- * - **最终效果**: `PageLayout` 的职责更加单一和清晰，它只负责“约束内容宽度并提供内边距”，不再关心外部的 flex 布局，这使得整体结构更具可维护性。
+ *   1.  为 props 定义了 `PageLayoutProps` 接口，并显式地在其中定义了 `children: React.ReactNode`。
+ *   2.  为组件注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import React from 'react';
+import {type JSX, type ReactNode} from 'react';
 import {Box, type BoxProps} from '@mui/material';
 
+// 【核心修改】显式定义 children
 interface PageLayoutProps extends BoxProps {
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
-const PageLayout: React.FC<PageLayoutProps> = ({children, sx, ...rest}) => {
+// 【核心修改】移除 React.FC，使用现代写法
+const PageLayout = ({children, sx, ...rest}: PageLayoutProps): JSX.Element => {
     return (
         <Box
             sx={{
@@ -31,8 +31,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({children, sx, ...rest}) => {
                 },
                 mx: 'auto',
                 py: 4,
-                // 【核心修复】移除了 flex 相关属性，因为父级动画容器现在负责此项工作。
-                // 这使得 PageLayout 的职责更纯粹：只负责内容区的宽度约束和内边距。
                 ...sx
             }}
             {...rest}

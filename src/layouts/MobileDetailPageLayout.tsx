@@ -2,21 +2,15 @@
  * 文件名: src/layouts/MobileDetailPageLayout.tsx
  *
  * 文件功能描述:
- * 此文件定义了一个【可复用的】移动端详情页面布局组件。它封装了所有移动端详情页共享的
- * UI 结构和业务逻辑，包括全屏布局、带关闭按钮的标题栏、以及从移动端到桌面端的自动重定向功能。
+ * 此文件定义了一个【可复用的】移动端详情页面布局组件。
  *
  * 本次修改内容:
- * - 【TypeScript 终极修复】通过使用更准确的泛型约束，彻底解决了所有类型不匹配的错误。
- * - **问题根源**:
- *   之前的泛型约束 `T extends Record<string, unknown>` 错误地要求传入的 props 类型必须包含一个“索引签名”，而我们具体的 props 类型（如 `{ logId: string }`）并不满足此条件。
- * - **解决方案**:
- *   1.  将泛型约束从 `T extends Record<string, unknown>` 修改为 `T extends object`。
- *   2.  这个新的约束只要求 `T` 是一个对象即可，这与我们所有具体的 props 接口（`...Props`）都完全兼容。
- * - **最终效果**:
- *   TypeScript 现在能够正确地验证所有传入的组件及其 props，所有类型错误都已消除，
- *   通用布局组件现在真正实现了类型安全和高度可复用性。
+ * - 【组件写法现代化】移除了 `React.FC` 的使用，采用了现代的函数组件定义方式。
+ *   对于泛型组件，这种写法更加自然和清晰，并显式注解了 `: JSX.Element | null` 返回值类型。
+ * - 【类型修正】由于此组件在特定条件下可能返回 `null`，将返回值类型从 `: JSX.Element`
+ *   修正为 `: JSX.Element | null`，以实现更精确的类型覆盖。
  */
-import {Suspense, useEffect, type LazyExoticComponent, type FC} from 'react';
+import {Suspense, useEffect, type JSX, type LazyExoticComponent, type ReactElement} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -26,21 +20,21 @@ import {motion} from 'framer-motion';
 
 const MotionBox = motion(Box);
 
-// 【核心修复】将泛型约束 T 修改为 extends object
+// 【核心修改】LazyExoticComponent 的泛型参数不再需要是 FC，可以是更通用的类型
 interface MobileDetailPageLayoutProps<T extends object> {
     title: string;
     backPath: string;
     paramName: keyof T & string;
-    DetailContentComponent: LazyExoticComponent<FC<T>>;
+    DetailContentComponent: LazyExoticComponent<(props: T) => ReactElement>;
 }
 
-// 【核心修复】将泛型约束 T 修改为 extends object
+// 【核心修改】移除 React.FC，使用现代泛型组件写法，并修正返回值类型
 const MobileDetailPageLayout = <T extends object>({
                                                       title,
                                                       backPath,
                                                       paramName,
                                                       DetailContentComponent,
-                                                  }: MobileDetailPageLayoutProps<T>) => {
+                                                  }: MobileDetailPageLayoutProps<T>): JSX.Element | null => {
     const navigate = useNavigate();
     const params = useParams();
     const {isMobile} = useLayoutState();
@@ -53,6 +47,7 @@ const MobileDetailPageLayout = <T extends object>({
         }
     }, [isMobile, id, navigate, backPath]);
 
+    // 【类型修正】如果 id 不存在，组件不渲染任何东西，返回 null
     if (!id) {
         return null;
     }

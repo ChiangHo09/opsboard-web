@@ -3,19 +3,10 @@
  *
  * 代码功能:
  * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
- * 它还负责所有页面切换的动画编排。
  *
  * 本次修改内容:
- * - 【错误边界修复】解决了错误边界状态在页面导航后不会自动重置的问题。
- * - **问题根源**:
- *   当一个页面崩溃后，其局部的错误边界会进入 `hasError: true` 状态。在之前的实现中，即使用户导航到一个正常的页面，
- *   这个错误状态依然存在，导致新页面也被渲染为错误提示。
- * - **解决方案**:
- *   通过为 `ErrorBoundary` 组件添加一个 `key={location.pathname}` 属性，我们利用了React的 `key` 调和机制。
- *   每当路由路径 (`pathname`) 改变时，React会销毁旧的 `ErrorBoundary` 实例并创建一个全新的实例，
- *   新实例的 `hasError` 状态会自然地重置为 `false`。
- * - **最终效果**:
- *   这确保了每个页面导航都会获得一个“干净”的错误边界，从而正确地渲染新页面，解决了跨页面的状态污染问题。
+ * - 【组件写法现代化】移除了 `export default function` 的写法，采用了现代的、
+ *   不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
 import {useState, type JSX, Suspense, useEffect} from 'react';
 import {useLocation, useOutlet} from 'react-router-dom';
@@ -29,7 +20,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 
 import SideNav from '@/components/SideNav';
-import {useLayout, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import {LayoutProvider, useLayout, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import RightSearchPanel from '@/components/RightSearchPanel';
 import Modal from '@/components/Modal';
 import {pageVariants, pageTransition, mobileOverlayVariants} from '@/utils/animations';
@@ -40,6 +31,7 @@ import LocalErrorFallback from '@/components/LocalErrorFallback';
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
+// MainContentWrapper 已经使用了现代写法，无需修改
 function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
     const location = useLocation();
     const currentOutlet = useOutlet();
@@ -130,7 +122,6 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                     >
                         <AnimatePresence mode="wait">
                             {currentOutlet && (
-                                // 【核心修复】为 ErrorBoundary 添加随路由变化的 key
                                 <ErrorBoundary key={location.pathname} fallback={<LocalErrorFallback/>}>
                                     <MotionBox
                                         key={basePath}
@@ -246,8 +237,17 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
     );
 }
 
-export default function MainLayout({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
-    return (
-        <MainContentWrapper onFakeLogout={onFakeLogout}/>
-    );
+// 【核心修改】为 MainLayout 定义 props 接口并使用现代写法
+interface MainLayoutProps {
+    onFakeLogout: () => void;
 }
+
+const MainLayout = ({onFakeLogout}: MainLayoutProps): JSX.Element => {
+    return (
+        <LayoutProvider>
+            <MainContentWrapper onFakeLogout={onFakeLogout}/>
+        </LayoutProvider>
+    );
+};
+
+export default MainLayout;
