@@ -1,12 +1,12 @@
 /**
  * 文件名: src/pages/Changelog.tsx
  *
- * 代码功能:
- * 此文件定义了应用的“更新日志”页面。
- *
  * 本次修改内容:
- * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
- *   并显式注解了 `: JSX.Element` 返回值类型。
+ * - 【API 调用更新】更新了数据获取方式，以匹配重构后的模块化 API。
+ * - **解决方案**:
+ *   1.  将导入从 `fetchChangelogs` 修改为 `changelogsApi`。
+ *   2.  在 `useResponsiveDetailView` Hook 的 `queryFn` 选项中，
+ *       将调用从 `fetchChangelogs` 修改为 `changelogsApi.fetchAll`。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -17,7 +17,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
-import {fetchChangelogs, type ChangelogRow} from '@/api';
+// 【核心修改】更新 API 导入
+import {changelogsApi, type ChangelogRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
 import TooltipCell from '@/components/ui/TooltipCell';
@@ -52,7 +53,8 @@ const Changelog = (): JSX.Element => {
         paramName: 'logId',
         baseRoute: '/app/changelog',
         queryKey: ['changelogs'],
-        queryFn: fetchChangelogs,
+        // 【核心修改】更新 API 调用
+        queryFn: changelogsApi.fetchAll,
         DetailContentComponent: ChangelogDetailContent,
     });
 

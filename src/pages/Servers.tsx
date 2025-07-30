@@ -1,12 +1,12 @@
 /**
  * 文件名: src/pages/Servers.tsx
  *
- * 代码功能:
- * 此文件负责定义并渲染应用的“服务器信息”页面。
- *
  * 本次修改内容:
- * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
- *   并显式注解了 `: JSX.Element` 返回值类型。
+ * - 【API 调用更新】更新了数据获取方式，以匹配重构后的模块化 API。
+ * - **解决方案**:
+ *   1.  将导入从 `fetchServers` 修改为 `serversApi`。
+ *   2.  在 `useResponsiveDetailView` Hook 的 `queryFn` 选项中，
+ *       将调用从 `fetchServers` 修改为 `serversApi.fetchAll`。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -18,7 +18,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
-import {fetchServers, type ServerRow} from '@/api';
+// 【核心修改】更新 API 导入
+import {serversApi, type ServerRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ServerDetailContentProps} from '@/components/modals/ServerDetailContent';
 import {handleAsyncError} from '@/utils/errorHandler';
@@ -50,7 +51,8 @@ const Servers = (): JSX.Element => {
         paramName: 'serverId',
         baseRoute: '/app/servers',
         queryKey: ['servers'],
-        queryFn: fetchServers,
+        // 【核心修改】更新 API 调用
+        queryFn: serversApi.fetchAll,
         DetailContentComponent: ServerDetailContent,
     });
 
