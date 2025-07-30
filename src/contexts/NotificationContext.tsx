@@ -2,17 +2,17 @@
  * 文件名: src/contexts/NotificationContext.tsx
  *
  * 文件功能描述:
- * 此文件定义了全局通知上下文（NotificationContext），用于在应用的任何地方
- * 触发和显示轻量级的 Snackbar (或 Toast) 通知。它封装了通知的状态管理
- * 和MUI Snackbar组件的渲染，提供一个简单的 `showNotification` 函数供其他组件调用。
+ * 此文件定义了全局通知上下文，用于在应用各处触发和显示 Snackbar 通知。
  *
  * 本次修改内容:
- * - 【TS Lint 修复】修复了 TS6133 错误（'event' is declared but its value is never read）。
- * - **解决方案**: 将 `handleClose` 函数中未使用的 `event` 参数重命名为 `_event`，
- *   这是 TypeScript/ESLint 中处理有意未使用的参数的标准惯例。
+ * - 【组件写法现代化】移除了 `NotificationProvider` 组件的 `React.FC` 写法。
+ * - **解决方案**:
+ *   1. 为 `NotificationProvider` 的 props 定义了独立的 `NotificationProviderProps` 接口，
+ *      并显式地在其中定义了 `children: ReactNode`。
+ *   2. 为组件注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import React, { createContext, useState, useContext, useMemo, type ReactNode, type FC } from 'react';
-import { Snackbar, Alert, type AlertColor } from '@mui/material';
+import React, {createContext, useState, useContext, useMemo, type ReactNode, type JSX} from 'react';
+import {Snackbar, Alert, type AlertColor} from '@mui/material';
 
 interface NotificationState {
     open: boolean;
@@ -25,7 +25,13 @@ type ShowNotification = (message: string, severity?: AlertColor, duration?: numb
 
 const NotificationContext = createContext<ShowNotification | undefined>(undefined);
 
-export const NotificationProvider: FC<{ children: ReactNode }> = ({ children }) => {
+// 【核心修改】为 Provider 的 props 定义一个接口
+interface NotificationProviderProps {
+    children: ReactNode;
+}
+
+// 【核心修改】移除 React.FC，使用现代写法
+export const NotificationProvider = ({children}: NotificationProviderProps): JSX.Element => {
     const [notification, setNotification] = useState<NotificationState>({
         open: false,
         message: '',
@@ -38,15 +44,14 @@ export const NotificationProvider: FC<{ children: ReactNode }> = ({ children }) 
         severity: AlertColor = 'error',
         duration: number | null = 4000
     ) => {
-        setNotification({ open: true, message, severity, duration });
+        setNotification({open: true, message, severity, duration});
     };
 
-    // 【核心修复】将未使用的 event 参数重命名为 _event
     const handleClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
         if (reason === 'clickaway') {
             return;
         }
-        setNotification(prev => ({ ...prev, open: false }));
+        setNotification(prev => ({...prev, open: false}));
     };
 
     const contextValue = useMemo(() => showNotification, []);
@@ -58,9 +63,9 @@ export const NotificationProvider: FC<{ children: ReactNode }> = ({ children }) 
                 open={notification.open}
                 autoHideDuration={notification.duration}
                 onClose={handleClose}
-                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                anchorOrigin={{vertical: 'top', horizontal: 'center'}}
             >
-                <Alert onClose={handleClose} severity={notification.severity} sx={{ width: '100%' }}>
+                <Alert onClose={handleClose} severity={notification.severity} sx={{width: '100%'}}>
                     {notification.message}
                 </Alert>
             </Snackbar>

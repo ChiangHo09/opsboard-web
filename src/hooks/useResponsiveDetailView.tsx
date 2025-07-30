@@ -2,33 +2,31 @@
  * 文件名: src/hooks/useResponsiveDetailView.ts
  *
  * 文件功能描述:
- * 此文件定义了一个名为 `useResponsiveDetailView` 的自定义 Hook。
- * 它封装了在应用中处理响应式详情视图（桌面端弹窗 vs. 移动端整页）的通用逻辑。
+ * 此文件定义了一个名为 `useResponsiveDetailView` 的自定义 Hook，
+ * 封装了处理响应式详情视图（桌面端弹窗 vs. 移动端整页）的通用逻辑。
  *
  * 本次修改内容:
- * - 【全新文件】创建此文件以抽象和复用逻辑。
- * - **功能实现**:
- *   1.  **参数化**: Hook 接收模块的基本配置（路由、参数名、数据获取函数、详情组件）。
- *   2.  **数据获取**: 内部使用 TanStack Query 的 `useQuery` 来获取列表数据。
- *   3.  **桌面端弹窗**: 包含一个 `useEffect`，用于监听 URL 参数变化，并在桌面视图下打开/关闭全局模态框。
- *   4.  **移动端重定向**: 包含另一个 `useEffect`，用于在移动端视图下自动重定向到专属的详情页面。
+ * - 【类型定义现代化】更新了 `UseResponsiveDetailViewOptions` 接口中
+ *   `DetailContentComponent` 的类型定义。
+ * - **解决方案**:
+ *   将 `LazyExoticComponent<FC<TProps>>` 修改为 `LazyExoticComponent<(props: TProps) => ReactElement>`。
  * - **最终效果**:
- *   通过使用此 Hook，所有列表页面（如 Tickets, Servers, Changelog）都可以移除重复的
- *   `useEffect` 代码，使页面组件本身更简洁，只关注于渲染 UI。
+ *   此 Hook 现在接受使用现代写法（不含 `React.FC`）定义的组件作为参数，
+ *   与整个项目的组件现代化方向保持了一致，提升了类型系统的连贯性。
  */
-import {useEffect, Suspense, type LazyExoticComponent, type FC} from 'react';
+import {useEffect, Suspense, type LazyExoticComponent, type ReactElement} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {useQuery, type QueryKey, type QueryFunction} from '@tanstack/react-query';
 import {Box, CircularProgress} from '@mui/material';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext';
 
-// 定义 Hook 接收的参数类型
+// 【核心修改】更新 DetailContentComponent 的类型，不再依赖 React.FC
 interface UseResponsiveDetailViewOptions<TData extends { id: string }, TProps> {
     paramName: keyof TProps & string;
     baseRoute: string;
     queryKey: QueryKey;
     queryFn: QueryFunction<TData[]>;
-    DetailContentComponent: LazyExoticComponent<FC<TProps>>;
+    DetailContentComponent: LazyExoticComponent<(props: TProps) => ReactElement>;
 }
 
 export const useResponsiveDetailView = <TData extends { id: string }, TProps extends object>({
