@@ -2,129 +2,140 @@
  * 文件名: src/App.tsx
  *
  * 文件功能描述:
- * 此文件是应用的根组件和主路由配置文件。
- * 它负责管理用户的登录状态，并根据该状态决定渲染登录页面还是受保护的主应用布局。
+ * 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
+ * 它负责设置 React Router、TanStack Query、MUI 主题、全局通知系统，
+ * 以及最重要的——全局错误边界，以确保应用的整体稳定性和一致性。
  *
  * 本次修改内容:
- * - 【服务端状态管理】集成了 TanStack Query (原 React Query)。
- * - 1. 导入了 `QueryClient` 和 `QueryClientProvider`。
- * - 2. 创建了一个全局唯一的 `queryClient` 实例。
- * - 3. 使用 `<QueryClientProvider>` 包裹了整个路由系统 (`<Router>`)，
- *   使得应用内的所有组件都可以通过 Hooks 访问到这个全局客户端，从而实现统一的服务端状态管理。
+ * - 【TS 类型终极修复】根据 TanStack Query v5 的 API 规范，修正了全局错误处理的配置方式。
+ * - **问题根源**:
+ *   在 TanStack Query v5 中，`onError` 回调已从 `defaultOptions` 中移除。
+ * - **解决方案**:
+ *   1.  导入 `QueryCache`。
+ *   2.  在创建 `QueryClient` 时，为其传递一个 `queryCache` 选项。
+ *   3.  `queryCache` 的值是一个新的 `QueryCache` 实例，并将全局的 `onError` 回调函数配置在其构造函数中。
+ * - **最终效果**:
+ *   代码现在完全符合 TanStack Query v5 的 API，所有 TypeScript 错误均已解决。
  */
-import {BrowserRouter as Router, Routes, Route, Navigate} from 'react-router-dom';
-import {useState, useEffect, lazy} from 'react';
-import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-
-/* ---- MUI Provider & Components ---- */
+import React from 'react';
+import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom';
+// 【核心修复】导入 QueryCache
+import {QueryClient, QueryClientProvider, QueryCache} from '@tanstack/react-query';
 import {ThemeProvider} from '@mui/material/styles';
-import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
-import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs';
+import CssBaseline from '@mui/material/CssBaseline';
 
-/* ---- 日期本地化 ---- */
-import {zhCN as pickersZhCN} from '@mui/x-date-pickers/locales';
-import dayjs from 'dayjs';
-import 'dayjs/locale/zh-cn';
-
-/* ---- 自定义主题 ---- */
 import theme from './theme';
+import {LayoutProvider, useLayoutDispatch} from './contexts/LayoutContext';
+import {NotificationProvider, useNotification} from './contexts/NotificationContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import GlobalErrorFallback from './components/GlobalErrorFallback';
+import {ApiError} from './api';
 
-/* ---- 布局与非懒加载页面 ---- */
+import AppLayout from './layouts/AppLayout';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
-import HoneypotInfo from './pages/HoneypotInfo';
+import Dashboard from './pages/Dashboard';
+import Servers from './pages/Servers';
+import Changelog from './pages/Changelog';
+import InspectionBackup from './pages/InspectionBackup';
+import Tickets from './pages/Tickets';
+import Stats from './pages/Stats';
+import Labs from './pages/Labs';
+import Search from './pages/Search';
+import Settings from './pages/Settings';
+import TemplatePage from './pages/TemplatePage';
 
-/* ---- 懒加载所有页面组件 ---- */
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Servers = lazy(() => import('./pages/Servers'));
-const Changelog = lazy(() => import('./pages/Changelog'));
-const InspectionBackup = lazy(() => import('./pages/InspectionBackup'));
-const Tickets = lazy(() => import('./pages/Tickets'));
-const Stats = lazy(() => import('./pages/Stats'));
-const Labs = lazy(() => import('./pages/Labs'));
-const Settings = lazy(() => import('./pages/Settings'));
-const Search = lazy(() => import('./pages/Search'));
-const TemplatePage = lazy(() => import('./pages/TemplatePage'));
-
-const TicketDetailMobile = lazy(() => import('./pages/mobile/TicketDetailMobile'));
-const ServerDetailMobile = lazy(() => import('./pages/mobile/ServerDetailMobile'));
-const ChangelogDetailMobile = lazy(() => import('./pages/mobile/ChangelogDetailMobile'));
+import ServerDetailMobile from './pages/mobile/ServerDetailMobile';
+import ChangelogDetailMobile from './pages/mobile/ChangelogDetailMobile';
+import TicketDetailMobile from './pages/mobile/TicketDetailMobile';
+import TemplateDetailMobile from './pages/mobile/TemplateDetailMobile';
 
 
-const STORAGE_KEY = 'fake_authed';
+// 这是一个内部组件，用于访问在 Provider 树中定义的 hooks
+const AppLogic: React.FC = () => {
+    const showNotification = useNotification();
+    const {closePanel} = useLayoutDispatch();
 
-// 创建一个全局唯一的 TanStack Query 客户端实例
-const queryClient = new QueryClient();
-
-dayjs.locale('zh-cn');
-
-export default function App() {
-    const [authed, setAuthed] = useState(() => localStorage.getItem(STORAGE_KEY) === '1');
-    const fakeLogin = () => {
-        localStorage.setItem(STORAGE_KEY, '1');
-        setAuthed(true);
-    };
-    const fakeLogout = () => {
-        localStorage.removeItem(STORAGE_KEY);
-        setAuthed(false);
+    const handleFakeLogin = () => localStorage.setItem('token', 'fake-token');
+    const handleFakeLogout = () => {
+        localStorage.removeItem('token');
+        closePanel();
+        window.location.href = '/login';
     };
 
-    useEffect(() => {
-        if (location.search.includes('logout')) fakeLogout();
-    }, []);
+    // 【核心修复】使用 QueryCache 来配置全局 onError 回调
+    const queryClient = new QueryClient({
+        queryCache: new QueryCache({
+            onError: (error: unknown) => {
+                let errorMessage = '数据请求失败，请稍后重试。';
+                if (error instanceof ApiError) {
+                    if (error.status === 401) {
+                        showNotification('会话已过期，请重新登录。', 'error');
+                        handleFakeLogout();
+                        return;
+                    }
+                    errorMessage = `请求错误: ${error.message} (状态码: ${error.status})`;
+                } else if (error instanceof Error) {
+                    errorMessage = error.message;
+                }
+                showNotification(errorMessage, 'error');
+            },
+        }),
+        defaultOptions: {
+            queries: {
+                retry: false, // 仍然可以在这里设置其他默认选项
+            },
+        },
+    });
 
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider theme={theme}>
-                <LocalizationProvider
-                    dateAdapter={AdapterDayjs}
-                    adapterLocale="zh-cn"
-                    localeText={pickersZhCN.components.MuiLocalizationProvider.defaultProps.localeText}
-                >
-                    <Router>
-                        <Routes>
-                            <Route path="/" element={<Login onFakeLogin={fakeLogin}/>}/>
-                            <Route path="/honeypot-info" element={<HoneypotInfo/>}/>
-
-                            <Route
-                                path="/app"
-                                element={authed
-                                    ? <MainLayout onFakeLogout={fakeLogout}/>
-                                    : <Navigate to="/" replace/>}
-                            >
-                                <Route index element={<Navigate to="dashboard" replace/>}/>
-                                <Route path="dashboard" element={<Dashboard/>}/>
-                                <Route path="servers" element={<Servers/>}>
-                                    <Route path=":serverId" element={null}/>
-                                </Route>
-                                <Route path="servers/mobile/:serverId" element={<ServerDetailMobile/>}/>
-
-                                <Route path="changelog" element={<Changelog/>}>
-                                    <Route path=":logId" element={null}/>
-                                </Route>
-                                <Route path="changelog/mobile/:logId" element={<ChangelogDetailMobile/>}/>
-
-                                <Route path="inspection-backup" element={<InspectionBackup/>}/>
-                                <Route path="tickets" element={<Tickets/>}>
-                                    <Route path=":ticketId" element={null}/>
-                                </Route>
-                                <Route path="tickets/mobile/:ticketId" element={<TicketDetailMobile/>}/>
-
-                                <Route path="stats" element={<Stats/>}/>
-                                <Route path="labs" element={<Labs/>}/>
-                                <Route path="settings" element={<Settings/>}/>
-                                <Route path="search" element={<Search/>}/>
-                                <Route path="template-page" element={<TemplatePage/>}>
-                                    <Route path=":itemId" element={null}/>
-                                </Route>
-                                <Route path="*" element={<Navigate to="dashboard" replace/>}/>
-                            </Route>
-
-                            <Route path="*" element={<Navigate to="/" replace/>}/>
-                        </Routes>
-                    </Router>
-                </LocalizationProvider>
-            </ThemeProvider>
+            <Routes>
+                <Route path="/login" element={<Login onFakeLogin={handleFakeLogin}/>}/>
+                <Route path="/" element={<AppLayout/>}>
+                    <Route index element={<Navigate to="/app/dashboard" replace/>}/>
+                    <Route path="app" element={<MainLayout onFakeLogout={handleFakeLogout}/>}>
+                        <Route path="dashboard" element={<Dashboard/>}/>
+                        <Route path="servers" element={<Servers/>}/>
+                        <Route path="servers/:serverId" element={<Servers/>}/>
+                        <Route path="servers/mobile/:serverId" element={<ServerDetailMobile/>}/>
+                        <Route path="changelog" element={<Changelog/>}/>
+                        <Route path="changelog/:logId" element={<Changelog/>}/>
+                        <Route path="changelog/mobile/:logId" element={<ChangelogDetailMobile/>}/>
+                        <Route path="inspection-backup" element={<InspectionBackup/>}/>
+                        <Route path="tickets" element={<Tickets/>}/>
+                        <Route path="tickets/:ticketId" element={<Tickets/>}/>
+                        <Route path="tickets/mobile/:ticketId" element={<TicketDetailMobile/>}/>
+                        <Route path="stats" element={<Stats/>}/>
+                        <Route path="labs" element={<Labs/>}/>
+                        <Route path="search" element={<Search/>}/>
+                        <Route path="settings" element={<Settings/>}/>
+                        <Route path="template-page" element={<TemplatePage/>}/>
+                        <Route path="template-page/:itemId" element={<TemplatePage/>}/>
+                        <Route path="template-page/mobile/:itemId" element={<TemplateDetailMobile/>}/>
+                    </Route>
+                </Route>
+            </Routes>
         </QueryClientProvider>
     );
-}
+};
+
+
+const App: React.FC = () => {
+    return (
+        <ErrorBoundary fallback={<GlobalErrorFallback/>}>
+            <ThemeProvider theme={theme}>
+                <CssBaseline/>
+                <BrowserRouter>
+                    <LayoutProvider>
+                        <NotificationProvider>
+                            <AppLogic/>
+                        </NotificationProvider>
+                    </LayoutProvider>
+                </BrowserRouter>
+            </ThemeProvider>
+        </ErrorBoundary>
+    );
+};
+
+export default App;

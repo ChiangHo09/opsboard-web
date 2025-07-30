@@ -6,18 +6,19 @@
  * 它通过调用通用的 MobileDetailPageLayout 组件来渲染页面。
  *
  * 本次修改内容:
- * - 【TypeScript 类型修复】在调用通用布局组件时，显式地传递了泛型参数。
+ * - 【代码清理】移除了用于测试局部错误边界而硬编码的 `throw new Error()` 语句。
+ * - **最终效果**: 此组件现在可以正常渲染，不再主动触发错误。
  */
 import React, {lazy} from 'react';
 import MobileDetailPageLayout from '@/layouts/MobileDetailPageLayout';
-// 【核心修复】导入详情内容组件的 props 类型
 import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
 
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
 const ChangelogDetailMobile: React.FC = () => {
+    // 【核心修改】移除用于测试的错误抛出逻辑
+
     return (
-        // 【核心修复】显式地为泛型组件传递 props 类型
         <MobileDetailPageLayout<ChangelogDetailContentProps>
             title="日志详情"
             backPath="/app/changelog"

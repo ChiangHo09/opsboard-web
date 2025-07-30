@@ -5,11 +5,12 @@
  * 此文件负责定义并渲染应用的“服务器信息”页面。
  *
  * 本次修改内容:
- * - 【逻辑抽象】使用新建的 `useResponsiveDetailView` 自定义 Hook 替代了本地的 `useEffect` 逻辑。
- * - 1. **移除重复 Effect**: 删除了之前用于管理弹窗显示和移动端重定向的两个 `useEffect`。
- * - 2. **引入自定义 Hook**: 导入并调用 `useResponsiveDetailView` Hook，并向其提供了本页面所需的全部配置。
- * - 3. **简化组件**: 页面组件的职责更加纯粹，主要关注于渲染表格和处理搜索面板的交互。
- * - 4. **保留分页同步**: 保留了一个 `useEffect`，用于在通过 URL 直接访问详情时，将表格自动翻到对应页。
+ * - 【错误处理】为 `onSearch` 事件处理器增加了统一的错误处理逻辑。
+ * - **解决方案**:
+ *   1.  导入了 `useNotification` 钩子和 `handleAsyncError` 工具函数。
+ *   2.  使用 `try...catch` 块包裹了 `onSearch` 回调函数的核心逻辑。
+ *   3.  在 `catch` 块中，调用 `handleAsyncError`，确保任何在搜索操作中发生的意外错误
+ *       都会被捕获，并通过全局通知系统向用户反馈，从而提升应用的健壮性。
  */
 import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -19,10 +20,12 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
 import {fetchServers, type ServerRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ServerDetailContentProps} from '@/components/modals/ServerDetailContent';
+import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -38,6 +41,7 @@ const Servers: React.FC = () => {
         setPanelTitle,
         setPanelWidth,
     } = useLayoutDispatch();
+    const showNotification = useNotification();
 
     const navigate = useNavigate();
     const {serverId} = useParams<{ serverId: string }>();
@@ -74,9 +78,13 @@ const Servers: React.FC = () => {
     }, [isPanelOpen]);
 
     const onSearch = useCallback((v: ServerSearchValues) => {
-        alert(`搜索: ${JSON.stringify(v)}`);
-        togglePanel();
-    }, [togglePanel]);
+        try {
+            alert(`搜索: ${JSON.stringify(v)}`);
+            togglePanel();
+        } catch (e) {
+            handleAsyncError(e, showNotification);
+        }
+    }, [togglePanel, showNotification]);
 
     const onReset = useCallback(() => {
         alert('重置搜索表单');

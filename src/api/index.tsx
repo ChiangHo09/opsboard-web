@@ -7,15 +7,24 @@
  * 并携带一份硬编码的、模拟真实数据结构的静态数据。
  *
  * 本次修改内容:
- * - 【类型修复】修复了在生成工单模拟数据时遇到的 TypeScript 类型错误。
- * - 1. 对操作类型数组使用 `as const`（常量断言），让 TypeScript 能够正确地将数组元素的类型推断为
- *   精确的字面量联合类型 (`'更新' | '备份' | '巡检'`)。
- * - 2. 为 `status` 变量添加了显式的类型注解 (`: TicketRow['status']`)，以确保三元表达式的结果
- *   被正确地识别为 `'挂起' | '就绪'` 类型，而不是被放宽为 `string`。
+ * - 【代码清理】移除了在 `fetchChangelogs` 函数中用于模拟 API 随机抛出错误的测试逻辑。
+ * - **最终效果**: 此 API 层现在会稳定地返回所有模拟数据，不再主动触发全局错误处理流程，
+ *   使其表现得像一个可靠的后端服务。`ApiError` 类被保留，以备将来与真实后端集成时使用。
  */
 
 // 模拟网络延迟的辅助函数
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// 自定义错误类，用于模拟带有HTTP状态码的API错误
+export class ApiError extends Error {
+    status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
 
 /* -------------------- 工单 (Tickets) -------------------- */
 
@@ -54,7 +63,6 @@ const ticketRows: TicketRow[] = [
         operationContent: '完成了对客户C所有服务器的季度例行巡检，检查了系统日志、磁盘空间和CPU使用率，未发现异常。'
     },
     ...Array.from({length: 40}).map((_, i) => {
-        // 【核心修复】为 status 变量添加显式类型注解
         const status: TicketRow['status'] = i % 3 === 0 ? '挂起' : '就绪';
         const opType = TICKET_OPERATION_TYPES[i % 3];
         return {
@@ -68,7 +76,7 @@ const ticketRows: TicketRow[] = [
 ];
 
 export const fetchTickets = async (): Promise<TicketRow[]> => {
-    await sleep(500); // 模拟 500ms 网络延迟
+    await sleep(500);
     console.log('API: Fetched Tickets');
     return ticketRows;
 };
@@ -166,6 +174,8 @@ const changelogRows: ChangelogRow[] = [
 
 export const fetchChangelogs = async (): Promise<ChangelogRow[]> => {
     await sleep(500);
+
+    // 【核心修改】移除用于模拟API错误的测试代码块
     console.log('API: Fetched Changelogs');
     return changelogRows;
 };

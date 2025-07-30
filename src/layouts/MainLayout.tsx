@@ -6,18 +6,18 @@
  * 它还负责所有页面切换的动画编排。
  *
  * 本次修改内容:
- * - 【弹窗状态修复】解决了在弹窗打开时，通过侧边栏导航到其他页面，弹窗不会自动关闭的问题。
+ * - 【错误边界修复】解决了错误边界状态在页面导航后不会自动重置的问题。
  * - **问题根源**:
- *   弹窗的显示状态（`isModalOpen`）是全局的，它不会在页面组件卸载时自动重置。
+ *   当一个页面崩溃后，其局部的错误边界会进入 `hasError: true` 状态。在之前的实现中，即使用户导航到一个正常的页面，
+ *   这个错误状态依然存在，导致新页面也被渲染为错误提示。
  * - **解决方案**:
- *   1.  在 `MainContentWrapper` 组件内部，增加了一个新的 `useEffect` 钩子。
- *   2.  这个 `useEffect` 的依赖数组是 `[basePath]`，`basePath` 代表了应用的主要模块路径（如 `/app/tickets`）。
- *   3.  当 `basePath` 发生变化（即用户导航到了一个全新的模块）时，`useEffect` 会被触发。
- *   4.  在 `useEffect` 内部，我们调用从 `useLayoutDispatch` 获取的 `setIsModalOpen(false)` 和 `setModalConfig` 函数，来强制关闭并清空任何可能处于打开状态的全局弹窗。
+ *   通过为 `ErrorBoundary` 组件添加一个 `key={location.pathname}` 属性，我们利用了React的 `key` 调和机制。
+ *   每当路由路径 (`pathname`) 改变时，React会销毁旧的 `ErrorBoundary` 实例并创建一个全新的实例，
+ *   新实例的 `hasError` 状态会自然地重置为 `false`。
  * - **最终效果**:
- *   现在，当用户在弹窗打开的状态下导航到应用的其他主要部分时，弹窗会自动、平滑地关闭，确保了正确的页面状态和用户体验。
+ *   这确保了每个页面导航都会获得一个“干净”的错误边界，从而正确地渲染新页面，解决了跨页面的状态污染问题。
  */
-import {useState, type JSX, Suspense, useEffect} from 'react'; // 【核心修复】导入 useEffect
+import {useState, type JSX, Suspense, useEffect} from 'react';
 import {useLocation, useOutlet} from 'react-router-dom';
 import {motion, AnimatePresence} from 'framer-motion';
 import {
@@ -29,11 +29,13 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 
 import SideNav from '@/components/SideNav';
-// 【核心修复】导入 useLayoutDispatch 以获取状态更新函数
-import {LayoutProvider, useLayout, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import {useLayout, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import RightSearchPanel from '@/components/RightSearchPanel';
 import Modal from '@/components/Modal';
 import {pageVariants, pageTransition, mobileOverlayVariants} from '@/utils/animations';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import LocalErrorFallback from '@/components/LocalErrorFallback';
+
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
@@ -49,18 +51,14 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
         isMobile, isModalOpen, modalContent, onModalClose,
     } = useLayout();
 
-    // 【核心修复】获取 dispatch 函数
-    const { setIsModalOpen, setModalConfig } = useLayoutDispatch();
+    const {setIsModalOpen, setModalConfig} = useLayoutDispatch();
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
 
-    // 【核心修复】添加此 useEffect 来监听基础路径的变化
     useEffect(() => {
-        // 当基础路径改变时（例如从 /app/tickets -> /app/dashboard），
-        // 关闭并清空所有全局弹窗。
         setIsModalOpen(false);
-        setModalConfig({ content: null, onClose: null });
-    }, [basePath, setIsModalOpen, setModalConfig]); // 依赖 basePath 的变化
+        setModalConfig({content: null, onClose: null});
+    }, [basePath, setIsModalOpen, setModalConfig]);
 
     const modalJSX = (
         <AnimatePresence>
@@ -132,26 +130,29 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                     >
                         <AnimatePresence mode="wait">
                             {currentOutlet && (
-                                <MotionBox
-                                    key={basePath}
-                                    variants={pageVariants}
-                                    transition={pageTransition}
-                                    initial="initial"
-                                    animate="animate"
-                                    exit="exit"
-                                    sx={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        overflowY: 'auto',
-                                        overflowX: 'hidden',
-                                    }}
-                                >
-                                    {currentOutlet}
-                                </MotionBox>
+                                // 【核心修复】为 ErrorBoundary 添加随路由变化的 key
+                                <ErrorBoundary key={location.pathname} fallback={<LocalErrorFallback/>}>
+                                    <MotionBox
+                                        key={basePath}
+                                        variants={pageVariants}
+                                        transition={pageTransition}
+                                        initial="initial"
+                                        animate="animate"
+                                        exit="exit"
+                                        sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            overflowY: 'auto',
+                                            overflowX: 'hidden',
+                                        }}
+                                    >
+                                        {currentOutlet}
+                                    </MotionBox>
+                                </ErrorBoundary>
                             )}
                         </AnimatePresence>
                         {isMobile && modalJSX}
@@ -247,8 +248,6 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
 
 export default function MainLayout({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
     return (
-        <LayoutProvider>
-            <MainContentWrapper onFakeLogout={onFakeLogout}/>
-        </LayoutProvider>
+        <MainContentWrapper onFakeLogout={onFakeLogout}/>
     );
 }

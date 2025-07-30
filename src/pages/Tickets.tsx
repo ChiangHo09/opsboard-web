@@ -5,12 +5,12 @@
  * 此文件负责定义并渲染应用的“工单信息”页面。它提供了一个可搜索、可分页、支持详情查看的高级表格来展示工单数据。
  *
  * 本次修改内容:
- * - 【代码清理】移除了在 `useLayoutState` 中对 `isMobile` 变量的解构。
- * - **问题根源**:
- *   在将响应式逻辑抽象到 `useResponsiveDetailView` Hook 后，此组件内不再直接使用 `isMobile` 变量，
- *   导致了 "unused variable" 的 lint 错误。
+ * - 【错误处理】为 `onSearch` 事件处理器增加了统一的错误处理逻辑。
  * - **解决方案**:
- *   从 `useLayoutState()` 的返回结果中只解构组件实际需要的 `isPanelOpen` 变量，保持代码整洁。
+ *   1.  导入了 `useNotification` 钩子和 `handleAsyncError` 工具函数。
+ *   2.  使用 `try...catch` 块包裹了 `onSearch` 回调函数的核心逻辑。
+ *   3.  在 `catch` 块中，调用 `handleAsyncError`，确保任何在搜索操作中发生的意外错误
+ *       都会被捕获，并通过全局通知系统向用户反馈，从而提升应用的健壮性。
  */
 import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -20,10 +20,12 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type TicketSearchValues} from '@/components/forms/TicketSearchForm';
 import {fetchTickets, type TicketRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type TicketDetailContentProps} from '@/components/modals/TicketDetailContent';
+import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -32,7 +34,6 @@ const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
 
 const Tickets: React.FC = () => {
-    // 【核心修复】不再需要 isMobile，将其从解构中移除
     const {isPanelOpen} = useLayoutState();
     const {
         togglePanel,
@@ -40,6 +41,7 @@ const Tickets: React.FC = () => {
         setPanelTitle,
         setPanelWidth,
     } = useLayoutDispatch();
+    const showNotification = useNotification();
 
     const navigate = useNavigate();
     const {ticketId} = useParams<{ ticketId: string }>();
@@ -76,9 +78,13 @@ const Tickets: React.FC = () => {
     }, [isPanelOpen]);
 
     const onSearch = useCallback((v: TicketSearchValues) => {
-        alert(`搜索: ${JSON.stringify(v)}`);
-        togglePanel();
-    }, [togglePanel]);
+        try {
+            alert(`搜索: ${JSON.stringify(v)}`);
+            togglePanel();
+        } catch (e) {
+            handleAsyncError(e, showNotification);
+        }
+    }, [togglePanel, showNotification]);
 
     const onReset = useCallback(() => {
         alert('重置工单搜索表单');

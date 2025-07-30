@@ -5,12 +5,9 @@
  * 此文件定义了应用的“更新日志”页面，提供了一个可搜索、可分页、支持详情查看的高级表格来展示日志数据。
  *
  * 本次修改内容:
- * - 【逻辑抽象】使用新建的 `useResponsiveDetailView` 自定义 Hook 替代了本地的 `useEffect` 逻辑。
- * - 1. **移除重复 Effect**: 删除了之前用于管理弹窗显示和移动端重定向的两个 `useEffect`。
- * - 2. **引入自定义 Hook**: 导入并调用 `useResponsiveDetailView` Hook，并向其提供了本页面所需的全部配置（路由名、参数名、API函数、详情组件等）。
- * - 3. **简化组件**: 页面组件现在不再需要直接从 `useLayoutDispatch` 获取 `setIsModalOpen` 和 `setModalConfig`，
- *   其职责更加纯粹，主要关注于渲染表格和处理搜索面板的交互。
- * - 4. **保留分页同步**: 保留了一个 `useEffect`，用于在通过 URL 直接访问详情时，将表格自动翻到对应页。
+ * - 【代码清理】移除了在 `onSearch` 事件处理器中用于测试的 `try...catch` 块和错误抛出逻辑。
+ * - **最终效果**: `onSearch` 函数恢复了其原始的、简洁的实现，不再需要 `handleAsyncError`
+ *   或 `useNotification`，相关的导入也已被移除，使组件更加纯粹。
  */
 import React, {useCallback, useState, lazy, Suspense, useEffect} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -20,10 +17,14 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+// 【修改】移除不再需要的导入
+// import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
 import {fetchChangelogs, type ChangelogRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
+// 【修改】移除不再需要的导入
+// import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -39,6 +40,8 @@ const Changelog: React.FC = () => {
         setPanelTitle,
         setPanelWidth,
     } = useLayoutDispatch();
+    // 【修改】移除不再需要的 useNotification
+    // const showNotification = useNotification();
 
     const navigate = useNavigate();
     const {logId} = useParams<{ logId: string }>();
@@ -47,7 +50,6 @@ const Changelog: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    // 【核心改造】使用自定义 Hook 封装数据获取和响应式视图逻辑
     const {
         data: rows = [],
         isLoading,
@@ -61,7 +63,6 @@ const Changelog: React.FC = () => {
         DetailContentComponent: ChangelogDetailContent,
     });
 
-    // 此 Effect 负责在通过 URL 直接打开详情时，自动跳转到数据所在的页码
     useEffect(() => {
         if (logId && rows.length > 0) {
             const itemIndex = rows.findIndex(row => row.id === logId);
@@ -81,6 +82,7 @@ const Changelog: React.FC = () => {
         }
     }, [isPanelOpen]);
 
+    // 【核心修改】移除 try...catch 和错误模拟逻辑
     const onSearch = useCallback((v: ChangelogSearchValues) => {
         alert(`搜索: ${JSON.stringify({
             ...v,
@@ -89,6 +91,7 @@ const Changelog: React.FC = () => {
         })}`);
         togglePanel();
     }, [togglePanel]);
+
     const onReset = useCallback(() => alert('重置表单'), []);
 
     useEffect(() => {
@@ -167,7 +170,7 @@ const Changelog: React.FC = () => {
                         justifyContent: 'center',
                         alignItems: 'center'
                     }}>
-                        <Typography color="error">加载失败: {error.message}</Typography>
+                        <Typography color="error">加载失败: {error?.message || '未知错误'}</Typography>
                     </Box>
                 )}
                 <DataTable
