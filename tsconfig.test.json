@@ -1,0 +1,30 @@
+/**
+ * 文件名: tsconfig.test.json
+ *
+ * 文件功能描述:
+ * 此文件是专门为 Jest 测试环境提供的 TypeScript 配置文件。
+ * 它继承了主应用 `tsconfig.app.json` 的所有设置（如路径别名、严格模式等），
+ * 但覆盖了与模块系统相关的特定规则，以确保与 Jest 的 CommonJS 环境兼容。
+ *
+ * 本次修改内容:
+ * - 【全新文件】创建此文件以隔离测试环境的编译配置。
+ * - **核心修复**:
+ *   1. 使用 "extends" 继承了 `tsconfig.app.json` 的所有配置。
+ *   2. 将 "verbatimModuleSyntax" 覆盖为 `false`。这解决了在 Jest (CommonJS) 环境下
+ *      使用 ES 模块 `import` 语法时与此严格规则的冲突。
+ *   3. 添加了 "types" 数组，明确包含了 "jest" 和 "@testing-library/jest-dom"，
+ *      确保测试相关的全局类型（如 `describe`, `it`, `.toBeInTheDocument`）被正确识别。
+ */
+{
+  "extends": "./tsconfig.app.json", // 继承主应用的配置
+  "compilerOptions": {
+    // 覆盖掉导致冲突的选项
+    "verbatimModuleSyntax": false,
+    "allowSyntheticDefaultImports": true,
+
+    // 明确为测试环境包含所需的类型
+    "types": ["jest", "@testing-library/jest-dom"]
+  },
+  // 确保测试文件也被包含进来
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src", "jest.setup.js"]
+}
