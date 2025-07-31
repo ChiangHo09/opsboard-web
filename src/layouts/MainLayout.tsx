@@ -2,11 +2,21 @@
  * 文件名: src/layouts/MainLayout.tsx
  *
  * 代码功能:
- * 此文件定义了应用的主UI布局，它包含了侧边栏、主内容区、搜索面板以及全局模态框（弹窗）的渲染入口。
+ * 此文件定义了应用的主UI布局。
  *
  * 本次修改内容:
- * - 【组件写法现代化】移除了 `export default function` 的写法，采用了现代的、
- *   不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
+ * - 【体验优化】修复了在桌面端打开详情弹窗时，背景列表页面会不必要地重载（刷新）的问题。
+ * - **问题根源**:
+ *   包裹页面组件的 `ErrorBoundary` 使用了 `location.pathname` 作为其 `key`。当路由从
+ *   `/app/tickets` 变为 `/app/tickets/tkt001` 时，`key` 发生变化，导致 React 卸载并
+ *   重新挂载整个页面组件，丢失了其滚动位置等状态。
+ * - **解决方案**:
+ *   将 `ErrorBoundary` 的 `key` 从 `location.pathname` 修改为 `basePath`。
+ *   `basePath` 代表了应用的主模块路径（如 `/app/tickets`），在打开详情弹窗这种
+ *   子路由导航中，`basePath` 的值保持不变。
+ * - **最终效果**:
+ *   现在，当用户打开详情弹窗时，`ErrorBoundary` 的 `key` 不再改变，背景页面组件
+ *   的状态（如滚动位置）得以保留，实现了无缝、平滑的弹窗体验。
  */
 import {useState, type JSX, Suspense, useEffect} from 'react';
 import {useLocation, useOutlet} from 'react-router-dom';
@@ -31,7 +41,6 @@ import LocalErrorFallback from '@/components/LocalErrorFallback';
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
-// MainContentWrapper 已经使用了现代写法，无需修改
 function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
     const location = useLocation();
     const currentOutlet = useOutlet();
@@ -122,7 +131,8 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                     >
                         <AnimatePresence mode="wait">
                             {currentOutlet && (
-                                <ErrorBoundary key={location.pathname} fallback={<LocalErrorFallback/>}>
+                                // 【核心修复】将 ErrorBoundary 的 key 从 location.pathname 修改为 basePath
+                                <ErrorBoundary key={basePath} fallback={<LocalErrorFallback/>}>
                                     <MotionBox
                                         key={basePath}
                                         variants={pageVariants}
@@ -237,7 +247,6 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
     );
 }
 
-// 【核心修改】为 MainLayout 定义 props 接口并使用现代写法
 interface MainLayoutProps {
     onFakeLogout: () => void;
 }
