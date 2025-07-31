@@ -1,14 +1,17 @@
 /**
  * 文件名: src/pages/Tickets.tsx
  *
- * 本次修改内容:
- * - 【API 调用更新】更新了数据获取方式，以匹配重构后的模块化 API。
+ * 文件职责:
+ * 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
+ *
+ * 本次改动内容:
+ * - 【类型安全修复】为 `onRowsPerPageChange` 回调的事件参数添加了显式类型定义。
  * - **解决方案**:
- *   1.  将导入从 `fetchTickets` 修改为 `ticketsApi`。
- *   2.  在 `useResponsiveDetailView` Hook 的 `queryFn` 选项中，
- *       将调用从 `fetchTickets` 修改为 `ticketsApi.fetchAll`。
+ *   通过将 `e` 参数的类型指定为 `React.ChangeEvent<HTMLInputElement>`，
+ *   解决了 TypeScript 报出的 `TS7006: Parameter 'e' implicitly has an 'any' type.` 错误。
+ * - 【API 调用更新】(此文件之前的改动) 更新了数据获取方式，以匹配重构后的模块化 API。
  */
-import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
+import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
@@ -18,7 +21,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type TicketSearchValues} from '@/components/forms/TicketSearchForm';
-// 【核心修改】更新 API 导入
 import {ticketsApi, type TicketRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type TicketDetailContentProps} from '@/components/modals/TicketDetailContent';
@@ -51,7 +53,6 @@ const Tickets = (): JSX.Element => {
         paramName: 'ticketId',
         baseRoute: '/app/tickets',
         queryKey: ['tickets'],
-        // 【核心修改】更新 API 调用
         queryFn: ticketsApi.fetchAll,
         DetailContentComponent: TicketDetailContent,
     });
@@ -167,13 +168,17 @@ const Tickets = (): JSX.Element => {
                     count={rows.length}
                     rowsPerPage={rowsPerPage}
                     page={page}
-                    onPageChange={(_, p) => setPage(p)}
-                    onRowsPerPageChange={e => {
+                    onPageChange={(_, p: number) => setPage(p)}
+                    onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement>) => {
                         setRowsPerPage(+e.target.value);
                         setPage(0);
                     }}
                     labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                    labelDisplayedRows={({from, to, count}: {
+                        from: number,
+                        to: number,
+                        count: number
+                    }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
                     <Table stickyHeader aria-label="工单信息表"
                            sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%', minWidth: 700}}>

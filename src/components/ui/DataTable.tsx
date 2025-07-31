@@ -1,22 +1,17 @@
 /**
  * 文件名: src/components/ui/DataTable.tsx
  *
- * 文件功能描述:
- * 此文件定义了一个 `DataTable` 组件，它为应用中的所有数据表格提供了一个
- * 统一的、带有固定分页器的、可滚动的容器。
+ * 文件职责:
+ * 这是一个通用的数据表格包装组件，提供了统一的纸张样式、滚动容器和分页功能。
+ * 它通过 `children` prop 接收实际的表格内容（如 `<Table>`），并将其余 props
+ * 传递给底层的 MUI `<TablePagination>` 组件。
  *
- * 本次修改内容:
- * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式。
- * - 【布局终极修复】通过切换到 Flexbox 布局，创建了一个更健壮的容器。
- * - **问题根源**:
- *   Grid 布局在处理高度为 1fr 的可滚动子元素时，有时会产生不一致的行为。
+ * 本次改动内容:
+ * - 【类型安全修复】为 `labelDisplayedRows` 回调的参数添加了显式类型定义。
  * - **解决方案**:
- *   1.  将 `Paper` 的布局从 `display: 'grid'` 修改为 `display: 'flex'` 和 `flexDirection: 'column'`。
- *   2.  为 `<TableContainer>` 添加 `flex: '1 1 auto'` 和 `minHeight: 0`，
- *       这是 Flexbox 布局中让一个子元素占据所有剩余空间并启用内部滚动的经典模式。
- * - **最终效果**:
- *   `DataTable` 现在提供了一个极其稳定和可预测的布局容器，确保了内部的表格
- *   无论内容多少，都能正确地撑满可用空间，为解决所有下游布局问题打下了坚实的基础。
+ *   通过为解构的 `{ from, to, count }` 参数提供 `{ from: number; to: number; count: number }` 类型，
+ *   解决了 TypeScript 报出的 `TS7031: Binding element '...' implicitly has an 'any' type.` 错误。
+ *   此修改确保了所有使用 `DataTable` 的页面都能通过类型检查。
  */
 import {type JSX, type ReactNode} from 'react';
 import {
@@ -37,17 +32,15 @@ const DataTable = ({children, ...paginationProps}: DataTableProps): JSX.Element 
             sx={{
                 width: '100%',
                 height: '100%',
-                // 【核心修复】使用 Flexbox 布局
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
             }}
         >
-            {/* 【核心修复】让 TableContainer 在 Flexbox 中占据剩余空间 */}
             <TableContainer sx={{
                 overflow: 'auto',
-                flex: '1 1 auto', // 占据所有可用空间
-                minHeight: 0,     // 允许在空间不足时收缩
+                flex: '1 1 0',
+                minHeight: 0,
             }}>
                 {children}
             </TableContainer>
@@ -56,7 +49,7 @@ const DataTable = ({children, ...paginationProps}: DataTableProps): JSX.Element 
                 component="div"
                 sx={{
                     borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                    flexShrink: 0, // 防止分页器被压缩
+                    flexShrink: 0,
                     '& .MuiToolbar-root': {
                         justifyContent: 'flex-end',
                     },

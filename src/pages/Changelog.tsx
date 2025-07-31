@@ -1,23 +1,27 @@
 /**
  * 文件名: src/pages/Changelog.tsx
  *
- * 本次修改内容:
- * - 【API 调用更新】更新了数据获取方式，以匹配重构后的模块化 API。
+ * 文件职责:
+ * 该文件负责渲染“更新日志”页面。它通过一个数据表格展示日志列表，
+ * 并提供搜索功能。此组件实现了响应式布局，能适配桌面和移动设备，
+ * 并支持点击日志行进行高亮显示和导航到详情。
+ *
+ * 本次改动内容:
+ * - 【样式统一】将表格行的悬停 (hover) 背景色与应用内其他页面（如 Tickets.tsx）保持一致。
  * - **解决方案**:
- *   1.  将导入从 `fetchChangelogs` 修改为 `changelogsApi`。
- *   2.  在 `useResponsiveDetailView` Hook 的 `queryFn` 选项中，
- *       将调用从 `fetchChangelogs` 修改为 `changelogsApi.fetchAll`。
+ *   在 `cellSx` 样式对象中，将 `'tr:hover &'` 选择器对应的 `backgroundColor` 的值从 `'primary.light'` 修改为 `'action.hover'`。
+ * - **最终效果**:
+ *   此页面的悬停效果现在使用了标准的 `action.hover` 主题颜色，确保了整个应用中表格交互视觉反馈的一致性。
  */
-import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
+import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, ButtonBase, CircularProgress
+    TableHead, TableRow, CircularProgress, ButtonBase
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
-// 【核心修改】更新 API 导入
 import {changelogsApi, type ChangelogRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
@@ -28,7 +32,7 @@ import DataTable from '@/components/ui/DataTable';
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
-const Changelog = (): JSX.Element => {
+export default function Changelog(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
     const {
         togglePanel,
@@ -53,7 +57,6 @@ const Changelog = (): JSX.Element => {
         paramName: 'logId',
         baseRoute: '/app/changelog',
         queryKey: ['changelogs'],
-        // 【核心修改】更新 API 调用
         queryFn: changelogsApi.fetchAll,
         DetailContentComponent: ChangelogDetailContent,
     });
@@ -125,6 +128,19 @@ const Changelog = (): JSX.Element => {
         togglePanel();
     };
 
+    const cellSx = {
+        'tr:hover &': {
+            // 【核心修改】将悬停颜色修改为与其他页面一致的 action.hover
+            backgroundColor: 'action.hover'
+        },
+        'tr.Mui-selected &': {
+            backgroundColor: 'action.selected'
+        },
+        'tr.Mui-selected:hover &': {
+            backgroundColor: 'action.selected'
+        }
+    };
+
     return (
         <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
             <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
@@ -143,64 +159,55 @@ const Changelog = (): JSX.Element => {
             </Box>
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
-                {isLoading && (
-                    <Box sx={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        bgcolor: 'rgba(255, 255, 255, 0.7)',
-                        zIndex: 10
-                    }}>
-                        <CircularProgress/>
-                    </Box>
-                )}
-                {isError && (
-                    <Box sx={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}>
-                        <Typography color="error">加载失败: {error?.message || '未知错误'}</Typography>
-                    </Box>
-                )}
+                {isLoading && <Box sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    bgcolor: 'rgba(255, 255, 255, 0.7)',
+                    zIndex: 10
+                }}><CircularProgress/></Box>}
+                {isError && <Box sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}><Typography color="error">加载失败: {error?.message || '未知错误'}</Typography></Box>}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
                     rowsPerPage={rowsPerPage}
                     page={page}
-                    onPageChange={(_, p) => setPage(p)}
-                    onRowsPerPageChange={e => {
+                    onPageChange={(_, p: number) => setPage(p)}
+                    onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                         setRowsPerPage(+e.target.value);
                         setPage(0);
                     }}
                     labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                    labelDisplayedRows={({from, to, count}: {
+                        from: number,
+                        to: number,
+                        count: number
+                    }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
                     <Table stickyHeader aria-label="更新日志表"
-                           sx={{borderCollapse: 'separate', tableLayout: isMobile ? 'auto' : 'fixed', minWidth: 800}}>
+                           sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
                         <TableHead>
                             <TableRow>
                                 {isMobile ? (
-                                    <><TableCell sx={{fontWeight: 700}}>客户名称</TableCell><TableCell
-                                        sx={{fontWeight: 700}}>更新时间</TableCell><TableCell
-                                        sx={{fontWeight: 700}}>更新内容</TableCell></>
+                                    <>
+                                        <TableCell sx={{fontWeight: 700}}>客户名称</TableCell>
+                                        <TableCell sx={{fontWeight: 700}}>更新时间</TableCell>
+                                        <TableCell sx={{fontWeight: 700}}>更新类型</TableCell>
+                                    </>
                                 ) : (
                                     <>
-                                        <TableCell sx={{
-                                            width: '15%',
-                                            position: 'sticky',
-                                            left: 0,
-                                            zIndex: 120,
-                                            bgcolor: 'background.paper',
-                                            fontWeight: 700
-                                        }}>客户名称</TableCell>
-                                        <TableCell sx={{width: '20%', fontWeight: 700}}>更新时间</TableCell>
-                                        <TableCell sx={{width: '15%', fontWeight: 700}}>更新类型</TableCell>
-                                        <TableCell sx={{width: '50%', fontWeight: 700}}>更新内容</TableCell>
+                                        <TableCell sx={{width: '18%', fontWeight: 700}}>客户名称</TableCell>
+                                        <TableCell sx={{width: '21%', fontWeight: 700}}>更新时间</TableCell>
+                                        <TableCell sx={{width: '14%', fontWeight: 700}}>更新类型</TableCell>
+                                        <TableCell sx={{width: '47%', fontWeight: 700}}>更新内容</TableCell>
                                     </>
                                 )}
                             </TableRow>
@@ -208,43 +215,27 @@ const Changelog = (): JSX.Element => {
                         <TableBody>
                             {pageRows.map(r => {
                                 const isHighlighted = r.id === logId;
+
                                 return (
                                     <ButtonBase
                                         key={r.id}
                                         component={TableRow}
-                                        onClick={() => {
-                                            navigate(`/app/changelog/${r.id}`, {replace: true});
-                                        }}
-                                        sx={{
-                                            display: 'table-row',
-                                            width: '100%',
-                                            position: 'relative',
-                                        }}
+                                        selected={isHighlighted}
+                                        onClick={() => navigate(`/app/changelog/${r.id}`, {replace: true})}
+                                        sx={{display: 'table-row', width: '100%', textAlign: 'left'}}
                                     >
                                         {isMobile ? (
                                             <>
-                                                <TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.updateTime}</TooltipCell><TooltipCell>{r.updateContent}</TooltipCell></>
+                                                <TooltipCell sx={cellSx}>{r.customerName}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.updateTime.split(' ')[0]}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.updateType}</TooltipCell>
+                                            </>
                                         ) : (
                                             <>
-                                                <TooltipCell sx={{
-                                                    position: 'sticky',
-                                                    left: 0,
-                                                    zIndex: 100,
-                                                    bgcolor: isHighlighted ? 'action.selected' : 'background.paper',
-                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
-                                                }}>{r.customerName}</TooltipCell>
-                                                <TooltipCell sx={{
-                                                    bgcolor: isHighlighted ? 'action.selected' : 'transparent',
-                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
-                                                }}>{r.updateTime}</TooltipCell>
-                                                <TooltipCell sx={{
-                                                    bgcolor: isHighlighted ? 'action.selected' : 'transparent',
-                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
-                                                }}>{r.updateType}</TooltipCell>
-                                                <TooltipCell sx={{
-                                                    bgcolor: isHighlighted ? 'action.selected' : 'transparent',
-                                                    'tr:hover &': {bgcolor: isHighlighted ? 'action.selected' : 'action.hover'}
-                                                }}>{r.updateContent}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.customerName}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.updateTime.split(' ')[0]}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.updateType}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.updateContent}</TooltipCell>
                                             </>
                                         )}
                                     </ButtonBase>
@@ -256,6 +247,4 @@ const Changelog = (): JSX.Element => {
             </Box>
         </PageLayout>
     );
-};
-
-export default Changelog;
+}

@@ -1,27 +1,24 @@
 /**
  * 文件名: src/pages/Servers.tsx
  *
- * 本次修改内容:
- * - 【桌面端响应式终极修复 v3】通过 CSS Grid 的 `minmax()` 函数，实现了真正灵活的、
- *   按比例自适应的列宽布局，解决了主列在某些情况下宽度过大的视觉不平衡问题。
- * - **问题根源**:
- *   之前仅使用 `1fr` 单位让主列填充剩余空间，当其他列被隐藏时，主列会过度扩张。
+ * 文件职责:
+ * 该文件负责渲染“服务器信息”页面。它包含一个用于展示服务器列表的数据表格，
+ * 并通过一个可抽出的侧边面板提供搜索功能。此组件处理数据获取、分页、
+ * 响应式布局调整（针对移动和桌面视图），以及到服务器详情页的导航。
+ *
+ * 本次改动内容:
+ * - 【布局简化】移除了之前根据浏览器宽度自动收起部分列的响应式特性。
  * - **解决方案**:
- *   1.  **为所有列定义弹性宽度**: 使用 `minmax(min-width, fr-unit)` 为每一列都指定了
- *       一个最小宽度（保证可读性）和一个弹性系数（`fr` 单位，用于按比例分配空间）。
- *   2.  **动态列定义**: 创建了一个列定义数组，并根据 `hide...` 标志动态过滤，
- *       生成最终的 `grid-template-columns` 字符串。
- *   3.  **简化单元格样式**: 由于 Grid 容器现在完全控制了布局，单元格组件不再需要
- *       单独的 `width` 样式，使 JSX 更简洁。
+ *   1.  删除了用于检测断点的 `useMediaQuery` hooks (`hideUsageNotes`, `hideDeploymentNotes`)。
+ *   2.  移除了 `TableHead` 和 `TableBody` 中用于条件渲染表格列的逻辑。
  * - **最终效果**:
- *   无论窗口尺寸如何变化、无论哪些列被隐藏，所有可见列都会始终保持和谐的视觉比例，
- *   同时严丝合缝地铺满整个表格容器。这提供了在所有分辨率下都最佳的视觉体验。
+ *   现在，所有列（包括“部署类型/备注”和“使用备注”）在桌面视图下将始终保持可见，布局更加稳定，不再根据窗口宽度动态隐藏。
  */
-import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
+import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, ButtonBase, CircularProgress, useTheme, useMediaQuery
+    TableHead, TableRow, ButtonBase, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
@@ -38,7 +35,7 @@ import DataTable from '@/components/ui/DataTable';
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
 
-const Servers = (): JSX.Element => {
+export default function Servers(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
     const {
         togglePanel,
@@ -49,11 +46,6 @@ const Servers = (): JSX.Element => {
     const showNotification = useNotification();
     const navigate = useNavigate();
     const {serverId} = useParams<{ serverId: string }>();
-
-    const theme = useTheme();
-    const hideUsageNotes = useMediaQuery(theme.breakpoints.down(1400));
-    const hideDeploymentNotes = useMediaQuery(theme.breakpoints.down(1200));
-
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -105,7 +97,13 @@ const Servers = (): JSX.Element => {
 
         const timerId = setTimeout(() => {
             setPanelContent(
-                <Suspense fallback={<Box sx={{width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}><CircularProgress/></Box>}>
+                <Suspense fallback={<Box sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}><CircularProgress/></Box>}>
                     <ServerSearchForm onSearch={onSearch} onReset={onReset}/>
                 </Suspense>
             );
@@ -129,15 +127,25 @@ const Servers = (): JSX.Element => {
         togglePanel();
     };
 
-    // 【核心修改】定义所有列的弹性宽度
-    const gridTemplateColumns = [
-        'minmax(200px, 2.5fr)', // 服务器名称
-        'minmax(150px, 1.5fr)', // IP 地址
-        'minmax(100px, 1fr)',   // 角色
-        !hideDeploymentNotes && 'minmax(200px, 2fr)', // 部署类型
-        !hideUsageNotes && 'minmax(250px, 3fr)',   // 使用备注
-    ].filter(Boolean).join(' ');
+    const cellSx = {
+        'tr:hover &': {
+            backgroundColor: 'action.hover'
+        },
+        'tr.Mui-selected &': {
+            backgroundColor: 'action.selected'
+        },
+        'tr.Mui-selected:hover &': {
+            backgroundColor: 'action.selected'
+        }
+    };
 
+    const stickyCellSx = {
+        ...cellSx,
+        position: 'sticky',
+        left: 0,
+        zIndex: 100,
+        bgcolor: 'background.paper',
+    };
 
     return (
         <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
@@ -152,24 +160,43 @@ const Servers = (): JSX.Element => {
             </Box>
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
-                {isLoading && <Box sx={{position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10}}><CircularProgress/></Box>}
-                {isError && <Box sx={{position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center'}}><Typography color="error">加载失败: {error.message}</Typography></Box>}
+                {isLoading && <Box sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    bgcolor: 'rgba(255, 255, 255, 0.7)',
+                    zIndex: 10
+                }}><CircularProgress/></Box>}
+                {isError && <Box sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}><Typography color="error">加载失败: {error.message}</Typography></Box>}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
                     rowsPerPage={rowsPerPage}
                     page={page}
-                    onPageChange={(_, p) => setPage(p)}
-                    onRowsPerPageChange={e => {
+                    onPageChange={(_, p: number) => setPage(p)}
+                    onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                         setRowsPerPage(+e.target.value);
                         setPage(0);
                     }}
                     labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                    labelDisplayedRows={({from, to, count}: {
+                        from: number,
+                        to: number,
+                        count: number
+                    }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    <Table stickyHeader aria-label="服务器信息表" sx={{borderCollapse: 'separate', minWidth: isMobile ? 0 : 800}}>
+                    <Table stickyHeader aria-label="服务器信息表"
+                           sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
                         <TableHead>
-                            <TableRow sx={{display: isMobile ? 'table-row' : 'grid', gridTemplateColumns}}>
+                            <TableRow>
                                 {isMobile ? (
                                     <>
                                         <TableCell sx={{fontWeight: 700}}>客户名称</TableCell>
@@ -178,57 +205,56 @@ const Servers = (): JSX.Element => {
                                     </>
                                 ) : (
                                     <>
-                                        {/* 【核心修改】移除单元格的 width 样式，由 Grid 容器控制 */}
-                                        <TableCell sx={{position: 'sticky', left: 0, zIndex: 120, bgcolor: 'background.paper', fontWeight: 700, display: 'flex', alignItems: 'center'}}>服务器名称</TableCell>
-                                        <TableCell sx={{fontWeight: 700, display: 'flex', alignItems: 'center'}}>IP 地址</TableCell>
-                                        <TableCell sx={{fontWeight: 700, display: 'flex', alignItems: 'center'}}>角色</TableCell>
-                                        {!hideDeploymentNotes && <TableCell sx={{fontWeight: 700, display: 'flex', alignItems: 'center'}}>部署类型 / 备注</TableCell>}
-                                        {!hideUsageNotes && <TableCell sx={{fontWeight: 700, display: 'flex', alignItems: 'center'}}>使用备注</TableCell>}
+                                        <TableCell sx={{
+                                            width: '18%',
+                                            position: 'sticky',
+                                            left: 0,
+                                            zIndex: 120,
+                                            bgcolor: 'background.paper',
+                                            fontWeight: 700,
+                                        }}>服务器名称</TableCell>
+                                        <TableCell sx={{width: '15%', fontWeight: 700}}>IP 地址</TableCell>
+                                        <TableCell sx={{width: '12%', fontWeight: 700}}>角色</TableCell>
+                                        <TableCell sx={{width: '24%', fontWeight: 700}}>部署类型 / 备注</TableCell>
+                                        <TableCell sx={{width: '31%', fontWeight: 700}}>使用备注</TableCell>
                                     </>
                                 )}
                             </TableRow>
                         </TableHead>
-                        <TableBody sx={{display: isMobile ? 'table-row-group' : 'contents'}}>
-                            {pageRows.map(r => (
-                                <ButtonBase
-                                    key={r.id}
-                                    component="div"
-                                    onClick={() => navigate(`/app/servers/${r.id}`, {replace: true})}
-                                    sx={{
-                                        display: isMobile ? 'table-row' : 'grid',
-                                        gridTemplateColumns,
-                                        width: '100%',
-                                        position: 'relative',
-                                        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                                        textAlign: 'left',
-                                        '&:hover': {
-                                            bgcolor: 'action.hover'
-                                        }
-                                    }}
-                                >
-                                    {isMobile ? (
-                                        <>
-                                            <TooltipCell>{r.customerName}</TooltipCell>
-                                            <TooltipCell>{r.serverName}</TooltipCell>
-                                            <TooltipCell>{r.role}</TooltipCell>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <TooltipCell sx={{position: 'sticky', left: 0, zIndex: 100, bgcolor: 'background.paper', 'div:hover &': {bgcolor: 'action.hover'}, display: 'flex', alignItems: 'center'}}>{r.serverName}</TooltipCell>
-                                            <TooltipCell sx={{display: 'flex', alignItems: 'center'}}>{r.ip}</TooltipCell>
-                                            <TooltipCell sx={{display: 'flex', alignItems: 'center'}}>{r.role}</TooltipCell>
-                                            {!hideDeploymentNotes && <TooltipCell sx={{display: 'flex', alignItems: 'center'}}>{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>}
-                                            {!hideUsageNotes && <TooltipCell sx={{display: 'flex', alignItems: 'center'}}>{r.note || '-'}</TooltipCell>}
-                                        </>
-                                    )}
-                                </ButtonBase>
-                            ))}
+                        <TableBody>
+                            {pageRows.map(r => {
+                                const isHighlighted = r.id === serverId;
+                                return (
+                                    <ButtonBase
+                                        key={r.id}
+                                        component={TableRow}
+                                        selected={isHighlighted}
+                                        onClick={() => navigate(`/app/servers/${r.id}`, {replace: true})}
+                                        sx={{display: 'table-row', width: '100%', textAlign: 'left'}}
+                                    >
+                                        {isMobile ? (
+                                            <>
+                                                <TooltipCell sx={cellSx}>{r.customerName}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.serverName}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.role}</TooltipCell>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <TooltipCell sx={stickyCellSx}>{r.serverName}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.ip}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.role}</TooltipCell>
+                                                <TooltipCell
+                                                    sx={cellSx}>{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>
+                                                <TooltipCell sx={cellSx}>{r.note || '-'}</TooltipCell>
+                                            </>
+                                        )}
+                                    </ButtonBase>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </DataTable>
             </Box>
         </PageLayout>
     );
-};
-
-export default Servers;
+}
