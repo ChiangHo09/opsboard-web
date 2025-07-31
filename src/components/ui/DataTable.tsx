@@ -7,16 +7,18 @@
  * 传递给底层的 MUI `<TablePagination>` 组件。
  *
  * 本次改动内容:
- * - 【类型安全修复】为 `labelDisplayedRows` 回调的参数添加了显式类型定义。
+ * - 【渲染闪烁终极修复】修复了包裹的表格在拥有固定列时，点击行会产生闪烁的底层问题。
+ * - **问题根源**:
+ *   MUI 的 `<TableContainer>` 组件内部存在一些特殊的样式或行为，当它与 `position: sticky` 的单元格和 `ButtonBase` 的涟漪效果结合时，会引发不可预知的渲染层冲突，导致闪烁。
  * - **解决方案**:
- *   通过为解构的 `{ from, to, count }` 参数提供 `{ from: number; to: number; count: number }` 类型，
- *   解决了 TypeScript 报出的 `TS7031: Binding element '...' implicitly has an 'any' type.` 错误。
- *   此修改确保了所有使用 `DataTable` 的页面都能通过类型检查。
+ *   使用一个普通的 `<Box>` 组件替换 `<TableContainer>`，并为其应用完全相同的滚动和伸缩样式。`<Box>` 是一个纯粹的 `div` 包装器，它不包含任何额外的内部逻辑，从而为表格提供了一个干净、可预测的渲染环境。
+ * - **最终效果**:
+ *   在干净的渲染环境中，页面级组件（如 Servers.tsx, Tickets.tsx）中已经实现的、正确的闪烁修复逻辑（背景色所有权转移模式）得以正常工作，所有闪烁问题被彻底根除。
  */
 import {type JSX, type ReactNode} from 'react';
 import {
     Paper,
-    TableContainer,
+    Box, // 【核心修改】导入 Box 组件
     TablePagination,
     type TablePaginationProps,
 } from '@mui/material';
@@ -37,13 +39,14 @@ const DataTable = ({children, ...paginationProps}: DataTableProps): JSX.Element 
                 overflow: 'hidden',
             }}
         >
-            <TableContainer sx={{
+            {/* 【核心修改】使用 Box 替换 TableContainer */}
+            <Box sx={{
                 overflow: 'auto',
                 flex: '1 1 0',
                 minHeight: 0,
             }}>
                 {children}
-            </TableContainer>
+            </Box>
 
             <TablePagination
                 component="div"

@@ -7,11 +7,13 @@
  * 并支持点击日志行进行高亮显示和导航到详情。
  *
  * 本次改动内容:
- * - 【样式统一】将表格行的悬停 (hover) 背景色与应用内其他页面（如 Tickets.tsx）保持一致。
+ * - 【移动端布局修复】修复了移动设备视图下，表格右侧出现空白区域的问题。
+ * - **问题根源**:
+ *   在移动视图下，`table-layout: fixed` 的表格缺少明确的列宽定义。这导致浏览器无法正确计算并拉伸列以填充100%的容器宽度，从而产生右侧空白。
  * - **解决方案**:
- *   在 `cellSx` 样式对象中，将 `'tr:hover &'` 选择器对应的 `backgroundColor` 的值从 `'primary.light'` 修改为 `'action.hover'`。
+ *   为移动视图下的每一个表头单元格 (`TableCell`) 添加了明确的、均分的百分比宽度 (`width: '33.33%'`)。
  * - **最终效果**:
- *   此页面的悬停效果现在使用了标准的 `action.hover` 主题颜色，确保了整个应用中表格交互视觉反馈的一致性。
+ *   这为 `table-layout: fixed` 算法提供了必要的布局依据，确保表格在移动设备上能够始终精确地充满其容器的100%宽度，消除了空白区域。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -130,7 +132,6 @@ export default function Changelog(): JSX.Element {
 
     const cellSx = {
         'tr:hover &': {
-            // 【核心修改】将悬停颜色修改为与其他页面一致的 action.hover
             backgroundColor: 'action.hover'
         },
         'tr.Mui-selected &': {
@@ -198,9 +199,9 @@ export default function Changelog(): JSX.Element {
                             <TableRow>
                                 {isMobile ? (
                                     <>
-                                        <TableCell sx={{fontWeight: 700}}>客户名称</TableCell>
-                                        <TableCell sx={{fontWeight: 700}}>更新时间</TableCell>
-                                        <TableCell sx={{fontWeight: 700}}>更新类型</TableCell>
+                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>客户名称</TableCell>
+                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>更新时间</TableCell>
+                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>更新类型</TableCell>
                                     </>
                                 ) : (
                                     <>
