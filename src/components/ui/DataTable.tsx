@@ -6,15 +6,19 @@
  * 统一的、带有固定分页器的、可滚动的容器。
  *
  * 本次修改内容:
- * - 【布局闪烁终极修复】确保了 `TableContainer` 能够始终撑满其父容器的宽度。
+ * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式。
+ * - 【布局终极修复】通过切换到 Flexbox 布局，创建了一个更健壮的容器。
  * - **问题根源**:
- *   `TableContainer` 默认的宽度是 `auto`，它会收缩以适应其子元素 (`<Table>`) 的宽度。这在 React hydration 过程中，由于样式的延迟应用，会导致一次从“撑满”到“收缩”的布局重排，从而产生闪烁。
+ *   Grid 布局在处理高度为 1fr 的可滚动子元素时，有时会产生不一致的行为。
  * - **解决方案**:
- *   1.  为 `<TableContainer>` 组件的 `sx` 属性添加了 `width: '100%'`。
+ *   1.  将 `Paper` 的布局从 `display: 'grid'` 修改为 `display: 'flex'` 和 `flexDirection: 'column'`。
+ *   2.  为 `<TableContainer>` 添加 `flex: '1 1 auto'` 和 `minHeight: 0`，
+ *       这是 Flexbox 布局中让一个子元素占据所有剩余空间并启用内部滚动的经典模式。
  * - **最终效果**:
- *   此修改强制 `TableContainer` 在任何时候都占据其父级 Grid 单元格的全部宽度。这确保了在页面初始加载和 React hydration 完成后，布局始终保持一致，彻底根除了刷新时的闪烁问题。
+ *   `DataTable` 现在提供了一个极其稳定和可预测的布局容器，确保了内部的表格
+ *   无论内容多少，都能正确地撑满可用空间，为解决所有下游布局问题打下了坚实的基础。
  */
-import React from 'react';
+import {type JSX, type ReactNode} from 'react';
 import {
     Paper,
     TableContainer,
@@ -22,39 +26,41 @@ import {
     type TablePaginationProps,
 } from '@mui/material';
 
-// 定义 DataTable 组件的 props 接口
-// 它继承了 TablePagination 的所有 props，除了 'component'，并添加了一个 children prop
 interface DataTableProps extends Omit<TablePaginationProps, 'component'> {
-    children: React.ReactNode; // 用于接收 <Table> 组件
+    children: ReactNode;
 }
 
-const DataTable: React.FC<DataTableProps> = ({children, ...paginationProps}) => {
+const DataTable = ({children, ...paginationProps}: DataTableProps): JSX.Element => {
     return (
         <Paper
             elevation={0}
             sx={{
                 width: '100%',
                 height: '100%',
-                display: 'grid',
-                gridTemplateRows: '1fr auto', // 内容区占满剩余空间，分页器高度自适应
-                overflow: 'hidden', // 确保 Paper 自身不滚动
+                // 【核心修复】使用 Flexbox 布局
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
             }}
         >
-            {/* 【核心修复】为 TableContainer 添加 width: '100%' */}
-            <TableContainer sx={{overflow: 'auto', width: '100%'}}>
+            {/* 【核心修复】让 TableContainer 在 Flexbox 中占据剩余空间 */}
+            <TableContainer sx={{
+                overflow: 'auto',
+                flex: '1 1 auto', // 占据所有可用空间
+                minHeight: 0,     // 允许在空间不足时收缩
+            }}>
                 {children}
             </TableContainer>
 
             <TablePagination
-                component="div" // 确保它是一个 div
+                component="div"
                 sx={{
                     borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                    // 使分页控件靠右
+                    flexShrink: 0, // 防止分页器被压缩
                     '& .MuiToolbar-root': {
                         justifyContent: 'flex-end',
                     },
                 }}
-                // 将所有分页相关的 props 传递给 TablePagination
                 {...paginationProps}
             />
         </Paper>

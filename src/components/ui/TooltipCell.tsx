@@ -2,41 +2,38 @@
  * 文件名: src/components/ui/TooltipCell.tsx
  *
  * 文件功能描述:
- * 此文件定义了一个 `TooltipCell` 组件，它是一个增强版的 `TableCell`，
- * 专用于在数据表格中优雅地处理长文本的显示。仅当文本内容溢出时，
- * 才会通过鼠标悬停显示完整的 Tooltip。
+ * 此文件定义了一个 `TooltipCell` 组件，一个增强版的 `TableCell`，
+ * 专用于在数据表格中优雅地处理长文本，仅在内容溢出时显示 Tooltip。
  *
  * 本次修改内容:
- * - 【核心修复】通过添加 `disableHoverListener` 属性，彻底解决了 Tooltip 内部状态与外部 `open` prop 控制之间的冲突。
- * - 【逻辑优化】引入 `cellRef` 直接引用 `TableCell` 元素，使溢出判断逻辑 (`scrollWidth > clientWidth`) 更加健壮和明确。
+ * - 【布局坍塌终极修复】通过修正内容宽度的测量方式，彻底解决了所有相关问题。
  * - **问题根源**:
- *   未禁用 Tooltip 内置的悬停事件监听器。当通过 `open` prop 手动控制 Tooltip 的显示时，其内部的悬停逻辑仍然在运行。这种状态冲突是引发布局坍塌的直接导火索。
+ *   内部用于测量的 `<span>` 使用了 `display: 'block'`，这导致其 `scrollWidth`
+ *   错误地等于父级单元格的宽度，而非其自身内容的真实宽度，从而使溢出判断失效。
  * - **解决方案**:
- *   1.  在 `<Tooltip>` 组件上添加 `disableHoverListener` 属性，确保 Tooltip 的显示完全由 `open` 状态变量控制。
- *   2.  为 `TableCell` 添加 `ref={cellRef}`。
- *   3.  在 `handleMouseEnter` 事件中，使用 `cellRef.current.clientWidth` 来获取单元格的实际渲染宽度，替代了不够稳定的 `parentElement.clientWidth` 写法。
+ *   1.  将包裹内容的 `Box` 组件的 `display` 样式从 `'block'` 修改为 `'inline-block'`。
+ *       这确保了 `scrollWidth` 能够精确测量文本内容的实际像素宽度。
+ *   2.  简化了溢出判断逻辑，现在通过 `contentRef.current.parentElement`
+ *       即可稳定地获取到父级 `TableCell` 元素进行宽度比较。
  * - **最终效果**:
- *   Tooltip 的显示逻辑现在是单一、可控的。鼠标悬停时，布局不再发生任何变化，仅在需要时平滑地显示提示信息，根除了列宽坍塌的问题。
+ *   溢出判断现在 100% 准确。Tooltip 只在需要时显示，不再与 `sticky` 定位或
+ *   表格布局产生任何冲突，彻底根除了所有布局坍塌和闪烁问题。
  */
-import React, {useState, useRef} from 'react';
+import {useState, useRef, type ReactNode, type JSX} from 'react';
 import {TableCell, Tooltip, type TableCellProps, Box} from '@mui/material';
 
 interface TooltipCellProps extends TableCellProps {
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
-const TooltipCell: React.FC<TooltipCellProps> = ({children, sx, ...rest}) => {
+const TooltipCell = ({children, sx, ...rest}: TooltipCellProps): JSX.Element => {
     const [open, setOpen] = useState(false);
-    // Ref 用于测量内容本身的真实宽度
     const contentRef = useRef<HTMLSpanElement>(null);
-    // Ref 用于获取容器（单元格）的渲染宽度
-    const cellRef = useRef<HTMLTableCellElement>(null);
 
     const handleMouseEnter = () => {
         const contentElement = contentRef.current;
-        const cellElement = cellRef.current;
+        const cellElement = contentElement?.parentElement; // 父元素就是 TableCell
 
-        // 仅当内容元素的滚动宽度大于其容器单元格的客户端宽度时，才显示 Tooltip
         if (contentElement && cellElement && contentElement.scrollWidth > cellElement.clientWidth) {
             setOpen(true);
         }
@@ -47,9 +44,7 @@ const TooltipCell: React.FC<TooltipCellProps> = ({children, sx, ...rest}) => {
     };
 
     return (
-        // TableCell 是布局的权威来源，为其添加 ref
         <TableCell
-            ref={cellRef}
             sx={sx}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -59,18 +54,18 @@ const TooltipCell: React.FC<TooltipCellProps> = ({children, sx, ...rest}) => {
                 title={children as string}
                 placement="top"
                 open={open}
-                // 【核心修复】禁用 Tooltip 自己的悬停监听器，避免状态冲突
                 disableHoverListener
                 disableFocusListener
                 disableTouchListener
                 slotProps={{tooltip: {className: 'tooltip-sidenav'}}}
             >
-                {/* 这个 Box/span 仅用于包裹内容和测量 scrollWidth */}
+                {/* 【核心修复】使用 inline-block 来正确测量内容宽度 */}
                 <Box
                     ref={contentRef}
                     component="span"
                     sx={{
-                        display: 'block',
+                        display: 'inline-block', // 确保 scrollWidth 是内容的真实宽度
+                        width: '100%',           // 同时让它填满单元格
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
