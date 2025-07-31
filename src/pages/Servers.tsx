@@ -2,11 +2,11 @@
  * 文件名: src/pages/Servers.tsx
  *
  * 本次修改内容:
- * - 【API 调用更新】更新了数据获取方式，以匹配重构后的模块化 API。
+ * - 【UI 布局优化】根据新的需求，调整了桌面端视图下服务器信息表格的列布局。
  * - **解决方案**:
- *   1.  将导入从 `fetchServers` 修改为 `serversApi`。
- *   2.  在 `useResponsiveDetailView` Hook 的 `queryFn` 选项中，
- *       将调用从 `fetchServers` 修改为 `serversApi.fetchAll`。
+ *   1.  在 `<TableHead>` 和 `<TableBody>` 的桌面端渲染逻辑中，完全移除了“客户名称”列。
+ *   2.  重新分配了剩余列的宽度百分比，将“服务器名称”列作为新的固定列，
+ *       并显著增加了“使用备注”列的宽度，以优化长文本内容的显示效果。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -18,7 +18,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
-// 【核心修改】更新 API 导入
 import {serversApi, type ServerRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ServerDetailContentProps} from '@/components/modals/ServerDetailContent';
@@ -51,7 +50,6 @@ const Servers = (): JSX.Element => {
         paramName: 'serverId',
         baseRoute: '/app/servers',
         queryKey: ['servers'],
-        // 【核心修改】更新 API 调用
         queryFn: serversApi.fetchAll,
         DetailContentComponent: ServerDetailContent,
     });
@@ -184,24 +182,27 @@ const Servers = (): JSX.Element => {
                         <TableHead>
                             <TableRow>
                                 {isMobile ? (
+                                    // 移动端视图保持不变
                                     <><TableCell sx={{fontWeight: 700}}>客户名称</TableCell><TableCell
                                         sx={{fontWeight: 700}}>服务器名称</TableCell><TableCell
                                         sx={{fontWeight: 700}}>角色</TableCell></>
                                 ) : (
+                                    // 【核心修改】桌面端视图
                                     <>
+                                        {/* 将“服务器名称”作为新的固定列 */}
                                         <TableCell sx={{
-                                            width: '15%',
+                                            width: '25%', // 调整宽度
                                             position: 'sticky',
                                             left: 0,
                                             zIndex: 120,
                                             bgcolor: 'background.paper',
                                             fontWeight: 700
-                                        }}>客户名称</TableCell>
-                                        <TableCell sx={{width: '20%', fontWeight: 700}}>服务器名称</TableCell>
-                                        <TableCell sx={{width: '15%', fontWeight: 700}}>IP 地址</TableCell>
+                                        }}>服务器名称</TableCell>
+                                        <TableCell sx={{width: '20%', fontWeight: 700}}>IP 地址</TableCell>
                                         <TableCell sx={{width: '10%', fontWeight: 700}}>角色</TableCell>
                                         <TableCell sx={{width: '20%', fontWeight: 700}}>部署类型 / 备注</TableCell>
-                                        <TableCell sx={{width: '20%', fontWeight: 700}}>使用备注</TableCell>
+                                        {/* 显著增加“使用备注”列的宽度 */}
+                                        <TableCell sx={{width: '25%', fontWeight: 700}}>使用备注</TableCell>
                                     </>
                                 )}
                             </TableRow>
@@ -221,19 +222,20 @@ const Servers = (): JSX.Element => {
                                     }}
                                 >
                                     {isMobile ? (
+                                        // 移动端视图保持不变
                                         <>
                                             <TooltipCell>{r.customerName}</TooltipCell><TooltipCell>{r.serverName}</TooltipCell><TooltipCell>{r.role}</TooltipCell></>
                                     ) : (
+                                        // 【核心修改】桌面端视图
                                         <>
+                                            {/* 将“服务器名称”作为新的固定列 */}
                                             <TooltipCell sx={{
                                                 position: 'sticky',
                                                 left: 0,
                                                 zIndex: 100,
                                                 bgcolor: 'background.paper',
                                                 'tr:hover &': {bgcolor: 'action.hover'}
-                                            }}>{r.customerName}</TooltipCell>
-                                            <TooltipCell
-                                                sx={{'tr:hover &': {bgcolor: 'action.hover'}}}>{r.serverName}</TooltipCell>
+                                            }}>{r.serverName}</TooltipCell>
                                             <TooltipCell
                                                 sx={{'tr:hover &': {bgcolor: 'action.hover'}}}>{r.ip}</TooltipCell>
                                             <TooltipCell
