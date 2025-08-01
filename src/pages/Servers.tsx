@@ -1,43 +1,16 @@
 /**
- * 文件名: src/pages/Servers.tsx
- *
- * 文件职责:
- * 该文件负责渲染“服务器信息”页面。它包含一个用于展示服务器列表的数据表格，
- * 并通过一个可抽出的侧边面板提供搜索功能。此组件处理数据获取、分页、
- * 响应式布局调整（针对移动和桌面视图），以及到服务器详情页的导航。
- *
- * 本次改动内容:
- * - 【布局简化】移除了桌面视图下的固定列（Sticky Column）功能。
- * - **变更原因**:
- *   由于表格现在已实现完美的自适应列宽，不再出现水平滚动条，因此固定首列的功能已不再必要。
- * - **解决方案**:
- *   1.  从表头 (`TableHead`) 的第一个 `TableCell` 的 `sx` 属性中，移除了 `position: 'sticky'`, `left: 0`, 和 `zIndex`。
- *   2.  从表体 (`TableBody`) 的第一个 `TooltipCell` 中，移除了专门为其设计的 `stickyCellSx`，改为使用与其他单元格统一的 `cellSx`。
- * - **最终效果**:
- *   代码得到了简化，并从根源上消除了所有由 `position: sticky` 引发的 `z-index` 渲染冲突问题（如加载状态颜色不一致、点击行闪烁等）。
- *
- * ---
- *
- * ### **【归档】固定列闪烁及加载状态问题的终极解决方案**
- *
- * 以下是为未来需要重新实现固定列功能时，解决相关渲染问题的备忘录：
- *
- * 1.  **行点击闪烁问题**:
- *     - **根源**: 涟漪动画层与固定列的 `position: sticky` 层发生渲染冲突。
- *     - **解决方案 (转移背景色所有权)**:
- *       a. 在作为行的 `<ButtonBase>` 上直接定义 `hover` 和 `selected` 的 `backgroundColor`。
- *       b. 在固定列的 `sx` 中，使其在 `tr:hover` 或 `tr.Mui-selected` 状态下 `backgroundColor` 变为 `transparent`，以“透”出父行的背景。
- *
- * 2.  **加载状态颜色不一致问题**:
- *     - **根源**: 固定列表头的 `z-index` (如 120) 高于加载遮罩层的 `z-index` (如 10)，导致其无法被遮罩。
- *     - **解决方案 (动态 Z-Index)**:
- *       在 `isLoading` 为 `true` 时，将固定列表头的 `z-index` 动态设置为 `auto`，使其渲染层级降至遮罩层之下。
+ * @file src/pages/Servers.tsx
+ * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
+ * @modification 在保留涟漪效果的前提下，彻底修复了表格行在交互时导致的布局塌陷问题。
+ *   - [核心修复]：引入并使用了新的 `<ClickableTableRow>` 组件来渲染表格的每一行。
+ *   - [解决方案]：`<ClickableTableRow>` 内部通过“第一单元格锚点”策略，完美地将布局与交互分离，既保证了 HTML 结构的有效性，又使得涟漪效果的 DOM 操作不会干扰 `table-layout: fixed` 的计算。
+ *   - [效果]：页面代码简洁，交互效果完整，布局问题被根除。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, ButtonBase, CircularProgress
+    TableHead, TableRow, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
@@ -50,6 +23,7 @@ import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
+import ClickableTableRow from '@/components/ui/ClickableTableRow';
 
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
@@ -146,18 +120,6 @@ export default function Servers(): JSX.Element {
         togglePanel();
     };
 
-    const cellSx = {
-        'tr:hover &': {
-            backgroundColor: 'action.hover'
-        },
-        'tr.Mui-selected &': {
-            backgroundColor: 'action.selected'
-        },
-        'tr.Mui-selected:hover &': {
-            backgroundColor: 'action.selected'
-        }
-    };
-
     return (
         <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
             <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
@@ -216,50 +178,43 @@ export default function Servers(): JSX.Element {
                                     </>
                                 ) : (
                                     <>
-                                        {/* 【核心修改】移除固定列相关样式 */}
                                         <TableCell sx={{
-                                            width: '18%',
-                                            fontWeight: 700,
+                                            width: '12%',
+                                            minWidth: '150px',
+                                            fontWeight: 700
                                         }}>服务器名称</TableCell>
-                                        <TableCell sx={{width: '15%', fontWeight: 700}}>IP 地址</TableCell>
-                                        <TableCell sx={{width: '12%', fontWeight: 700}}>角色</TableCell>
-                                        <TableCell sx={{width: '24%', fontWeight: 700}}>部署类型 / 备注</TableCell>
-                                        <TableCell sx={{width: '31%', fontWeight: 700}}>使用备注</TableCell>
+                                        <TableCell sx={{width: '10%', minWidth: '130px', fontWeight: 700}}>IP
+                                            地址</TableCell>
+                                        <TableCell
+                                            sx={{width: '8%', minWidth: '100px', fontWeight: 700}}>角色</TableCell>
+                                        <TableCell sx={{width: '20%', minWidth: '200px', fontWeight: 700}}>部署类型 /
+                                            备注</TableCell>
+                                        <TableCell sx={{fontWeight: 700}}>使用备注</TableCell>
                                     </>
                                 )}
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {pageRows.map(r => {
-                                const isHighlighted = r.id === serverId;
-                                return (
-                                    <ButtonBase
-                                        key={r.id}
-                                        component={TableRow}
-                                        selected={isHighlighted}
-                                        onClick={() => navigate(`/app/servers/${r.id}`, {replace: true})}
-                                        sx={{display: 'table-row', width: '100%', textAlign: 'left'}}
-                                    >
-                                        {isMobile ? (
-                                            <>
-                                                <TooltipCell sx={cellSx}>{r.customerName}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.serverName}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.role}</TooltipCell>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {/* 【核心修改】使用统一的 cellSx */}
-                                                <TooltipCell sx={cellSx}>{r.serverName}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.ip}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.role}</TooltipCell>
-                                                <TooltipCell
-                                                    sx={cellSx}>{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.note || '-'}</TooltipCell>
-                                            </>
-                                        )}
-                                    </ButtonBase>
-                                );
-                            })}
+                            {pageRows.map(r => (
+                                <ClickableTableRow
+                                    key={r.id}
+                                    selected={r.id === serverId}
+                                    onClick={() => navigate(`/app/servers/${r.id}`, {replace: true})}
+                                >
+                                    {isMobile ? [
+                                        <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
+                                        <TooltipCell key="serverName">{r.serverName}</TooltipCell>,
+                                        <TooltipCell key="role">{r.role}</TooltipCell>
+                                    ] : [
+                                        <TooltipCell key="serverName">{r.serverName}</TooltipCell>,
+                                        <TooltipCell key="ip">{r.ip}</TooltipCell>,
+                                        <TooltipCell key="role">{r.role}</TooltipCell>,
+                                        <TooltipCell
+                                            key="depCustNote">{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>,
+                                        <TooltipCell key="note">{r.note || '-'}</TooltipCell>
+                                    ]}
+                                </ClickableTableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </DataTable>

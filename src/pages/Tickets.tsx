@@ -1,16 +1,16 @@
 /**
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
- * @modification 修复了因缺少类型注解而导致的 TypeScript 编译错误 (TS7006)。
- *   - [修复]：为 `statusConfig` 对象中 `sx` 属性函数的回调参数 `theme` 显式添加了 `Theme` 类型。
- *   - [原因]：在启用了 `noImplicitAny` 的 TypeScript 项目中，所有函数参数都必须有明确的类型。此前 `theme` 参数缺少类型，导致编译失败。
- *   - [优化]：移除了 `statusConfig` 常量上多余的类型定义，让 TypeScript 自动推断出更精确的类型，增强了代码的类型安全性和可维护性。
+ * @modification 在保留涟漪效果的前提下，彻底修复了表格行在交互时导致的布局塌陷问题。
+ *   - [核心修复]：引入并使用了新的 `<ClickableTableRow>` 组件来渲染表格的每一行。
+ *   - [解决方案]：`<ClickableTableRow>` 内部通过“第一单元格锚点”策略，完美地将布局与交互分离，既保证了 HTML 结构的有效性，又使得涟漪效果的 DOM 操作不会干扰 `table-layout: fixed` 的计算。
+ *   - [效果]：页面代码简洁，交互效果完整，布局问题被根除。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, ButtonBase, CircularProgress, Chip, type Theme
+    TableHead, TableRow, CircularProgress, Chip, type Theme
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
@@ -24,6 +24,7 @@ import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 import {red} from '@mui/material/colors';
+import ClickableTableRow from '@/components/ui/ClickableTableRow';
 
 const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm'));
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
@@ -32,7 +33,6 @@ const TicketDetailContent = lazy(() => import('../components/modals/TicketDetail
 const statusConfig = {
     '就绪': {
         label: '完成',
-        // 【核心修复】为 theme 参数添加 Theme 类型
         sx: (theme: Theme) => ({
             fontWeight: 700,
             backgroundColor: theme.palette.neutral.main,
@@ -44,7 +44,6 @@ const statusConfig = {
     },
     '挂起': {
         label: '挂起',
-        // 【核心修复】为 theme 参数添加 Theme 类型
         sx: (theme: Theme) => ({
             fontWeight: 700,
             backgroundColor: red[200],
@@ -152,18 +151,6 @@ const Tickets = (): JSX.Element => {
         togglePanel();
     };
 
-    const cellSx = {
-        'tr:hover &': {
-            backgroundColor: 'action.hover'
-        },
-        'tr.Mui-selected &': {
-            backgroundColor: 'action.selected'
-        },
-        'tr.Mui-selected:hover &': {
-            backgroundColor: 'action.selected'
-        }
-    };
-
     return (
         <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
             <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
@@ -235,59 +222,51 @@ const Tickets = (): JSX.Element => {
                                     </>
                                 ) : (
                                     <>
-                                        <TableCell sx={{
-                                            width: '15%',
-                                            fontWeight: 700
-                                        }}>客户名称</TableCell>
-                                        <TableCell sx={{width: '10%', fontWeight: 700}}>状态</TableCell>
-                                        <TableCell sx={{width: '15%', fontWeight: 700}}>操作类别</TableCell>
-                                        <TableCell sx={{width: '60%', fontWeight: 700}}>操作内容</TableCell>
+                                        <TableCell
+                                            sx={{width: '10%', minWidth: '120px', fontWeight: 700}}>客户名称</TableCell>
+                                        <TableCell
+                                            sx={{width: '8%', minWidth: '90px', fontWeight: 700}}>状态</TableCell>
+                                        <TableCell
+                                            sx={{width: '10%', minWidth: '120px', fontWeight: 700}}>操作类别</TableCell>
+                                        <TableCell sx={{fontWeight: 700}}>操作内容</TableCell>
                                     </>
                                 )}
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => {
-                                const isHighlighted = r.id === ticketId;
                                 const currentStatus = statusConfig[r.status] || statusConfig.default;
-
                                 return (
-                                    <ButtonBase
+                                    <ClickableTableRow
                                         key={r.id}
-                                        component={TableRow}
-                                        selected={isHighlighted}
+                                        selected={r.id === ticketId}
                                         onClick={() => {
                                             navigate(`/app/tickets/${r.id}`, {replace: true});
                                         }}
-                                        sx={{display: 'table-row', width: '100%', textAlign: 'left'}}
                                     >
-                                        {isMobile ? (
-                                            <>
-                                                <TooltipCell sx={cellSx}>{r.customerName}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>
-                                                    <Chip
-                                                        label={currentStatus.label}
-                                                        size="small"
-                                                        sx={currentStatus.sx}
-                                                    />
-                                                </TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.operationType}</TooltipCell>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <TooltipCell sx={cellSx}>{r.customerName}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>
-                                                    <Chip
-                                                        label={currentStatus.label}
-                                                        size="small"
-                                                        sx={currentStatus.sx}
-                                                    />
-                                                </TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.operationType}</TooltipCell>
-                                                <TooltipCell sx={cellSx}>{r.operationContent}</TooltipCell>
-                                            </>
-                                        )}
-                                    </ButtonBase>
+                                        {isMobile ? [
+                                            <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
+                                            <TooltipCell key="status">
+                                                <Chip
+                                                    label={currentStatus.label}
+                                                    size="small"
+                                                    sx={currentStatus.sx}
+                                                />
+                                            </TooltipCell>,
+                                            <TooltipCell key="opType">{r.operationType}</TooltipCell>
+                                        ] : [
+                                            <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
+                                            <TooltipCell key="status">
+                                                <Chip
+                                                    label={currentStatus.label}
+                                                    size="small"
+                                                    sx={currentStatus.sx}
+                                                />
+                                            </TooltipCell>,
+                                            <TooltipCell key="opType">{r.operationType}</TooltipCell>,
+                                            <TooltipCell key="opContent">{r.operationContent}</TooltipCell>
+                                        ]}
+                                    </ClickableTableRow>
                                 );
                             })}
                         </TableBody>

@@ -1,10 +1,10 @@
 /**
  * @file src/components/ui/TooltipCell.tsx
  * @description 定义了一个增强版的 `TableCell`，它能智能地在内容因宽度不足而溢出时，自动显示一个包含完整内容的 Tooltip。
- * @modification 彻底重构了 Tooltip 的触发和内容生成逻辑，以解决其在处理非字符串子元素（如 Chip 组件）或特定布局下不显示的问题。
- *   - [重构]：引入了 `tooltipContent` 状态，用于动态存储应在 Tooltip 中显示的文本。
- *   - [修复]：移除了对 `children` prop 的错误类型断言 (`as string`)。现在，组件通过读取 DOM 元素的 `textContent` 属性来获取实际显示的文本，无论 `children` 是字符串还是 React 组件。
- *   - [效果]：此修改确保了组件的健壮性。现在，任何被截断的单元格内容，包括被包裹在 Chip 等组件内的文本，都能正确触发并显示包含完整内容的悬浮提示，统一了全站表格的交互体验。
+ * @modification 彻底重构了组件的内部结构，以“内外分离”的策略从根本上解决了布局塌陷和悬浮时出现空白的问题。
+ *   - [核心修复]：将所有布局约束、事件监听和溢出检测逻辑从根元素 `TableCell` 移至其内部的一个 `Box` 组件上。
+ *   - [原因]：此前的实现中，`TableCell` 自身的重渲染会干扰 `table-layout: fixed` 的计算。新方法让 `TableCell` 变成一个纯粹、稳定的布局容器，而内部的 `Box` 成为一个独立的、负责所有动态逻辑的功能单元。
+ *   - [效果]：`TableCell` 的尺寸不再受内部状态变化影响，创建了一个绝对稳定的布局边界，彻底消除了悬浮时的布局塌陷问题，并使溢出检测更加可靠。
  */
 import {useState, useRef, type ReactNode, type JSX} from 'react';
 import {TableCell, Tooltip, type TableCellProps, Box} from '@mui/material';
@@ -15,12 +15,11 @@ interface TooltipCellProps extends TableCellProps {
 
 const TooltipCell = ({children, sx, ...rest}: TooltipCellProps): JSX.Element => {
     const [isOverflowed, setIsOverflowed] = useState(false);
+    // ref 现在绑定在负责内容显示和截断的内部 Box 上。
     const contentRef = useRef<HTMLDivElement>(null);
 
     const handleMouseEnter = () => {
         const element = contentRef.current;
-        // 检查元素的滚动宽度是否大于其可见的偏移宽度。
-        // 这是判断内容是否被截断的最可靠方法。
         if (element && element.scrollWidth > element.offsetWidth) {
             setIsOverflowed(true);
         }
@@ -31,17 +30,11 @@ const TooltipCell = ({children, sx, ...rest}: TooltipCellProps): JSX.Element => 
     };
 
     return (
-        <TableCell
-            sx={sx}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            {...rest}
-        >
+        // TableCell 现在是一个纯粹的容器，其 sx 来自外部，不参与内部逻辑。
+        <TableCell sx={sx} {...rest}>
             <Tooltip
-                // 仅在 isOverflowed 为 true 时显示 Tooltip
                 title={isOverflowed ? (contentRef.current?.textContent || '') : ''}
                 placement="top"
-                // Tooltip 的开启状态完全由 isOverflowed 控制
                 open={isOverflowed}
                 disableHoverListener
                 disableFocusListener
@@ -53,11 +46,15 @@ const TooltipCell = ({children, sx, ...rest}: TooltipCellProps): JSX.Element => 
                 }}
             >
                 {/*
-                  这个 Box 同时负责内容显示和溢出检测。
-                  它的 ref 用于在 handleMouseEnter 中进行尺寸比较。
+                  这个 Box 是所有逻辑的核心：
+                  1. 它应用了所有截断样式。
+                  2. 它监听鼠标事件。
+                  3. 它的 ref 被用于溢出检测。
                 */}
                 <Box
                     ref={contentRef}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
                     sx={{
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
