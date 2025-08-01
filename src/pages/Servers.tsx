@@ -1,10 +1,15 @@
 /**
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
- * @modification 在保留涟漪效果的前提下，彻底修复了表格行在交互时导致的布局塌陷问题。
+ * @modification
+ *   - [UI/UX]：通过精确覆盖 `PageLayout` 的 `px` 属性，将移动设备视图下的左右边距调整为 `theme.spacing(1)`，同时让 `PageLayout` 的其他默认边距（如更大的顶部边距）正确生效。
+ *   - [解决方案]：将 `PageLayout` 的 `sx` 属性从通用的 `p` 修改为更具体的 `px`，避免了意外覆盖垂直内边距的问题。
+ *   - [UI/UX]：彻底修复了响应式布局问题。现在无论屏幕尺寸或容器宽度如何，当空间不足时，操作按钮都会自动从标题右侧换行到标题下方。
+ *   - [UI/UX]：将“编辑”按钮的图标从 `DriveFileRenameOutlineRoundedIcon` 更改为 `DriveFileRenameOutlineIcon`。
+ *   - [UI/UX]：在标题栏右侧的操作区中，于“导出”按钮前新增了一个“编辑”按钮。
+ *   - [UI/UX]：为“导出”按钮配置了 `ShareOutlinedIcon` 图标。
+ *   - [UI/UX]：为“搜索”按钮配置了 `SearchRoundedIcon` 图标。
  *   - [核心修复]：引入并使用了新的 `<ClickableTableRow>` 组件来渲染表格的每一行。
- *   - [解决方案]：`<ClickableTableRow>` 内部通过“第一单元格锚点”策略，完美地将布局与交互分离，既保证了 HTML 结构的有效性，又使得涟漪效果的 DOM 操作不会干扰 `table-layout: fixed` 的计算。
- *   - [效果]：页面代码简洁，交互效果完整，布局问题被根除。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -12,7 +17,10 @@ import {
     Box, Typography, Button, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+// 导入指定的图标
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
@@ -120,18 +128,52 @@ export default function Servers(): JSX.Element {
         togglePanel();
     };
 
+    // 定义胶囊按钮的通用样式
+    const capsuleButtonStyle = {
+        height: 42,
+        borderRadius: '50px',
+        textTransform: 'none',
+        px: 3,
+        bgcolor: 'app.button.background',
+        color: 'neutral.main',
+        '&:hover': {bgcolor: 'app.button.hover'}
+    };
+
     return (
-        <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
+        <PageLayout sx={{
+            // 只覆盖水平内边距，让 PageLayout 的 pt 和 pb 默认值生效
+            px: {xs: 1, md: 3},
+        }}>
+            {/* 标题及操作按钮区域 */}
+            <Box sx={{
+                display: 'flex',
+                flexShrink: 0,
+                mb: 2,
+                // 采用 flex-wrap 策略，实现真正的响应式布局
+                flexWrap: 'wrap', // 允许子元素在空间不足时换行
+                justifyContent: 'space-between', // 在空间充足时，将子元素推向两端
+                alignItems: 'center', // 垂直居中对齐
+                gap: 2 // 定义元素之间的间距
+            }}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>服务器信息</Typography>
-                <Button variant="contained" size="large" startIcon={<SearchIcon/>} onClick={handleTogglePanel} sx={{
-                    height: 42, borderRadius: '50px', textTransform: 'none', px: 3,
-                    bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': {bgcolor: 'app.button.hover'}
-                }}>
-                    <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
-                </Button>
+
+                {/* 操作按钮容器 */}
+                <Box sx={{display: 'flex', gap: 2}}>
+                    <Button variant="contained" size="large" startIcon={<DriveFileRenameOutlineIcon/>}
+                            sx={capsuleButtonStyle}>
+                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>编辑</Typography>
+                    </Button>
+                    <Button variant="contained" size="large" startIcon={<ShareOutlinedIcon/>} sx={capsuleButtonStyle}>
+                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>导出</Typography>
+                    </Button>
+                    <Button variant="contained" size="large" startIcon={<SearchRoundedIcon/>}
+                            onClick={handleTogglePanel} sx={capsuleButtonStyle}>
+                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
+                    </Button>
+                </Box>
             </Box>
 
+            {/* 表格区域 */}
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {isLoading && <Box sx={{
                     position: 'absolute',
