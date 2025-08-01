@@ -28,11 +28,12 @@
  * - 【架构统一】将此模板页面的布局和功能，与应用内其他页面（如 Servers.tsx）的最终最佳实践完全对齐。
  * - 【注释完善】根据要求，为整个文件添加了极其详尽的、教学级别的注释。
  * - **核心变更**:
- *   1.  **引入操作按钮**: 新增了“编辑”、“导出”和“搜索”三个胶囊按钮，并统一了样式。
- *   2.  **实现响应式标题**: 应用了 `flex-wrap` 策略，使得标题和操作按钮在窄屏下能自动、优雅地换行。
- *   3.  **自定义边距**: 通过覆盖 `PageLayout` 的 `sx` 属性，为移动端视图设置了更紧凑的内边距。
- *   4.  **采用 `ClickableTableRow`**: 替换了旧的 `ButtonBase` 实现，从根本上解决了涟漪效果与 `table-layout: fixed` 的冲突，根除了布局塌陷和闪烁问题。
- *   5.  **模拟加载**: 新增了 `isLoading` 和 `isError` 状态，以完整演示加载和错误状态下的 UI 效果。
+ *   1.  **引入 `ActionButtons` 组件**: 使用了统一的、可处理权限的按钮组组件，替换了之前手写的独立按钮。
+ *   2.  **模拟权限**: 新增了 `isAdmin` 状态，用于演示如何根据权限动态显示或隐藏“编辑”按钮。
+ *   3.  **实现响应式标题**: 应用了 `flex-wrap` 策略，使得标题和操作按钮在窄屏下能自动、优雅地换行。
+ *   4.  **自定义边距**: 通过覆盖 `PageLayout` 的 `sx` 属性，为移动端视图设置了更紧凑的内边距。
+ *   5.  **采用 `ClickableTableRow`**: 替换了旧的 `ButtonBase` 实现，从根本上解决了涟漪效果与 `table-layout: fixed` 的冲突，根除了布局塌陷和闪烁问题。
+ *   6.  **模拟加载**: 新增了 `isLoading` 和 `isError` 状态，以完整演示加载和错误状态下的 UI 效果。
  */
 
 // --- 1. IMPORTS ---
@@ -42,13 +43,9 @@ import {useEffect, useCallback, useState, lazy, Suspense, type JSX, type ChangeE
 import {useNavigate, useParams} from 'react-router-dom';
 // 导入所有需要的 Material-UI 组件。
 import {
-    Box, Typography, Button, Table, TableBody, TableCell,
+    Box, Typography, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress
 } from '@mui/material';
-// 导入图标
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 // 导入全局上下文的 Hooks，用于与主布局进行状态交互。
 import {useLayoutDispatch, useLayoutState} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
@@ -58,8 +55,9 @@ import DataTable from '@/components/ui/DataTable.tsx';
 import TooltipCell from '@/components/ui/TooltipCell.tsx';
 import {type TemplateSearchValues} from '@/components/forms/TemplateSearchForm.tsx';
 import {handleAsyncError} from '@/utils/errorHandler.ts';
-// 导入我们最终的、健壮的可点击行组件。
+// 导入我们最终的、健壮的可点击行组件和操作按钮组组件。
 import ClickableTableRow from '@/components/ui/ClickableTableRow.tsx';
+import ActionButtons from '@/components/ui/ActionButtons.tsx';
 
 
 // 使用 React.lazy 进行代码分割，只有在需要时才加载这些组件。
@@ -137,6 +135,8 @@ const TemplatePage = (): JSX.Element => {
     // 模拟数据获取的加载和错误状态。
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
+    // 模拟管理员权限状态。
+    const [isAdmin] = useState(true); // 您可以改为 false 来测试编辑按钮的隐藏效果。
 
     // --- 3.3 Callbacks ---
     // 使用 useCallback 来记忆回调函数，避免在子组件中引起不必要的重渲染。
@@ -275,22 +275,11 @@ const TemplatePage = (): JSX.Element => {
     // 根据当前分页状态，从总数据中计算出当前页应显示的数据。
     const pageRows = templateRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
-    // 定义胶囊按钮的通用样式
-    const capsuleButtonStyle = {
-        height: 42,
-        borderRadius: '50px',
-        textTransform: 'none',
-        px: 3,
-        bgcolor: 'app.button.background',
-        color: 'neutral.main',
-        '&:hover': {bgcolor: 'app.button.hover'}
-    };
-
     // --- 3.6 JSX ---
     return (
         <PageLayout sx={{
             // 覆盖 PageLayout 的默认内边距，为移动端提供更紧凑的布局
-            p: { xs: 1, md: 3 },
+            p: {xs: 1, md: 3},
         }}>
             {/* 页面顶部区域：标题和操作按钮 */}
             <Box sx={{
@@ -304,18 +293,13 @@ const TemplatePage = (): JSX.Element => {
             }}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>模板页面</Typography>
 
-                {/* 操作按钮容器 */}
-                <Box sx={{display: 'flex', gap: 2}}>
-                    <Button variant="contained" size="large" startIcon={<DriveFileRenameOutlineIcon />} sx={capsuleButtonStyle}>
-                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>编辑</Typography>
-                    </Button>
-                    <Button variant="contained" size="large" startIcon={<ShareOutlinedIcon />} sx={capsuleButtonStyle}>
-                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>导出</Typography>
-                    </Button>
-                    <Button variant="contained" size="large" startIcon={<SearchRoundedIcon />} onClick={handleTogglePanel} sx={capsuleButtonStyle}>
-                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
-                    </Button>
-                </Box>
+                {/* 使用统一的 ActionButtons 组件 */}
+                <ActionButtons
+                    showEditButton={isAdmin} // 根据权限显示编辑按钮
+                    onSearchClick={handleTogglePanel}
+                    onEditClick={() => alert('编辑按钮被点击')}
+                    onExportClick={() => alert('导出按钮被点击')}
+                />
             </Box>
 
             {/* 数据表格区域，flexGrow: 1 使其占据所有剩余空间。 */}
