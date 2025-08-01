@@ -2,25 +2,19 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
  * @modification
- *   - [UI/UX]：通过精确覆盖 `PageLayout` 的 `px` 属性，将移动设备视图下的左右边距调整为 `theme.spacing(1)`，同时让 `PageLayout` 的其他默认边距（如更大的顶部边距）正确生效。
- *   - [解决方案]：将 `PageLayout` 的 `sx` 属性从通用的 `p` 修改为更具体的 `px`，避免了意外覆盖垂直内边距的问题。
+ *   - [UI/UX]：统一了移动端和桌面端的视图，现在移动端也显示完整的三按钮操作组（编辑、导出、搜索），以保持体验一致性。
+ *   - [架构重构]：引入了新的、统一的 `<ActionButtons>` 组件来替换原有的独立按钮，实现了分段式按钮组的视觉效果。
+ *   - [权限模拟]：通过向 `<ActionButtons>` 传递 `showEditButton` prop，演示了如何根据权限动态显示或隐藏按钮，而布局始终保持正确。
+ *   - [代码简化]：页面顶部的操作按钮逻辑被完全封装，使得本文件代码更简洁、更易于维护。
  *   - [UI/UX]：彻底修复了响应式布局问题。现在无论屏幕尺寸或容器宽度如何，当空间不足时，操作按钮都会自动从标题右侧换行到标题下方。
- *   - [UI/UX]：将“编辑”按钮的图标从 `DriveFileRenameOutlineRoundedIcon` 更改为 `DriveFileRenameOutlineIcon`。
- *   - [UI/UX]：在标题栏右侧的操作区中，于“导出”按钮前新增了一个“编辑”按钮。
- *   - [UI/UX]：为“导出”按钮配置了 `ShareOutlinedIcon` 图标。
- *   - [UI/UX]：为“搜索”按钮配置了 `SearchRoundedIcon` 图标。
  *   - [核心修复]：引入并使用了新的 `<ClickableTableRow>` 组件来渲染表格的每一行。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
-    Box, Typography, Button, Table, TableBody, TableCell,
+    Box, Typography, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress
 } from '@mui/material';
-// 导入指定的图标
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
@@ -32,6 +26,7 @@ import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
+import ActionButtons from '@/components/ui/ActionButtons'; // 导入新的按钮组组件
 
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
@@ -51,6 +46,9 @@ export default function Servers(): JSX.Element {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
+
+    // 模拟管理员权限
+    const [isAdmin] = useState(true); // 您可以改为 false 来测试编辑按钮的隐藏效果
 
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
         paramName: 'serverId',
@@ -128,49 +126,29 @@ export default function Servers(): JSX.Element {
         togglePanel();
     };
 
-    // 定义胶囊按钮的通用样式
-    const capsuleButtonStyle = {
-        height: 42,
-        borderRadius: '50px',
-        textTransform: 'none',
-        px: 3,
-        bgcolor: 'app.button.background',
-        color: 'neutral.main',
-        '&:hover': {bgcolor: 'app.button.hover'}
-    };
-
     return (
         <PageLayout sx={{
-            // 只覆盖水平内边距，让 PageLayout 的 pt 和 pb 默认值生效
-            px: {xs: 1, md: 3},
+            p: {xs: 1, md: 3},
         }}>
             {/* 标题及操作按钮区域 */}
             <Box sx={{
                 display: 'flex',
                 flexShrink: 0,
                 mb: 2,
-                // 采用 flex-wrap 策略，实现真正的响应式布局
-                flexWrap: 'wrap', // 允许子元素在空间不足时换行
-                justifyContent: 'space-between', // 在空间充足时，将子元素推向两端
-                alignItems: 'center', // 垂直居中对齐
-                gap: 2 // 定义元素之间的间距
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 2
             }}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>服务器信息</Typography>
 
-                {/* 操作按钮容器 */}
-                <Box sx={{display: 'flex', gap: 2}}>
-                    <Button variant="contained" size="large" startIcon={<DriveFileRenameOutlineIcon/>}
-                            sx={capsuleButtonStyle}>
-                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>编辑</Typography>
-                    </Button>
-                    <Button variant="contained" size="large" startIcon={<ShareOutlinedIcon/>} sx={capsuleButtonStyle}>
-                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>导出</Typography>
-                    </Button>
-                    <Button variant="contained" size="large" startIcon={<SearchRoundedIcon/>}
-                            onClick={handleTogglePanel} sx={capsuleButtonStyle}>
-                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
-                    </Button>
-                </Box>
+                {/* 使用新的 ActionButtons 组件，它现在对所有视图都可见 */}
+                <ActionButtons
+                    showEditButton={isAdmin} // 根据权限显示编辑按钮
+                    onSearchClick={handleTogglePanel}
+                    onEditClick={() => alert('编辑按钮被点击')}
+                    onExportClick={() => alert('导出按钮被点击')}
+                />
             </Box>
 
             {/* 表格区域 */}

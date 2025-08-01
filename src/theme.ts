@@ -1,9 +1,10 @@
 /**
  * @file src/theme.ts
  * @description 此文件负责创建和配置整个应用的 Material-UI 主题。它定义了全局的调色板、排版、间距、形状以及组件级别的默认属性和样式覆盖，是构建一致性用户界面的核心。
- * @modification 对整个文件添加了详尽的逐行和逐块注释。
- *   - [注释]：为导入语句、模块增强、调色板、组件覆盖等所有部分添加了详细的开发者注释，解释了每一行代码的“什么”与“为何”。
- *   - [目的]：极大地提高主题配置文件的可读性和可维护性。
+ * @modification 本次提交旨在彻底解决 `ButtonGroup` 分割线的样式覆盖问题。
+ *   - [样式覆盖修正]: 重构了 `MuiButtonGroup` 的 `styleOverrides`。放弃了之前不够精确的选择器，转而使用 `grouped` 样式插槽（slot）进行覆盖。
+ *   - [根本原因]: MUI 对 `variant="contained"` 的按钮组应用了高优先级的默认边框样式。
+ *   - [解决方案]: `grouped` 插槽是专门用于定义“组内按钮”样式的正确途径。通过在 `grouped` 插槽中检查 `ownerState.variant` 是否为 `contained`，我们得以精确地将分割线颜色 `borderRightColor` 覆盖为 `transparent`，从而彻底解决了问题，且无需使用 `!important`。
  */
 
 // 从 @mui/material/styles 导入 createTheme 函数，这是创建和合并主题对象的核心工具。
@@ -133,6 +134,25 @@ const theme = createTheme(
 
         // `components` 对象用于覆盖或扩展 MUI 内置组件的默认样式和属性。
         components: {
+            // [最终修复] 覆盖 MuiButtonGroup 的默认样式
+            MuiButtonGroup: {
+                styleOverrides: {
+                    // 'grouped' 是专门用于定位组内按钮的样式插槽 (slot)。
+                    // 这种方法比使用复杂的后代选择器更健壮、更符合 MUI 的设计理念。
+                    grouped: ({ownerState}) => ({
+                        // 我们只关心 'contained' 变体的按钮组
+                        ...(ownerState.variant === 'contained' && {
+                            // 目标为组内的按钮，除了最后一个
+                            '&:not(:last-of-type)': {
+                                // 关键修复：MUI 对 'contained' 按钮组的分割线应用了非常高优先级的样式。
+                                // 通过直接覆盖 'grouped' 插槽的 borderRightColor，我们可以精确地将其设置为透明，
+                                // 从而从根本上解决问题，而无需使用 '!important'。
+                                borderRightColor: 'transparent',
+                            },
+                        })
+                    }),
+                },
+            },
             // 覆盖 MuiOutlinedInput (轮廓输入框) 的样式。
             MuiOutlinedInput: {
                 styleOverrides: {
