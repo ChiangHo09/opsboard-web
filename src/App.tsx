@@ -1,12 +1,9 @@
 /**
- * 文件名: src/App.tsx
- *
- * 文件功能描述:
- * 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
- *
- * 本次修改内容:
- * - 【组件写法现代化】移除了 `AppLogic` 和 `App` 组件的 `React.FC` 写法，
- *   采用了现代的函数组件定义方式，并显式注解了 `: JSX.Element` 返回值类型。
+ * @file src/App.tsx
+ * @description 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
+ * @modification 实现了每次打开浏览器都需重新登录的功能。
+ *   - [核心修改]：在 `handleFakeLogin` 和 `handleFakeLogout` 函数中，将 token 的存储目标从 `localStorage` 更改为 `sessionStorage`。
+ *   - [原因]：`sessionStorage` 的生命周期与浏览器会话绑定，关闭浏览器后数据自动清除，从而强制用户在下一次访问时必须重新登录。
  */
 import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom';
 import {QueryClient, QueryClientProvider, QueryCache} from '@tanstack/react-query';
@@ -41,14 +38,15 @@ import TemplateDetailMobile from './pages/mobile/TemplateDetailMobile';
 import type { JSX } from 'react';
 
 
-// 【核心修改】移除 React.FC，使用现代写法
 const AppLogic = (): JSX.Element => {
     const showNotification = useNotification();
     const {closePanel} = useLayoutDispatch();
 
-    const handleFakeLogin = () => localStorage.setItem('token', 'fake-token');
+    // 核心修改：使用 sessionStorage 替代 localStorage
+    const handleFakeLogin = () => sessionStorage.setItem('token', 'fake-token');
     const handleFakeLogout = () => {
-        localStorage.removeItem('token');
+        // 核心修改：使用 sessionStorage 替代 localStorage
+        sessionStorage.removeItem('token');
         closePanel();
         window.location.href = '/login';
     };
@@ -109,7 +107,6 @@ const AppLogic = (): JSX.Element => {
     );
 };
 
-// 【核心修改】移除 React.FC，使用现代写法
 const App = (): JSX.Element => {
     return (
         <ErrorBoundary fallback={<GlobalErrorFallback/>}>
