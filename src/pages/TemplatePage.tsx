@@ -25,13 +25,13 @@
  * - 8. **统一错误处理**: 为所有可能在用户交互中出错的回调函数添加了 `try...catch` 块，并调用统一的错误处理机制。
  *
  * @modification
- * - 【架构统一】将此模板页面的表格实现，与应用内其他页面的最终最佳实践完全对齐，全面采用 `<ClickableTableRow>` 组件。
+ * - 【架构统一】将此模板页面的布局和功能，与应用内其他页面（如 Servers.tsx）的最终最佳实践完全对齐。
  * - 【注释完善】根据要求，为整个文件添加了极其详尽的、教学级别的注释。
- * - **核心修复**:
- *   1.  **采用 `ClickableTableRow`**: 替换了旧的 `ButtonBase` 实现，从根本上解决了涟漪效果与 `table-layout: fixed` 的冲突，根除了布局塌陷和闪烁问题。
- *   2.  **简化样式**: 由于 `ClickableTableRow` 内部处理了所有交互样式，本文件内不再需要复杂的行级 `sx` 属性，代码更简洁。
- *   3.  **加载状态修复**: 保留了固定列表头在 `isLoading` 状态下动态调整 `zIndex` 的逻辑，修复了加载时颜色不一致的问题。
- *   4.  **移动端布局**: 保留了移动视图下表头的明确百分比宽度，以维持布局稳定。
+ * - **核心变更**:
+ *   1.  **引入操作按钮**: 新增了“编辑”、“导出”和“搜索”三个胶囊按钮，并统一了样式。
+ *   2.  **实现响应式标题**: 应用了 `flex-wrap` 策略，使得标题和操作按钮在窄屏下能自动、优雅地换行。
+ *   3.  **自定义边距**: 通过覆盖 `PageLayout` 的 `sx` 属性，为移动端视图设置了更紧凑的内边距。
+ *   4.  **采用 `ClickableTableRow`**: 替换了旧的 `ButtonBase` 实现，从根本上解决了涟漪效果与 `table-layout: fixed` 的冲突，根除了布局塌陷和闪烁问题。
  *   5.  **模拟加载**: 新增了 `isLoading` 和 `isError` 状态，以完整演示加载和错误状态下的 UI 效果。
  */
 
@@ -45,7 +45,10 @@ import {
     Box, Typography, Button, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+// 导入图标
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 // 导入全局上下文的 Hooks，用于与主布局进行状态交互。
 import {useLayoutDispatch, useLayoutState} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
@@ -272,18 +275,47 @@ const TemplatePage = (): JSX.Element => {
     // 根据当前分页状态，从总数据中计算出当前页应显示的数据。
     const pageRows = templateRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+    // 定义胶囊按钮的通用样式
+    const capsuleButtonStyle = {
+        height: 42,
+        borderRadius: '50px',
+        textTransform: 'none',
+        px: 3,
+        bgcolor: 'app.button.background',
+        color: 'neutral.main',
+        '&:hover': {bgcolor: 'app.button.hover'}
+    };
+
     // --- 3.6 JSX ---
     return (
-        <PageLayout sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-            {/* 页面顶部区域：标题和搜索按钮 */}
-            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexShrink: 0}}>
+        <PageLayout sx={{
+            // 覆盖 PageLayout 的默认内边距，为移动端提供更紧凑的布局
+            p: { xs: 1, md: 3 },
+        }}>
+            {/* 页面顶部区域：标题和操作按钮 */}
+            <Box sx={{
+                display: 'flex',
+                flexShrink: 0,
+                mb: 2,
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 2
+            }}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>模板页面</Typography>
-                <Button variant="contained" size="large" startIcon={<SearchIcon/>} onClick={handleTogglePanel} sx={{
-                    height: 42, borderRadius: '50px', textTransform: 'none', px: 3,
-                    bgcolor: 'app.button.background', color: 'neutral.main', '&:hover': {bgcolor: 'app.button.hover'}
-                }}>
-                    <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
-                </Button>
+
+                {/* 操作按钮容器 */}
+                <Box sx={{display: 'flex', gap: 2}}>
+                    <Button variant="contained" size="large" startIcon={<DriveFileRenameOutlineIcon />} sx={capsuleButtonStyle}>
+                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>编辑</Typography>
+                    </Button>
+                    <Button variant="contained" size="large" startIcon={<ShareOutlinedIcon />} sx={capsuleButtonStyle}>
+                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>导出</Typography>
+                    </Button>
+                    <Button variant="contained" size="large" startIcon={<SearchRoundedIcon />} onClick={handleTogglePanel} sx={capsuleButtonStyle}>
+                        <Typography component="span" sx={{transform: 'translateY(1px)'}}>搜索</Typography>
+                    </Button>
+                </Box>
             </Box>
 
             {/* 数据表格区域，flexGrow: 1 使其占据所有剩余空间。 */}
