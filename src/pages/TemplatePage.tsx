@@ -1,17 +1,18 @@
 /**
- * 文件名: src/pages/TemplatePage.tsx
- *
- * 文件职责:
+ * @file src/pages/TemplatePage.tsx
+ * @description
  * 此文件定义了一个功能完备的【模板页面】。它是一个高级的数据驱动视图，
  * 集成了多种现代React应用的常见模式和功能，旨在成为创建新页面的“终极模板”。
  *
+ * @features
  * 实现的核心功能包括：
  * - 1. **数据展示**: 使用 Material-UI 的 `<Table>` 组件，在一个可分页的 `DataTable` 容器中展示模拟数据。
  * - 2. **响应式布局**:
- *      - **桌面端**: 包含一个始终可见的、内容丰富的表格。
+ *      - **桌面端**: 包含一个内容丰富的表格，并支持“粘性”固定列。
  *      - **移动端**: 自动切换为列数更少、布局更紧凑的表格视图。
  * - 3. **统一的交互体验**:
- *      - **整行点击**: 每一行都是一个完整的可点击区域，并带有标准的“水波纹”涟漪效果。
+ *      - **整行点击**: 通过统一的 `<ClickableTableRow>` 组件，每一行都是一个完整的可点击区域。
+ *      - **涟漪效果**: 点击行时，有标准的“水波纹”涟漪效果，且不会导致任何布局问题。
  *      - **行高亮**: 支持通过 URL 参数 (`:itemId`) 控制特定行的高亮显示。
  *      - **悬停效果**: 鼠标悬停在行上时，有统一的背景色变化反馈。
  * - 4. **健壮的渲染机制**:
@@ -23,14 +24,14 @@
  * - 7. **全局状态集成**: 与 `LayoutContext` 深度集成，用于控制和管理右侧搜索面板和全局模态框。
  * - 8. **统一错误处理**: 为所有可能在用户交互中出错的回调函数添加了 `try...catch` 块，并调用统一的错误处理机制。
  *
- * 本次改动内容:
- * - 【架构统一】将此模板页面的表格实现，与应用内其他页面（Servers, Tickets）的最终最佳实践完全对齐。
+ * @modification
+ * - 【架构统一】将此模板页面的表格实现，与应用内其他页面的最终最佳实践完全对齐，全面采用 `<ClickableTableRow>` 组件。
  * - 【注释完善】根据要求，为整个文件添加了极其详尽的、教学级别的注释。
  * - **核心修复**:
- *   1.  **行级背景**: 将 `hover` 和 `selected` 的背景色转移到父级 `<ButtonBase>` 上。
- *   2.  **固定列退让**: 为固定列的 `sx` 添加了在 `hover` 或 `selected` 状态下背景变透明的逻辑，彻底修复了涟漪动画的闪烁问题。
- *   3.  **加载状态修复**: 为固定列表头添加了在 `isLoading` 状态下动态调整 `zIndex` 的逻辑，修复了加载时颜色不一致的问题。
- *   4.  **移动端布局**: 为移动视图下的表头添加了明确的百分比宽度，修复了右侧空白问题。
+ *   1.  **采用 `ClickableTableRow`**: 替换了旧的 `ButtonBase` 实现，从根本上解决了涟漪效果与 `table-layout: fixed` 的冲突，根除了布局塌陷和闪烁问题。
+ *   2.  **简化样式**: 由于 `ClickableTableRow` 内部处理了所有交互样式，本文件内不再需要复杂的行级 `sx` 属性，代码更简洁。
+ *   3.  **加载状态修复**: 保留了固定列表头在 `isLoading` 状态下动态调整 `zIndex` 的逻辑，修复了加载时颜色不一致的问题。
+ *   4.  **移动端布局**: 保留了移动视图下表头的明确百分比宽度，以维持布局稳定。
  *   5.  **模拟加载**: 新增了 `isLoading` 和 `isError` 状态，以完整演示加载和错误状态下的 UI 效果。
  */
 
@@ -42,7 +43,7 @@ import {useNavigate, useParams} from 'react-router-dom';
 // 导入所有需要的 Material-UI 组件。
 import {
     Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, ButtonBase, CircularProgress
+    TableHead, TableRow, CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 // 导入全局上下文的 Hooks，用于与主布局进行状态交互。
@@ -54,6 +55,9 @@ import DataTable from '@/components/ui/DataTable.tsx';
 import TooltipCell from '@/components/ui/TooltipCell.tsx';
 import {type TemplateSearchValues} from '@/components/forms/TemplateSearchForm.tsx';
 import {handleAsyncError} from '@/utils/errorHandler.ts';
+// 导入我们最终的、健壮的可点击行组件。
+import ClickableTableRow from '@/components/ui/ClickableTableRow.tsx';
+
 
 // 使用 React.lazy 进行代码分割，只有在需要时才加载这些组件。
 const TemplateSearchForm = lazy(() => import('@/components/forms/TemplateSearchForm.tsx'));
@@ -108,14 +112,18 @@ const templateRows: TemplateRow[] = [
 const TemplatePage = (): JSX.Element => {
     // --- 3.1 Hooks ---
     // 从全局布局上下文中获取状态和 dispatch 函数。
-    const {isMobile, isPanelOpen} = useLayoutState();
+    const {isMobile, isPanelOpen} = useLayoutState(); // 获取响应式状态和面板打开状态。
     const {
-        togglePanel, setPanelContent, setPanelTitle, setPanelWidth,
-        setIsModalOpen, setModalConfig,
+        togglePanel, // 函数：切换右侧面板的显示/隐藏。
+        setPanelContent, // 函数：设置右侧面板的 React 内容。
+        setPanelTitle, // 函数：设置右侧面板的标题。
+        setPanelWidth, // 函数：设置右侧面板的宽度。
+        setIsModalOpen, // 函数：设置全局模态框（弹窗）的打开/关闭状态。
+        setModalConfig, // 函数：配置全局模态框的内容和关闭回调。
     } = useLayoutDispatch();
-    const showNotification = useNotification(); // 获取全局通知函数。
+    const showNotification = useNotification(); // 获取全局通知函数，用于显示 snackbar。
     const navigate = useNavigate(); // 获取用于程序化导航的函数。
-    const {itemId} = useParams<{ itemId: string }>(); // 从URL中获取 :itemId 参数。
+    const {itemId} = useParams<{ itemId: string }>(); // 从URL中获取 :itemId 参数，例如 /app/template-page/item-001。
 
     // --- 3.2 State ---
     // 管理表格分页的状态。
@@ -139,12 +147,12 @@ const TemplatePage = (): JSX.Element => {
         try {
             // 在真实应用中，这里会执行API调用或数据筛选逻辑。
             alert(`搜索: ${JSON.stringify(values)}`);
-            togglePanel(); // 关闭搜索面板。
+            togglePanel(); // 搜索后关闭搜索面板。
         } catch (e) {
             // 使用统一的错误处理机制捕获任何意外错误。
             handleAsyncError(e, showNotification);
         }
-    }, [togglePanel, showNotification]); // 依赖项
+    }, [togglePanel, showNotification]); // 依赖项：确保函数在依赖变化时才重新创建。
 
     /**
      * @callback handleReset
@@ -175,34 +183,36 @@ const TemplatePage = (): JSX.Element => {
 
     // Effect 1: 模拟数据获取过程。
     useEffect(() => {
-        setIsLoading(true);
-        setIsError(false);
+        setIsLoading(true); // 开始时，设置为加载状态。
+        setIsError(false); // 重置错误状态。
         const timer = setTimeout(() => {
             // 模拟成功或失败
             if (Math.random() > 0.1) { // 90% 概率成功
                 setIsLoading(false);
-            } else {
+            } else { // 10% 概率失败
                 setIsLoading(false);
                 setIsError(true);
             }
-        }, 1500); // 模拟1.5秒的网络延迟
-        return () => clearTimeout(timer);
-    }, []);
+        }, 1500); // 模拟1.5秒的网络延迟。
+        return () => clearTimeout(timer); // 组件卸载时清除定时器，防止内存泄漏。
+    }, []); // 空依赖数组表示此 effect 只在组件首次挂载时运行一次。
 
     // Effect 2: 当全局面板状态为打开时，同步本地的面板内容加载状态。
     useEffect(() => {
         if (isPanelOpen) {
             setIsPanelContentSet(true);
         }
-    }, [isPanelOpen]);
+    }, [isPanelOpen]); // 依赖于 isPanelOpen。
 
     // Effect 3: 核心响应式逻辑 - 处理桌面端弹窗的显示。
     useEffect(() => {
         const itemExists = itemId && templateRows.some(row => row.id === itemId);
+        // 仅当 itemId 存在、数据中能找到对应项且当前不是移动端视图时，才打开弹窗。
         if (itemExists && !isMobile) {
-            setIsModalOpen(true);
-            setModalConfig({
+            setIsModalOpen(true); // 打开全局弹窗。
+            setModalConfig({ // 配置弹窗内容。
                 content: (
+                    // 使用 Suspense 包裹懒加载的组件，提供加载中的后备 UI。
                     <Suspense fallback={<Box sx={{
                         width: '100%',
                         height: '100%',
@@ -213,16 +223,19 @@ const TemplatePage = (): JSX.Element => {
                         <TemplateModalContent itemId={itemId}/>
                     </Suspense>
                 ),
+                // 定义关闭弹窗时的回调，通常是导航回基础 URL。
                 onClose: () => navigate('/app/template-page', {replace: true}),
             });
         } else {
+            // 如果条件不满足，确保弹窗是关闭的。
             setIsModalOpen(false);
             setModalConfig({content: null, onClose: null});
         }
-    }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig]);
+    }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig]); // 依赖于这些值的变化。
 
     // Effect 4: 核心响应式逻辑 - 处理移动端的页面重定向。
     useEffect(() => {
+        // 如果 URL 中有 itemId 且当前是移动端视图，则重定向到专门的移动详情页。
         if (itemId && isMobile) {
             navigate(`/app/template-page/mobile/${itemId}`, {replace: true});
         }
@@ -230,7 +243,8 @@ const TemplatePage = (): JSX.Element => {
 
     // Effect 5: 负责在需要时加载搜索面板的内容。
     useEffect(() => {
-        if (!isPanelContentSet) return;
+        if (!isPanelContentSet) return; // 如果不需要设置内容，则提前返回。
+        // 使用 setTimeout(..., 0) 将内容设置推迟到下一个事件循环，确保面板动画流畅。
         const timerId = setTimeout(() => {
             setPanelContent(
                 <Suspense fallback={<Box sx={{
@@ -246,6 +260,7 @@ const TemplatePage = (): JSX.Element => {
             setPanelTitle('模板搜索');
             setPanelWidth(360);
         }, 0);
+        // 返回一个清理函数，在 effect 重新运行或组件卸载时，清空面板内容。
         return () => {
             clearTimeout(timerId);
             setPanelContent(null);
@@ -256,18 +271,6 @@ const TemplatePage = (): JSX.Element => {
     // --- 3.5 Render Logic ---
     // 根据当前分页状态，从总数据中计算出当前页应显示的数据。
     const pageRows = templateRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-    // 为固定列单元格定义专属样式对象，以处理背景色“退让”逻辑。
-    const stickyCellSx = {
-        position: 'sticky',
-        left: 0,
-        zIndex: 100,
-        bgcolor: 'background.paper',
-        // 在父行 hover 或 selected 时，自身背景变透明，以“透出”父行的背景色。
-        'tr:hover &, tr.Mui-selected &': {
-            backgroundColor: 'transparent',
-        },
-    };
 
     // --- 3.6 JSX ---
     return (
@@ -290,7 +293,7 @@ const TemplatePage = (): JSX.Element => {
                     <Box sx={{
                         position: 'absolute', inset: 0, display: 'flex',
                         justifyContent: 'center', alignItems: 'center',
-                        bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10
+                        bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 // zIndex 确保在表格内容之上
                     }}>
                         <CircularProgress/>
                     </Box>
@@ -329,7 +332,7 @@ const TemplatePage = (): JSX.Element => {
                             <TableRow>
                                 {isMobile ? (
                                     <>
-                                        {/* 移动端表头，提供明确的百分比宽度 */}
+                                        {/* 移动端表头，提供明确的百分比宽度以避免布局问题 */}
                                         <TableCell sx={{width: '40%', fontWeight: 700}}>项目名称</TableCell>
                                         <TableCell sx={{width: '20%', fontWeight: 700}}>类别</TableCell>
                                         <TableCell sx={{width: '40%', fontWeight: 700}}>描述</TableCell>
@@ -353,57 +356,38 @@ const TemplatePage = (): JSX.Element => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {pageRows.map(row => {
-                                // 判断当前行是否应被高亮。
-                                const isHighlighted = row.id === itemId;
-                                return (
-                                    <ButtonBase
-                                        key={row.id}
-                                        component={TableRow} // 渲染为一个 TableRow。
-                                        selected={isHighlighted} // 将高亮状态传递给 ButtonBase。
-                                        onClick={() => navigate(`/app/template-page/${row.id}`, {replace: true})}
-                                        sx={{
-                                            display: 'table-row',
-                                            width: '100%',
-                                            textAlign: 'left',
-                                            // 关键修复：在行级定义 hover 和 selected 背景色。
-                                            '&:hover': {
-                                                backgroundColor: 'action.hover',
-                                            },
-                                            '&.Mui-selected': {
-                                                backgroundColor: 'action.selected',
-                                            },
-                                            '&.Mui-selected:hover': {
-                                                backgroundColor: 'action.selected',
-                                            },
-                                        }}
-                                    >
-                                        {isMobile ? (
-                                            <>
-                                                {/* 移动端行内容 */}
-                                                <TooltipCell>{row.name}</TooltipCell>
-                                                <TableCell>{row.category}</TableCell>
-                                                <TooltipCell>{row.description}</TooltipCell>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {/* 桌面端行内容 */}
-                                                {/* 固定列单元格，使用专属的 sx */}
-                                                <TooltipCell sx={stickyCellSx}>
-                                                    {row.name}
-                                                </TooltipCell>
-                                                {/* 普通单元格，无需 sx */}
-                                                <TableCell>
-                                                    {row.category}
-                                                </TableCell>
-                                                <TooltipCell>
-                                                    {row.description}
-                                                </TooltipCell>
-                                            </>
-                                        )}
-                                    </ButtonBase>
-                                );
-                            })}
+                            {pageRows.map(row => (
+                                // 使用 ClickableTableRow 替代旧的实现。
+                                <ClickableTableRow
+                                    key={row.id} // React 列表渲染的必要 key。
+                                    selected={row.id === itemId} // 将高亮状态传递给组件。
+                                    onClick={() => navigate(`/app/template-page/${row.id}`, {replace: true})} // 传递点击回调。
+                                >
+                                    {isMobile ? [
+                                        // 移动端行内容，作为数组传递给 children。
+                                        // 每个子元素都需要一个唯一的 key。
+                                        <TooltipCell key="name">{row.name}</TooltipCell>,
+                                        <TableCell key="category">{row.category}</TableCell>,
+                                        <TooltipCell key="desc">{row.description}</TooltipCell>
+                                    ] : [
+                                        // 桌面端行内容，作为数组传递给 children。
+                                        <TooltipCell key="name" sx={{
+                                            // 固定列单元格需要保持粘性定位。
+                                            position: 'sticky',
+                                            left: 0,
+                                            bgcolor: 'background.paper',
+                                        }}>
+                                            {row.name}
+                                        </TooltipCell>,
+                                        <TableCell key="category">
+                                            {row.category}
+                                        </TableCell>,
+                                        <TooltipCell key="desc">
+                                            {row.description}
+                                        </TooltipCell>
+                                    ]}
+                                </ClickableTableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </DataTable>
