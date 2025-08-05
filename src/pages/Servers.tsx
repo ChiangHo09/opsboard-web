@@ -2,12 +2,9 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
  * @modification
+ *   - [Refactor]: 引入了列配置数组（`columns`）来动态渲染表格的表头和单元格。此举将表格结构定义与渲染逻辑分离，使代码更具声明性、更易于维护，并消除了移动端和桌面端视图之间的重复代码。
  *   - [UI/UX]：统一了移动端和桌面端的视图，现在移动端也显示完整的三按钮操作组（编辑、导出、搜索），以保持体验一致性。
- *   - [架构重构]：引入了新的、统一的 `<ActionButtons>` 组件来替换原有的独立按钮，实现了分段式按钮组的视觉效果。
- *   - [权限模拟]：通过向 `<ActionButtons>` 传递 `showEditButton` prop，演示了如何根据权限动态显示或隐藏按钮，而布局始终保持正确。
- *   - [代码简化]：页面顶部的操作按钮逻辑被完全封装，使得本文件代码更简洁、更易于维护。
- *   - [UI/UX]：彻底修复了响应式布局问题。现在无论屏幕尺寸或容器宽度如何，当空间不足时，操作按钮都会自动从标题右侧换行到标题下方。
- *   - [核心修复]：引入并使用了新的 `<ClickableTableRow>` 组件来渲染表格的每一行。
+ *   - [架构重构]：引入了新的、统一的 `<ActionButtons>` 组件来替换原有的独立按钮。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -26,10 +23,68 @@ import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
-import ActionButtons from '@/components/ui/ActionButtons'; // 导入新的按钮组组件
+import ActionButtons from '@/components/ui/ActionButtons';
 
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
+
+// 【核心优化】为桌面端定义列配置
+const desktopColumns = [
+    {
+        id: 'serverName',
+        label: '服务器名称',
+        sx: {width: '12%', minWidth: '150px', fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell key="serverName">{r.serverName}</TooltipCell>
+    },
+    {
+        id: 'ip',
+        label: 'IP 地址',
+        sx: {width: '10%', minWidth: '130px', fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell key="ip">{r.ip}</TooltipCell>
+    },
+    {
+        id: 'role',
+        label: '角色',
+        sx: {width: '8%', minWidth: '100px', fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell key="role">{r.role}</TooltipCell>
+    },
+    {
+        id: 'depCustNote',
+        label: '部署类型 / 备注',
+        sx: {width: '20%', minWidth: '200px', fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell
+            key="depCustNote">{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>
+    },
+    {
+        id: 'note',
+        label: '使用备注',
+        sx: {fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell key="note">{r.note || '-'}</TooltipCell>
+    },
+];
+
+// 【核心优化】为移动端定义列配置
+const mobileColumns = [
+    {
+        id: 'customerName',
+        label: '客户名称',
+        sx: {width: '33.33%', fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell key="customerName">{r.customerName}</TooltipCell>
+    },
+    {
+        id: 'serverName',
+        label: '服务器名称',
+        sx: {width: '33.33%', fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell key="serverName">{r.serverName}</TooltipCell>
+    },
+    {
+        id: 'role',
+        label: '角色',
+        sx: {width: '33.33%', fontWeight: 700},
+        renderCell: (r: ServerRow) => <TooltipCell key="role">{r.role}</TooltipCell>
+    },
+];
+
 
 export default function Servers(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -47,8 +102,7 @@ export default function Servers(): JSX.Element {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    // 模拟管理员权限
-    const [isAdmin] = useState(true); // 您可以改为 false 来测试编辑按钮的隐藏效果
+    const [isAdmin] = useState(true);
 
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
         paramName: 'serverId',
@@ -126,9 +180,11 @@ export default function Servers(): JSX.Element {
         togglePanel();
     };
 
+    // 【核心优化】根据 isMobile 状态选择要使用的列配置
+    const columns = isMobile ? mobileColumns : desktopColumns;
+
     return (
         <PageLayout>
-            {/* 标题及操作按钮区域 */}
             <Box sx={{
                 display: 'flex',
                 flexShrink: 0,
@@ -139,17 +195,14 @@ export default function Servers(): JSX.Element {
                 gap: 2
             }}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>服务器信息</Typography>
-
-                {/* 使用新的 ActionButtons 组件，它现在对所有视图都可见 */}
                 <ActionButtons
-                    showEditButton={isAdmin} // 根据权限显示编辑按钮
+                    showEditButton={isAdmin}
                     onSearchClick={handleTogglePanel}
                     onEditClick={() => alert('编辑按钮被点击')}
                     onExportClick={() => alert('导出按钮被点击')}
                 />
             </Box>
 
-            {/* 表格区域 */}
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {isLoading && <Box sx={{
                     position: 'absolute',
@@ -178,38 +231,16 @@ export default function Servers(): JSX.Element {
                         setPage(0);
                     }}
                     labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}: {
-                        from: number,
-                        to: number,
-                        count: number
-                    }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
                     <Table stickyHeader aria-label="服务器信息表"
                            sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
                         <TableHead>
                             <TableRow>
-                                {isMobile ? (
-                                    <>
-                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>客户名称</TableCell>
-                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>服务器名称</TableCell>
-                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>角色</TableCell>
-                                    </>
-                                ) : (
-                                    <>
-                                        <TableCell sx={{
-                                            width: '12%',
-                                            minWidth: '150px',
-                                            fontWeight: 700
-                                        }}>服务器名称</TableCell>
-                                        <TableCell sx={{width: '10%', minWidth: '130px', fontWeight: 700}}>IP
-                                            地址</TableCell>
-                                        <TableCell
-                                            sx={{width: '8%', minWidth: '100px', fontWeight: 700}}>角色</TableCell>
-                                        <TableCell sx={{width: '20%', minWidth: '200px', fontWeight: 700}}>部署类型 /
-                                            备注</TableCell>
-                                        <TableCell sx={{fontWeight: 700}}>使用备注</TableCell>
-                                    </>
-                                )}
+                                {/* 【核心优化】动态渲染表头 */}
+                                {columns.map(col => (
+                                    <TableCell key={col.id} sx={col.sx}>{col.label}</TableCell>
+                                ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -219,18 +250,8 @@ export default function Servers(): JSX.Element {
                                     selected={r.id === serverId}
                                     onClick={() => navigate(`/app/servers/${r.id}`, {replace: true})}
                                 >
-                                    {isMobile ? [
-                                        <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
-                                        <TooltipCell key="serverName">{r.serverName}</TooltipCell>,
-                                        <TooltipCell key="role">{r.role}</TooltipCell>
-                                    ] : [
-                                        <TooltipCell key="serverName">{r.serverName}</TooltipCell>,
-                                        <TooltipCell key="ip">{r.ip}</TooltipCell>,
-                                        <TooltipCell key="role">{r.role}</TooltipCell>,
-                                        <TooltipCell
-                                            key="depCustNote">{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>,
-                                        <TooltipCell key="note">{r.note || '-'}</TooltipCell>
-                                    ]}
+                                    {/* 【核心优化】动态渲染单元格 */}
+                                    {columns.map(col => col.renderCell(r))}
                                 </ClickableTableRow>
                             ))}
                         </TableBody>

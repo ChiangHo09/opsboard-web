@@ -2,11 +2,9 @@
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
  * @modification
+ *   - [Refactor]: 撤销了对 `<StatusChip>` 组件的依赖，将状态相关的显示逻辑（`statusConfig` 对象和 `<Chip>` 渲染）重新内联回本文件中。此举是为了响应删除独立组件文件的要求。
  *   - [架构统一]：将页面布局与 `Servers.tsx` 的最佳实践完全对齐，引入了统一的 `<ActionButtons>` 组件。
  *   - [权限模拟]：新增了 `isAdmin` 状态，用于演示如何根据权限动态显示或隐藏“编辑”按钮。
- *   - [UI/UX]：实现了标题区域的 `flex-wrap` 响应式布局，确保在窄屏下按钮能自动换行。
- *   - [UI/UX]：调整了移动端视图的内边距，使其更紧凑。
- *   - [核心修复]：引入并使用了新的 `<ClickableTableRow>` 组件来渲染表格的每一行。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -26,13 +24,13 @@ import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 import {red} from '@mui/material/colors';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
-import ActionButtons from '@/components/ui/ActionButtons'; // 导入 ActionButtons 组件
+import ActionButtons from '@/components/ui/ActionButtons';
 
 const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm'));
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
 
-// 定义状态的视觉配置
-const statusConfig = {
+// 【核心修改】将状态的视觉配置逻辑内联回本文件。
+const statusConfig: Record<string, { label: string; sx: (theme: Theme) => object }> = {
     '就绪': {
         label: '完成',
         sx: (theme: Theme) => ({
@@ -57,9 +55,9 @@ const statusConfig = {
     },
     'default': {
         label: '未知',
-        sx: {
+        sx: () => ({
             fontWeight: 700,
-        },
+        }),
     },
 };
 
@@ -246,6 +244,7 @@ const Tickets = (): JSX.Element => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => {
+                                // 【核心修改】直接在本文件中查找状态配置
                                 const currentStatus = statusConfig[r.status] || statusConfig.default;
                                 return (
                                     <ClickableTableRow
@@ -258,6 +257,7 @@ const Tickets = (): JSX.Element => {
                                         {isMobile ? [
                                             <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
                                             <TooltipCell key="status">
+                                                {/* 【核心修改】使用内联的 Chip 组件进行渲染 */}
                                                 <Chip
                                                     label={currentStatus.label}
                                                     size="small"
@@ -268,6 +268,7 @@ const Tickets = (): JSX.Element => {
                                         ] : [
                                             <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
                                             <TooltipCell key="status">
+                                                {/* 【核心修改】使用内联的 Chip 组件进行渲染 */}
                                                 <Chip
                                                     label={currentStatus.label}
                                                     size="small"
