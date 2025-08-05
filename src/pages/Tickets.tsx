@@ -2,7 +2,7 @@
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
  * @modification
- *   - [Refactor]: 撤销了对 `<StatusChip>` 组件的依赖，将状态相关的显示逻辑（`statusConfig` 对象和 `<Chip>` 渲染）重新内联回本文件中。此举是为了响应删除独立组件文件的要求。
+ *   - [Refactor]: 引入了列配置数组（`columns`）来动态渲染表格的表头和单元格。此举将表格结构定义与渲染逻辑分离，使代码更具声明性、更易于维护，并消除了移动端和桌面端视图之间的重复代码。
  *   - [架构统一]：将页面布局与 `Servers.tsx` 的最佳实践完全对齐，引入了统一的 `<ActionButtons>` 组件。
  *   - [权限模拟]：新增了 `isAdmin` 状态，用于演示如何根据权限动态显示或隐藏“编辑”按钮。
  */
@@ -29,7 +29,6 @@ import ActionButtons from '@/components/ui/ActionButtons';
 const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm'));
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
 
-// 【核心修改】将状态的视觉配置逻辑内联回本文件。
 const statusConfig: Record<string, { label: string; sx: (theme: Theme) => object }> = {
     '就绪': {
         label: '完成',
@@ -61,6 +60,67 @@ const statusConfig: Record<string, { label: string; sx: (theme: Theme) => object
     },
 };
 
+// 【核心优化】为桌面端定义列配置
+const desktopColumns = [
+    {
+        id: 'customerName',
+        label: '客户名称',
+        sx: {width: '10%', minWidth: '120px', fontWeight: 700},
+        renderCell: (r: TicketRow) => <TooltipCell key="customerName">{r.customerName}</TooltipCell>
+    },
+    {
+        id: 'status',
+        label: '状态',
+        sx: {width: '8%', minWidth: '90px', fontWeight: 700},
+        renderCell: (r: TicketRow) => {
+            const currentStatus = statusConfig[r.status] || statusConfig.default;
+            return (
+                <TableCell key="status">
+                    <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>
+                </TableCell>
+            );
+        }
+    },
+    {
+        id: 'operationType',
+        label: '操作类别',
+        sx: {width: '10%', minWidth: '120px', fontWeight: 700},
+        renderCell: (r: TicketRow) => <TooltipCell key="opType">{r.operationType}</TooltipCell>
+    },
+    {
+        id: 'operationContent',
+        label: '操作内容',
+        sx: {fontWeight: 700},
+        renderCell: (r: TicketRow) => <TooltipCell key="opContent">{r.operationContent}</TooltipCell>
+    },
+];
+
+// 【核心优化】为移动端定义列配置
+const mobileColumns = [
+    {
+        id: 'customerName',
+        label: '客户名称',
+        sx: {width: '33.33%', fontWeight: 700},
+        renderCell: (r: TicketRow) => <TooltipCell key="customerName">{r.customerName}</TooltipCell>
+    },
+    {
+        id: 'status', label: '状态', sx: {width: '33.33%', fontWeight: 700}, renderCell: (r: TicketRow) => {
+            const currentStatus = statusConfig[r.status] || statusConfig.default;
+            return (
+                <TableCell key="status">
+                    <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>
+                </TableCell>
+            );
+        }
+    },
+    {
+        id: 'operationType',
+        label: '操作类别',
+        sx: {width: '33.33%', fontWeight: 700},
+        renderCell: (r: TicketRow) => <TooltipCell key="opType">{r.operationType}</TooltipCell>
+    },
+];
+
 
 const Tickets = (): JSX.Element => {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -79,8 +139,7 @@ const Tickets = (): JSX.Element => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isPanelContentSet, setIsPanelContentSet] = useState(false);
 
-    // 模拟管理员权限
-    const [isAdmin] = useState(true); // 您可以改为 false 来测试编辑按钮的隐藏效果
+    const [isAdmin] = useState(true);
 
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
         paramName: 'ticketId',
@@ -154,9 +213,11 @@ const Tickets = (): JSX.Element => {
         togglePanel();
     };
 
+    // 根据 isMobile 状态选择要使用的列配置
+    const columns = isMobile ? mobileColumns : desktopColumns;
+
     return (
         <PageLayout>
-            {/* 标题及操作按钮区域 */}
             <Box sx={{
                 display: 'flex',
                 flexShrink: 0,
@@ -168,7 +229,6 @@ const Tickets = (): JSX.Element => {
             }}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>工单信息</Typography>
 
-                {/* 使用新的 ActionButtons 组件 */}
                 <ActionButtons
                     showEditButton={isAdmin}
                     onSearchClick={handleTogglePanel}
@@ -213,74 +273,31 @@ const Tickets = (): JSX.Element => {
                         setPage(0);
                     }}
                     labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}: {
-                        from: number,
-                        to: number,
-                        count: number
-                    }) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
                     <Table stickyHeader aria-label="工单信息表"
                            sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%'}}>
                         <TableHead>
                             <TableRow>
-                                {isMobile ? (
-                                    <>
-                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>客户名称</TableCell>
-                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>状态</TableCell>
-                                        <TableCell sx={{width: '33.33%', fontWeight: 700}}>操作类别</TableCell>
-                                    </>
-                                ) : (
-                                    <>
-                                        <TableCell
-                                            sx={{width: '10%', minWidth: '120px', fontWeight: 700}}>客户名称</TableCell>
-                                        <TableCell
-                                            sx={{width: '8%', minWidth: '90px', fontWeight: 700}}>状态</TableCell>
-                                        <TableCell
-                                            sx={{width: '10%', minWidth: '120px', fontWeight: 700}}>操作类别</TableCell>
-                                        <TableCell sx={{fontWeight: 700}}>操作内容</TableCell>
-                                    </>
-                                )}
+                                {/* 动态渲染表头 */}
+                                {columns.map(col => (
+                                    <TableCell key={col.id} sx={col.sx}>{col.label}</TableCell>
+                                ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {pageRows.map(r => {
-                                // 【核心修改】直接在本文件中查找状态配置
-                                const currentStatus = statusConfig[r.status] || statusConfig.default;
-                                return (
-                                    <ClickableTableRow
-                                        key={r.id}
-                                        selected={r.id === ticketId}
-                                        onClick={() => {
-                                            navigate(`/app/tickets/${r.id}`, {replace: true});
-                                        }}
-                                    >
-                                        {isMobile ? [
-                                            <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
-                                            <TooltipCell key="status">
-                                                {/* 【核心修改】使用内联的 Chip 组件进行渲染 */}
-                                                <Chip
-                                                    label={currentStatus.label}
-                                                    size="small"
-                                                    sx={currentStatus.sx}
-                                                />
-                                            </TooltipCell>,
-                                            <TooltipCell key="opType">{r.operationType}</TooltipCell>
-                                        ] : [
-                                            <TooltipCell key="customerName">{r.customerName}</TooltipCell>,
-                                            <TooltipCell key="status">
-                                                {/* 【核心修改】使用内联的 Chip 组件进行渲染 */}
-                                                <Chip
-                                                    label={currentStatus.label}
-                                                    size="small"
-                                                    sx={currentStatus.sx}
-                                                />
-                                            </TooltipCell>,
-                                            <TooltipCell key="opType">{r.operationType}</TooltipCell>,
-                                            <TooltipCell key="opContent">{r.operationContent}</TooltipCell>
-                                        ]}
-                                    </ClickableTableRow>
-                                );
-                            })}
+                            {pageRows.map(r => (
+                                <ClickableTableRow
+                                    key={r.id}
+                                    selected={r.id === ticketId}
+                                    onClick={() => {
+                                        navigate(`/app/tickets/${r.id}`, {replace: true});
+                                    }}
+                                >
+                                    {/* 动态渲染单元格 */}
+                                    {columns.map(col => col.renderCell(r))}
+                                </ClickableTableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </DataTable>
