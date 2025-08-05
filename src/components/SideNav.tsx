@@ -1,12 +1,8 @@
 /**
- * 文件名: src/components/SideNav.tsx
- *
- * 代码功能:
- * 此文件定义了应用的侧边导航栏组件（SideNav）。
- *
- * 本次修改内容:
- * - 【组件写法现代化】移除了 `export default function` 的写法，采用了现代的、
- *   不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
+ * @file src/components/SideNav.tsx
+ * @description 定义了应用的侧边导航栏组件（SideNav）。
+ * @modification 本次提交旨在清理冗余的样式代码。
+ *   - [代码简化]：移除了 Tooltip 组件上的 `slotProps` 和 `className`。由于样式已在 `theme.ts` 中被定义为全局默认，这些本地覆盖已不再需要。
  */
 import React, {useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
@@ -76,7 +72,6 @@ interface SideNavProps {
     onFakeLogout: () => void;
 }
 
-// 【核心修改】使用现代写法
 const SideNav = ({open, onToggle, onFakeLogout}: SideNavProps): JSX.Element => {
     const {pathname} = useLocation();
     const nav = useNavigate();
@@ -109,7 +104,7 @@ const SideNav = ({open, onToggle, onFakeLogout}: SideNavProps): JSX.Element => {
                     <Tooltip
                         title={!open && !isMobile ? item.label : ''}
                         placement="right"
-                        slotProps={{tooltip: {className: 'tooltip-sidenav'}}}
+                        // 【核心修改】移除冗余的 slotProps，样式将从主题继承
                     >
                         <Box sx={{
                             width: BTN_SIZE,
@@ -200,7 +195,7 @@ const SideNav = ({open, onToggle, onFakeLogout}: SideNavProps): JSX.Element => {
                                 <Tooltip
                                     title={item.label}
                                     placement="bottom"
-                                    slotProps={{tooltip: {className: 'tooltip-sidenav'}}}
+                                    // 【核心修改】移除冗余的 slotProps
                                 >
                                     <Box component="span" sx={controlIconSx}>{item.icon}</Box>
                                 </Tooltip>
@@ -311,7 +306,8 @@ const SideNav = ({open, onToggle, onFakeLogout}: SideNavProps): JSX.Element => {
                                 >
                                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                                         <Tooltip title={open ? '' : '展开'} placement="right"
-                                                 slotProps={{tooltip: {className: 'tooltip-sidenav'}}}>
+                                            // 【核心修改】移除冗余的 slotProps
+                                        >
                                             <Box sx={{
                                                 width: BTN_SIZE,
                                                 height: '100%',
@@ -376,7 +372,8 @@ const SideNav = ({open, onToggle, onFakeLogout}: SideNavProps): JSX.Element => {
                                     >
                                         <Box sx={{display: 'flex', alignItems: 'center'}}>
                                             <Tooltip title={!open ? "chiangho" : ''} placement="right"
-                                                     slotProps={{tooltip: {className: 'tooltip-sidenav'}}}>
+                                                // 【核心修改】移除冗余的 slotProps
+                                            >
                                                 <Box sx={{
                                                     width: BTN_SIZE,
                                                     height: '100%',

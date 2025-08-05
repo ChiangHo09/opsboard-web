@@ -1,10 +1,10 @@
 /**
  * @file src/theme.ts
  * @description 此文件负责创建和配置整个应用的 Material-UI 主题。它定义了全局的调色板、排版、间距、形状以及组件级别的默认属性和样式覆盖，是构建一致性用户界面的核心。
- * @modification 本次提交旨在彻底解决 `ButtonGroup` 分割线的样式覆盖问题。
- *   - [样式覆盖修正]: 重构了 `MuiButtonGroup` 的 `styleOverrides`。放弃了之前不够精确的选择器，转而使用 `grouped` 样式插槽（slot）进行覆盖。
- *   - [根本原因]: MUI 对 `variant="contained"` 的按钮组应用了高优先级的默认边框样式。
- *   - [解决方案]: `grouped` 插槽是专门用于定义“组内按钮”样式的正确途径。通过在 `grouped` 插槽中检查 `ownerState.variant` 是否为 `contained`，我们得以精确地将分割线颜色 `borderRightColor` 覆盖为 `transparent`，从而彻底解决了问题，且无需使用 `!important`。
+ * @modification 本次提交旨在统一全局 Tooltip 样式并修复其架构问题。
+ *   - [架构重构]：修改了 `MuiTooltip` 的 `styleOverrides`。移除了之前仅对 `.tooltip-sidenav` 类生效的限定，将样式直接应用到 `tooltip` 插槽的根部。
+ *   - [根本原因]：之前的样式依赖于一个需要手动添加的 CSS 类，导致样式定义分散，实现不一致。
+ *   - [解决方案]：通过为 `tooltip` 插槽提供一个全局默认样式，我们确保了应用中所有 `<Tooltip>` 组件在视觉上的一致性。新的 `borderRadius` 被设置为 `4px`，以实现统一的“圆角矩形”外观。
  */
 
 // 从 @mui/material/styles 导入 createTheme 函数，这是创建和合并主题对象的核心工具。
@@ -230,18 +230,16 @@ const theme = createTheme(
             MuiTooltip: {
                 styleOverrides: {
                     // `tooltip` 指的是弹出的提示框本身。
+                    // 【核心修改】移除 .tooltip-sidenav 类选择器，将样式直接应用到所有 Tooltip 组件。
                     tooltip: ({theme}) => ({
-                        // 通过 CSS 类选择器 `.tooltip-sidenav` 来应用这套特定样式。
-                        // 这允许我们在需要的地方通过 `className` prop 来选择性地使用此样式。
-                        '&.tooltip-sidenav': {
-                            backgroundColor: palette.app.background,      // 背景色使用应用背景色。
-                            color: palette.neutral.main,                  // 文本颜色使用中性主色。
-                            borderRadius: shape.borderRadius * 0.75,      // 设置一个稍小的圆角。
-                            border: `1px solid ${theme.palette.divider}`, // 添加一个细微的边框。
-                            padding: '4px 9px',                           // 设置内边距。
-                            fontSize: '13px',                             // 设置字体大小。
-                            fontWeight: 500,                              // 设置字重。
-                        },
+                        backgroundColor: palette.app.background,
+                        color: palette.neutral.main,
+                        // 设置为明确的“圆角矩形”样式
+                        borderRadius: Number(shape.borderRadius) / 2, // 4px
+                        border: `1px solid ${theme.palette.divider}`,
+                        padding: '4px 9px',
+                        fontSize: '13px',
+                        fontWeight: 500,
                     }),
                 },
             },

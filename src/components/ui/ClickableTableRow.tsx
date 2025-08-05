@@ -1,59 +1,38 @@
 /**
  * @file src/components/ui/ClickableTableRow.tsx
- * @description 提供一个带涟漪效果的、完全可交互的表格行。通过“第一单元格锚点”策略，从根本上解决了在 `table-layout: fixed` 表格中交互导致布局塌陷的问题。
- * @modification
- *   - [Type Safety]: 修复了所有 TypeScript 错误。通过为被克隆的元素提供精确的 props 类型（`{ children?: ReactNode }`），解决了 `no-explicit-any` 和 `props is of type unknown` 的问题。
- *   - [Robustness]: 使用 `React.Children.toArray` 来安全地处理所有类型的子节点。
- *   - [Type Guard]: 在执行 `React.cloneElement` 之前，使用 `React.isValidElement` 作为类型守卫，确保只对有效的 React 元素进行操作。
+ * @description 提供一个可交互的表格行。通过将事件监听和状态管理提升至行级别，彻底解决了布局塌陷和子组件事件被劫持的问题。
+ * @modification 彻底重构了组件实现，采用了更稳定和健壮的事件委托模式。
+ *   - [核心架构]：移除了原有的、基于 `React.cloneElement` 和绝对定位 `ButtonBase` 的“第一单元格锚点”策略。
+ *   - [事件处理]：将 `onClick` 事件直接绑定在 `<TableRow>` 上，并应用 `cursor: pointer` 样式，提供了清晰的交互指示。
+ *   - [布局稳定]：此改动从根本上消除了因 `ButtonBase` 覆盖层导致的布局塌陷和渲染闪烁问题。
+ *   - [子事件修复]：由于不再有覆盖层，鼠标事件（如 `onMouseEnter`）现在可以正确地传递到每一个子单元格（`TooltipCell`），使其能够按预期工作。
+ *   - [代码简化]：新实现更加简洁、直观，易于理解和维护，且完全符合 React 的组合模式。
  */
-import React, {type ReactNode, type JSX} from 'react';
-import {TableRow, ButtonBase, type TableRowProps} from '@mui/material';
+import {type ReactNode, type JSX} from 'react';
+import {TableRow, type TableRowProps} from '@mui/material';
 
+// Omit 'children' from TableRowProps and redefine it to be more specific if needed,
+// but for this component, ReactNode is appropriate.
 interface ClickableTableRowProps extends Omit<TableRowProps, 'onClick' | 'children'> {
-    children: ReactNode; // 接受所有合法的 React 子节点
+    children: ReactNode;
     onClick: () => void;
 }
 
-const ClickableTableRow = ({children, onClick, selected, ...rest}: ClickableTableRowProps): JSX.Element | null => {
-    // 使用 React.Children.toArray 安全地将 children 转换为数组，以处理各种情况（单个元素、数组、Fragment 等）
-    const childrenArray = React.Children.toArray(children);
-
-    // 守卫：如果没有任何子元素，则不渲染任何内容
-    if (childrenArray.length === 0) {
-        return null;
-    }
-
-    // 分离第一个子元素和其他子元素
-    const [firstChild, ...otherChildren] = childrenArray;
-
-    // 类型守卫：确保第一个子元素是我们可以克隆的有效 React 元素
-    if (!React.isValidElement(firstChild)) {
-        // 如果第一个子元素不是有效元素（例如，只是一个字符串），
-        // 则打印一个开发时错误，并渲染一个不带点击功能的普通行作为回退，以避免应用崩溃。
-        console.error(
-            "ClickableTableRow's first child is not a valid React element. The ripple effect will not be applied.",
-            firstChild
-        );
-        return <TableRow {...rest} selected={selected}>{children}</TableRow>;
-    }
-
-    // 为被克隆的元素定义一个精确的 props 类型，以替代 'any' 和 'unknown'
-    type ClonableElementProps = {
-        children?: ReactNode;
-    };
-
+const ClickableTableRow = ({children, onClick, selected, ...rest}: ClickableTableRowProps): JSX.Element => {
     return (
         <TableRow
             {...rest}
             selected={selected}
+            onClick={onClick} // 直接在 TableRow 上处理点击事件
             sx={{
-                position: 'relative', // 为绝对定位的 ButtonBase 提供定位上下文
+                cursor: 'pointer', // 明确指示该行为可交互
                 // 将悬浮和选中样式直接应用到 TableRow，由其子单元格继承
                 '&:hover': {
                     '.MuiTableCell-root': {
                         backgroundColor: 'action.hover',
                     }
                 },
+                // 确保选中状态的样式优先级更高
                 '&.Mui-selected': {
                     '.MuiTableCell-root': {
                         backgroundColor: 'action.selected',
@@ -63,38 +42,16 @@ const ClickableTableRow = ({children, onClick, selected, ...rest}: ClickableTabl
                             backgroundColor: 'action.selected',
                         }
                     }
-                }
+                },
+                // 移除任何可能由旧实现残留的相对定位
+                position: 'static',
             }}
         >
             {/*
-              现在 firstChild 已被确认为 ReactElement，可以安全地克隆它。
-              我们使用一个精确的类型断言来告知 TypeScript props 的形状。
+              直接渲染子元素，不做任何克隆或注入。
+              现在每个子组件（TooltipCell）都能独立接收自己的鼠标事件。
             */}
-            {React.cloneElement(
-                firstChild as React.ReactElement<ClonableElementProps>, // 使用精确类型，解决 no-explicit-any
-                {
-                    // 将 ButtonBase 作为 firstChild 的新子元素注入
-                    children: (
-                        <>
-                            {/* 此处使用相同的类型断言，安全地访问 .props.children，解决 props is unknown */}
-                            {(firstChild as React.ReactElement<ClonableElementProps>).props.children}
-                            <ButtonBase
-                                onClick={onClick}
-                                sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    zIndex: 1, // 确保交互层在最上方
-                                }}
-                            />
-                        </>
-                    ),
-                }
-            )}
-            {/* 渲染剩余的单元格 */}
-            {otherChildren}
+            {children}
         </TableRow>
     );
 };
