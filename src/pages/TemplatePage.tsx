@@ -6,34 +6,28 @@
  *
  * @features
  * 实现的核心功能包括：
- * - 1. **数据展示**: 使用 Material-UI 的 `<Table>` 组件，在一个可分页的 `DataTable` 容器中展示模拟数据。
- * - 2. **响应式布局**:
+ * - 1. **配置驱动的UI**: 表格的结构（列、顺序、样式、渲染方式）由 `desktopColumns` 和 `mobileColumns` 配置数组驱动，彻底消除了重复代码，使维护变得极其简单。
+ * - 2. **数据展示**: 使用 Material-UI 的 `<Table>` 组件，在一个可分页的 `DataTable` 容器中展示模拟数据。
+ * - 3. **响应式布局**:
  *      - **桌面端**: 包含一个内容丰富的表格，并支持“粘性”固定列。
  *      - **移动端**: 自动切换为列数更少、布局更紧凑的表格视图。
- * - 3. **统一的交互体验**:
+ * - 4. **统一的交互体验**:
  *      - **整行点击**: 通过统一的 `<ClickableTableRow>` 组件，每一行都是一个完整的可点击区域。
- *      - **涟漪效果**: 点击行时，有标准的“水波纹”涟漪效果，且不会导致任何布局问题。
  *      - **行高亮**: 支持通过 URL 参数 (`:itemId`) 控制特定行的高亮显示。
  *      - **悬停效果**: 鼠标悬停在行上时，有统一的背景色变化反馈。
- * - 4. **健壮的渲染机制**:
+ * - 5. **健壮的渲染机制**:
  *      - **加载状态**: 在模拟数据获取时，会显示一个覆盖整个表格的半透明加载指示器。
  *      - **错误状态**: 在数据加载失败时，会显示清晰的错误提示信息。
- * - 5. **懒加载集成**: 右侧的搜索面板 (`TemplateSearchForm`) 和弹窗内容 (`TemplateModalContent`)
- *      都通过 `React.lazy` 和 `Suspense` 实现按需加载，优化了初始加载性能。
- * - 6. **URL驱动状态**: 详情视图的打开状态完全由URL参数驱动，支持通过链接直接分享和访问特定项的详情。
- * - 7. **全局状态集成**: 与 `LayoutContext` 深度集成，用于控制和管理右侧搜索面板和全局模态框。
- * - 8. **统一错误处理**: 为所有可能在用户交互中出错的回调函数添加了 `try...catch` 块，并调用统一的错误处理机制。
+ * - 6. **懒加载集成**: 右侧的搜索面板 (`TemplateSearchForm`) 和弹窗内容 (`TemplateModalContent`) 都通过 `React.lazy` 和 `Suspense` 实现按需加载，优化了初始加载性能。
+ * - 7. **URL驱动状态**: 详情视图的打开状态完全由URL参数驱动，支持通过链接直接分享和访问特定项的详情。
+ * - 8. **全局状态集成**: 与 `LayoutContext` 深度集成，用于控制和管理右侧搜索面板和全局模态框。
+ * - 9. **统一错误处理**: 为所有可能在用户交互中出错的回调函数添加了 `try...catch` 块，并调用统一的错误处理机制。
+ * - 10. **统一操作按钮**: 页面顶部的操作按钮由统一的 `<ActionButtons>` 组件提供，支持权限控制和响应式换行。
  *
  * @modification
- * - 【架构统一】将此模板页面的布局和功能，与应用内其他页面（如 Servers.tsx）的最终最佳实践完全对齐。
+ * - 【核心重构】引入了“配置驱动UI”模式，使用 `columns` 数组来动态渲染表格，彻底消除了桌面端和移动端视图的重复渲染逻辑。
  * - 【注释完善】根据要求，为整个文件添加了极其详尽的、教学级别的注释。
- * - **核心变更**:
- *   1.  **引入 `ActionButtons` 组件**: 使用了统一的、可处理权限的按钮组组件，替换了之前手写的独立按钮。
- *   2.  **模拟权限**: 新增了 `isAdmin` 状态，用于演示如何根据权限动态显示或隐藏“编辑”按钮。
- *   3.  **实现响应式标题**: 应用了 `flex-wrap` 策略，使得标题和操作按钮在窄屏下能自动、优雅地换行。
- *   4.  **自定义边距**: 通过覆盖 `PageLayout` 的 `sx` 属性，为移动端视图设置了更紧凑的内边距。
- *   5.  **采用 `ClickableTableRow`**: 替换了旧的 `ButtonBase` 实现，从根本上解决了涟漪效果与 `table-layout: fixed` 的冲突，根除了布局塌陷和闪烁问题。
- *   6.  **模拟加载**: 新增了 `isLoading` 和 `isError` 状态，以完整演示加载和错误状态下的 UI 效果。
+ * - 【架构统一】将此模板页面的布局和功能，与应用内其他页面（如 Servers.tsx）的最终最佳实践完全对齐。
  */
 
 // --- 1. IMPORTS ---
@@ -64,7 +58,7 @@ import ActionButtons from '@/components/ui/ActionButtons.tsx';
 const TemplateSearchForm = lazy(() => import('@/components/forms/TemplateSearchForm.tsx'));
 const TemplateModalContent = lazy(() => import('@/components/modals/TemplateModalContent.tsx'));
 
-// --- 2. TYPE & DATA DEFINITIONS ---
+// --- 2. TYPE, DATA, AND CONFIG DEFINITIONS ---
 
 /**
  * @interface TemplateRow
@@ -102,6 +96,72 @@ const templateRows: TemplateRow[] = [
         createData(`item-${i + 4}`, `模板项目 ${i + 4}`, ['A', 'B', 'C'][i % 3] as TemplateRow['category'], `这是第 ${i + 4} 条项目的描述。`)
     ),
 ];
+
+// 【核心重构】为桌面端定义列配置数组
+const desktopColumns = [
+    {
+        id: 'name', // 列的唯一标识符
+        label: '项目名称', // 在表头中显示的文本
+        sx: { // 应用于表头 <TableCell> 的样式
+            width: '25%',
+            position: 'sticky', // 关键属性：使单元格“粘性”定位
+            left: 0, // 粘在左侧
+            zIndex: 1, // zIndex 确保在滚动时能覆盖其他列
+            bgcolor: 'background.paper', // 需要背景色以覆盖下方滚过的内容
+            fontWeight: 700
+        },
+        // 定义如何渲染该列的单元格，接收一整行数据作为参数
+        renderCell: (r: TemplateRow, isLoading: boolean) => (
+            <TooltipCell key="name" sx={{
+                // 单元格也需要保持粘性定位
+                position: 'sticky',
+                left: 0,
+                // 当数据加载时，背景色需要与表头同步，否则会透明
+                bgcolor: 'background.paper',
+                // 关键修复：加载时 zIndex 降级，以被遮罩层覆盖
+                zIndex: isLoading ? 'auto' : 1,
+            }}>
+                {r.name}
+            </TooltipCell>
+        )
+    },
+    {
+        id: 'category',
+        label: '类别',
+        sx: {width: '15%', fontWeight: 700},
+        // 对于不需要 Tooltip 的简单文本，直接使用 TableCell
+        renderCell: (r: TemplateRow) => <TableCell key="category">{r.category}</TableCell>
+    },
+    {
+        id: 'description',
+        label: '描述',
+        sx: {width: '60%', fontWeight: 700},
+        renderCell: (r: TemplateRow) => <TooltipCell key="desc">{r.description}</TooltipCell>
+    },
+];
+
+// 【核心重构】为移动端定义列配置数组
+const mobileColumns = [
+    {
+        id: 'name',
+        label: '项目名称',
+        sx: {width: '40%', fontWeight: 700},
+        renderCell: (r: TemplateRow) => <TooltipCell key="name">{r.name}</TooltipCell>
+    },
+    {
+        id: 'category',
+        label: '类别',
+        sx: {width: '20%', fontWeight: 700},
+        renderCell: (r: TemplateRow) => <TableCell key="category">{r.category}</TableCell>
+    },
+    {
+        id: 'description',
+        label: '描述',
+        sx: {width: '40%', fontWeight: 700},
+        renderCell: (r: TemplateRow) => <TooltipCell key="desc">{r.description}</TooltipCell>
+    },
+];
+
 
 // --- 3. COMPONENT DEFINITION ---
 
@@ -274,32 +334,34 @@ const TemplatePage = (): JSX.Element => {
     // --- 3.5 Render Logic ---
     // 根据当前分页状态，从总数据中计算出当前页应显示的数据。
     const pageRows = templateRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    // 根据 isMobile 状态选择要使用的列配置
+    const columns = isMobile ? mobileColumns : desktopColumns;
 
     // --- 3.6 JSX ---
     return (
         <PageLayout>
             {/* 页面顶部区域：标题和操作按钮 */}
             <Box sx={{
-                display: 'flex',
-                flexShrink: 0,
-                mb: 2,
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 2
+                display: 'flex', // 启用 Flexbox 布局
+                flexShrink: 0, // 防止此容器在 flex 布局中被压缩
+                mb: 2, // margin-bottom，与下方表格的间距
+                flexWrap: 'wrap', // 关键：允许内容在空间不足时换行
+                justifyContent: 'space-between', // 将子元素沿主轴（水平）分散对齐
+                alignItems: 'center', // 将子元素沿交叉轴（垂直）居中对齐
+                gap: 2 // 子元素之间的间距
             }}>
                 <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>模板页面</Typography>
 
                 {/* 使用统一的 ActionButtons 组件 */}
                 <ActionButtons
-                    showEditButton={isAdmin} // 根据权限显示编辑按钮
-                    onSearchClick={handleTogglePanel}
-                    onEditClick={() => alert('编辑按钮被点击')}
-                    onExportClick={() => alert('导出按钮被点击')}
+                    showEditButton={isAdmin} // prop: 根据权限显示/隐藏编辑按钮
+                    onSearchClick={handleTogglePanel} // prop: 搜索按钮的点击回调
+                    onEditClick={() => alert('编辑按钮被点击')} // prop: 编辑按钮的点击回调
+                    onExportClick={() => alert('导出按钮被点击')} // prop: 导出按钮的点击回调
                 />
             </Box>
 
-            {/* 数据表格区域，flexGrow: 1 使其占据所有剩余空间。 */}
+            {/* 数据表格区域，flexGrow: 1 使其占据所有剩余垂直空间。 */}
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {/* 加载状态遮罩层 */}
                 {isLoading && (
@@ -321,84 +383,40 @@ const TemplatePage = (): JSX.Element => {
                     </Box>
                 )}
                 <DataTable
-                    rowsPerPageOptions={[10, 25, 50]} // 可选的每页行数。
-                    count={templateRows.length} // 总行数，用于计算总页数。
-                    rowsPerPage={rowsPerPage} // 当前每页行数。
-                    page={page} // 当前页码。
-                    onPageChange={(_, newPage: number) => setPage(newPage)} // 页码改变时的回调。
-                    onRowsPerPageChange={(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { // 每页行数改变时的回调。
+                    rowsPerPageOptions={[10, 25, 50]} // prop: 可选的每页行数
+                    count={templateRows.length} // prop: 总行数，用于计算总页数
+                    rowsPerPage={rowsPerPage} // prop: 当前每页行数
+                    page={page} // prop: 当前页码
+                    onPageChange={(_, newPage: number) => setPage(newPage)} // prop: 页码改变时的回调
+                    onRowsPerPageChange={(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { // prop: 每页行数改变时的回调
                         setRowsPerPage(+event.target.value);
-                        setPage(0); // 改变每页行数时，重置到第一页。
+                        setPage(0); // 改变每页行数时，重置到第一页
                     }}
-                    labelRowsPerPage="每页行数:" // 自定义文本。
-                    labelDisplayedRows={({from, to, count}: {
-                        from: number,
-                        to: number,
-                        count: number
-                    }) => `显示 ${from}-${to} 条, 共 ${count} 条`} // 自定义文本。
+                    labelRowsPerPage="每页行数:" // prop: 自定义文本
+                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`} // prop: 自定义文本
                 >
                     <Table
-                        stickyHeader // 关键属性：使表头在垂直滚动时固定。
+                        stickyHeader // prop: 使表头在垂直滚动时固定
                         aria-label="模板数据表"
                         sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%'}}>
                         <TableHead>
                             <TableRow>
-                                {isMobile ? (
-                                    <>
-                                        {/* 移动端表头，提供明确的百分比宽度以避免布局问题 */}
-                                        <TableCell sx={{width: '40%', fontWeight: 700}}>项目名称</TableCell>
-                                        <TableCell sx={{width: '20%', fontWeight: 700}}>类别</TableCell>
-                                        <TableCell sx={{width: '40%', fontWeight: 700}}>描述</TableCell>
-                                    </>
-                                ) : (
-                                    <>
-                                        {/* 桌面端表头 */}
-                                        <TableCell sx={{
-                                            width: '25%',
-                                            position: 'sticky', // 关键属性：使单元格“粘性”定位。
-                                            left: 0, // 粘在左侧。
-                                            // 关键修复：加载时 zIndex 降级，以被遮罩层覆盖。
-                                            zIndex: isLoading ? 'auto' : 120,
-                                            bgcolor: 'background.paper', // 需要背景色以覆盖下方内容。
-                                            fontWeight: 700
-                                        }}>项目名称</TableCell>
-                                        <TableCell sx={{width: '15%', fontWeight: 700}}>类别</TableCell>
-                                        <TableCell sx={{width: '60%', fontWeight: 700}}>描述</TableCell>
-                                    </>
-                                )}
+                                {/* 【核心重构】动态渲染表头 */}
+                                {columns.map(col => (
+                                    <TableCell key={col.id} sx={col.sx}>{col.label}</TableCell>
+                                ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {pageRows.map(row => (
-                                // 使用 ClickableTableRow 替代旧的实现。
+                                // 使用 ClickableTableRow 替代旧的实现
                                 <ClickableTableRow
-                                    key={row.id} // React 列表渲染的必要 key。
-                                    selected={row.id === itemId} // 将高亮状态传递给组件。
-                                    onClick={() => navigate(`/app/template-page/${row.id}`, {replace: true})} // 传递点击回调。
+                                    key={row.id} // prop: React 列表渲染的必要 key
+                                    selected={row.id === itemId} // prop: 将高亮状态传递给组件
+                                    onClick={() => navigate(`/app/template-page/${row.id}`, {replace: true})} // prop: 传递点击回调
                                 >
-                                    {isMobile ? [
-                                        // 移动端行内容，作为数组传递给 children。
-                                        // 每个子元素都需要一个唯一的 key。
-                                        <TooltipCell key="name">{row.name}</TooltipCell>,
-                                        <TableCell key="category">{row.category}</TableCell>,
-                                        <TooltipCell key="desc">{row.description}</TooltipCell>
-                                    ] : [
-                                        // 桌面端行内容，作为数组传递给 children。
-                                        <TooltipCell key="name" sx={{
-                                            // 固定列单元格需要保持粘性定位。
-                                            position: 'sticky',
-                                            left: 0,
-                                            bgcolor: 'background.paper',
-                                        }}>
-                                            {row.name}
-                                        </TooltipCell>,
-                                        <TableCell key="category">
-                                            {row.category}
-                                        </TableCell>,
-                                        <TooltipCell key="desc">
-                                            {row.description}
-                                        </TooltipCell>
-                                    ]}
+                                    {/* 【核心重构】动态渲染单元格 */}
+                                    {columns.map(col => col.renderCell(row, isLoading))}
                                 </ClickableTableRow>
                             ))}
                         </TableBody>
