@@ -26,7 +26,7 @@ const PageLayout = ({sx, ...rest}: PageLayoutProps): JSX.Element => {
                 mx: 'auto', // 始终水平居中
 
                 // --- 默认的、可被覆盖的响应式内边距 ---
-                pt: {xs: 3, md: 4}, // 顶部内边距
+                pt: {xs: 4, md: 5}, // 顶部内边距
                 pb: {xs: 2, md: 3}, // 底部内边距
                 px: {xs: 2, md: 3}, // 水平内边距
 

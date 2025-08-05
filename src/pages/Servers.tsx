@@ -127,9 +127,7 @@ export default function Servers(): JSX.Element {
     };
 
     return (
-        <PageLayout sx={{
-            p: {xs: 1, md: 3},
-        }}>
+        <PageLayout>
             {/* 标题及操作按钮区域 */}
             <Box sx={{
                 display: 'flex',

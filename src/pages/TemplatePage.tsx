@@ -277,10 +277,7 @@ const TemplatePage = (): JSX.Element => {
 
     // --- 3.6 JSX ---
     return (
-        <PageLayout sx={{
-            // 覆盖 PageLayout 的默认内边距，为移动端提供更紧凑的布局
-            p: {xs: 1, md: 3},
-        }}>
+        <PageLayout>
             {/* 页面顶部区域：标题和操作按钮 */}
             <Box sx={{
                 display: 'flex',
