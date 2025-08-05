@@ -2,9 +2,9 @@
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
  * @modification
- *   - [Refactor]: 引入了列配置数组（`columns`）来动态渲染表格的表头和单元格。此举将表格结构定义与渲染逻辑分离，使代码更具声明性、更易于维护，并消除了移动端和桌面端视图之间的重复代码。
- *   - [架构统一]：将页面布局与 `Servers.tsx` 的最佳实践完全对齐，引入了统一的 `<ActionButtons>` 组件。
- *   - [权限模拟]：新增了 `isAdmin` 状态，用于演示如何根据权限动态显示或隐藏“编辑”按钮。
+ *   - [Refactor]: 更新了 `<PageHeader>` 组件的导入路径，以符合 `/src/layouts` 的标准目录结构。
+ *   - [Refactor]: 引入并使用了新的可复用布局组件 `<PageHeader />`。
+ *   - [Refactor]: 引入了列配置数组（`columns`）来动态渲染表格的表头和单元格。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -25,6 +25,7 @@ import DataTable from '@/components/ui/DataTable';
 import {red} from '@mui/material/colors';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
+import PageHeader from '@/layouts/PageHeader'; // 【核心修改】更新了导入路径
 
 const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm'));
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
@@ -60,7 +61,6 @@ const statusConfig: Record<string, { label: string; sx: (theme: Theme) => object
     },
 };
 
-// 【核心优化】为桌面端定义列配置
 const desktopColumns = [
     {
         id: 'customerName',
@@ -95,7 +95,6 @@ const desktopColumns = [
     },
 ];
 
-// 【核心优化】为移动端定义列配置
 const mobileColumns = [
     {
         id: 'customerName',
@@ -213,29 +212,21 @@ const Tickets = (): JSX.Element => {
         togglePanel();
     };
 
-    // 根据 isMobile 状态选择要使用的列配置
     const columns = isMobile ? mobileColumns : desktopColumns;
 
     return (
         <PageLayout>
-            <Box sx={{
-                display: 'flex',
-                flexShrink: 0,
-                mb: 2,
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 2
-            }}>
-                <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>工单信息</Typography>
-
-                <ActionButtons
-                    showEditButton={isAdmin}
-                    onSearchClick={handleTogglePanel}
-                    onEditClick={() => alert('编辑按钮被点击')}
-                    onExportClick={() => alert('导出按钮被点击')}
-                />
-            </Box>
+            <PageHeader
+                title="工单信息"
+                actions={
+                    <ActionButtons
+                        showEditButton={isAdmin}
+                        onSearchClick={handleTogglePanel}
+                        onEditClick={() => alert('编辑按钮被点击')}
+                        onExportClick={() => alert('导出按钮被点击')}
+                    />
+                }
+            />
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {isLoading && (
@@ -279,7 +270,6 @@ const Tickets = (): JSX.Element => {
                            sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%'}}>
                         <TableHead>
                             <TableRow>
-                                {/* 动态渲染表头 */}
                                 {columns.map(col => (
                                     <TableCell key={col.id} sx={col.sx}>{col.label}</TableCell>
                                 ))}
@@ -294,7 +284,6 @@ const Tickets = (): JSX.Element => {
                                         navigate(`/app/tickets/${r.id}`, {replace: true});
                                     }}
                                 >
-                                    {/* 动态渲染单元格 */}
                                     {columns.map(col => col.renderCell(r))}
                                 </ClickableTableRow>
                             ))}

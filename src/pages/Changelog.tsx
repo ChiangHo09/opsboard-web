@@ -2,14 +2,13 @@
  * @file src/pages/Changelog.tsx
  * @description 该文件负责渲染“更新日志”页面，并提供搜索功能。
  * @modification
- *   - [Code Review]: 本次提交确认该文件已遵循“配置驱动UI”的最佳实践。表格渲染逻辑已通过列配置数组（`columns`）实现，无需进一步重构。
- *   - [Refactor]: 引入了列配置数组（`columns`）来动态渲染表格的表头和单元格。此举将表格结构定义与渲染逻辑分离，使代码更具声明性、更易于维护，并消除了移动端和桌面端视图之间的重复代码。
- *   - [架构统一]：将页面布局与 `Servers.tsx` 的最佳实践完全对齐，引入了统一的 `<ActionButtons>` 组件。
+ *   - [Refactor]: 更新了 `<PageHeader>` 组件的导入路径，以符合 `/src/layouts` 的标准目录结构。
+ *   - [Refactor]: 引入并使用了新的可复用布局组件 `<PageHeader />`，以替代之前手写的用于包裹标题和按钮的 Flexbox `<Box>`。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {
-    Box, Typography, Table, TableBody, TableCell,
+    Box, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress
 } from '@mui/material';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
@@ -22,11 +21,11 @@ import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
+import PageHeader from '@/layouts/PageHeader'; // 【核心修改】更新了导入路径
 
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
-// 【核心优化】为桌面端定义列配置
 const desktopColumns = [
     {
         id: 'customerName',
@@ -54,7 +53,6 @@ const desktopColumns = [
     },
 ];
 
-// 【核心优化】为移动端定义列配置
 const mobileColumns = [
     {
         id: 'customerName',
@@ -174,28 +172,21 @@ export default function Changelog(): JSX.Element {
         togglePanel();
     };
 
-    // 【核心优化】根据 isMobile 状态选择要使用的列配置
     const columns = isMobile ? mobileColumns : desktopColumns;
 
     return (
         <PageLayout>
-            <Box sx={{
-                display: 'flex',
-                flexShrink: 0,
-                mb: 2,
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 2
-            }}>
-                <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>更新日志</Typography>
-                <ActionButtons
-                    showEditButton={isAdmin}
-                    onSearchClick={handleTogglePanel}
-                    onEditClick={() => alert('编辑按钮被点击')}
-                    onExportClick={() => alert('导出按钮被点击')}
-                />
-            </Box>
+            <PageHeader
+                title="更新日志"
+                actions={
+                    <ActionButtons
+                        showEditButton={isAdmin}
+                        onSearchClick={handleTogglePanel}
+                        onEditClick={() => alert('编辑按钮被点击')}
+                        onExportClick={() => alert('导出按钮被点击')}
+                    />
+                }
+            />
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {isLoading && <Box sx={{
@@ -213,7 +204,7 @@ export default function Changelog(): JSX.Element {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center'
-                }}><Typography color="error">加载失败: {error?.message || '未知错误'}</Typography></Box>}
+                }}><Box>加载失败: {error?.message || '未知错误'}</Box></Box>}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
@@ -231,7 +222,6 @@ export default function Changelog(): JSX.Element {
                            sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
                         <TableHead>
                             <TableRow>
-                                {/* 【核心优化】动态渲染表头 */}
                                 {columns.map(col => (
                                     <TableCell key={col.id} sx={col.sx}>{col.label}</TableCell>
                                 ))}
@@ -244,7 +234,6 @@ export default function Changelog(): JSX.Element {
                                     selected={r.id === logId}
                                     onClick={() => navigate(`/app/changelog/${r.id}`, {replace: true})}
                                 >
-                                    {/* 【核心优化】动态渲染单元格 */}
                                     {columns.map(col => col.renderCell(r))}
                                 </ClickableTableRow>
                             ))}
