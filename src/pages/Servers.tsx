@@ -2,6 +2,7 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
  * @modification
+ *   - [Layout Fix]: 修复了表格右侧的空白问题。通过为前几列设置固定的像素宽度，并让最后一列（使用备注）自动填充所有剩余空间，确保表格能够精确地填满其容器的100%宽度。
  *   - [Refactor]: 更新了 `<PageHeader>` 组件的导入路径，以符合 `/src/layouts` 的标准目录结构。
  *   - [Refactor]: 引入并使用了新的可复用布局组件 `<PageHeader />`。
  *   - [Refactor]: 引入了列配置数组（`columns`）来动态渲染表格的表头和单元格。
@@ -24,41 +25,42 @@ import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
-import PageHeader from '@/layouts/PageHeader'; // 【核心修改】更新了导入路径
+import PageHeader from '@/layouts/PageHeader';
 
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
 
+// 【核心修复】为固定宽度的列设置像素宽度，最后一列不设置宽度以自动填充。
 const desktopColumns = [
     {
         id: 'serverName',
         label: '服务器名称',
-        sx: {width: '12%', minWidth: '150px', fontWeight: 700},
+        sx: {width: '150px', fontWeight: 700},
         renderCell: (r: ServerRow) => <TooltipCell key="serverName">{r.serverName}</TooltipCell>
     },
     {
         id: 'ip',
         label: 'IP 地址',
-        sx: {width: '10%', minWidth: '130px', fontWeight: 700},
+        sx: {width: '130px', fontWeight: 700},
         renderCell: (r: ServerRow) => <TooltipCell key="ip">{r.ip}</TooltipCell>
     },
     {
         id: 'role',
         label: '角色',
-        sx: {width: '8%', minWidth: '100px', fontWeight: 700},
+        sx: {width: '100px', fontWeight: 700},
         renderCell: (r: ServerRow) => <TooltipCell key="role">{r.role}</TooltipCell>
     },
     {
         id: 'depCustNote',
         label: '部署类型 / 备注',
-        sx: {width: '20%', minWidth: '200px', fontWeight: 700},
+        sx: {width: '200px', fontWeight: 700},
         renderCell: (r: ServerRow) => <TooltipCell
             key="depCustNote">{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell>
     },
     {
         id: 'note',
         label: '使用备注',
-        sx: {fontWeight: 700},
+        sx: {fontWeight: 700}, // 不设置 width，让其自动填充剩余空间
         renderCell: (r: ServerRow) => <TooltipCell key="note">{r.note || '-'}</TooltipCell>
     },
 ];

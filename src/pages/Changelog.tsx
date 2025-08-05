@@ -2,8 +2,8 @@
  * @file src/pages/Changelog.tsx
  * @description 该文件负责渲染“更新日志”页面，并提供搜索功能。
  * @modification
+ *   - [Layout Fix]: 彻底修复了表格右侧的空白问题。通过为前几列设置固定的像素宽度，并让最后一列（更新内容）自动填充所有剩余空间，确保了表格始终能精确地填满其容器的100%宽度。
  *   - [Refactor]: 更新了 `<PageHeader>` 组件的导入路径，以符合 `/src/layouts` 的标准目录结构。
- *   - [Refactor]: 引入并使用了新的可复用布局组件 `<PageHeader />`，以替代之前手写的用于包裹标题和按钮的 Flexbox `<Box>`。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -21,34 +21,35 @@ import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
-import PageHeader from '@/layouts/PageHeader'; // 【核心修改】更新了导入路径
+import PageHeader from '@/layouts/PageHeader';
 
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
+// 【核心修复】为固定宽度的列设置像素宽度，最后一列不设置宽度以自动填充。
 const desktopColumns = [
     {
         id: 'customerName',
         label: '客户名称',
-        sx: {width: '12%', minWidth: '150px', fontWeight: 700},
+        sx: {width: '180px', fontWeight: 700},
         renderCell: (r: ChangelogRow) => <TooltipCell key="customerName">{r.customerName}</TooltipCell>
     },
     {
         id: 'updateTime',
         label: '更新时间',
-        sx: {width: '15%', minWidth: '180px', fontWeight: 700},
+        sx: {width: '180px', fontWeight: 700},
         renderCell: (r: ChangelogRow) => <TooltipCell key="updateTime">{r.updateTime.split(' ')[0]}</TooltipCell>
     },
     {
         id: 'updateType',
         label: '更新类型',
-        sx: {width: '10%', minWidth: '120px', fontWeight: 700},
+        sx: {width: '150px', fontWeight: 700},
         renderCell: (r: ChangelogRow) => <TooltipCell key="updateType">{r.updateType}</TooltipCell>
     },
     {
         id: 'updateContent',
         label: '更新内容',
-        sx: {fontWeight: 700},
+        sx: {fontWeight: 700}, // 不设置 width，让其自动填充剩余空间
         renderCell: (r: ChangelogRow) => <TooltipCell key="updateContent">{r.updateContent}</TooltipCell>
     },
 ];
