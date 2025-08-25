@@ -7,27 +7,29 @@
  * @features
  * 实现的核心功能包括：
  * - 1. **配置驱动的UI**: 表格的结构（列、顺序、样式、渲染方式）由 `desktopColumns` 和 `mobileColumns` 配置数组驱动，彻底消除了重复代码，使维护变得极其简单。
- * - 2. **数据展示**: 使用 Material-UI 的 `<Table>` 组件，在一个可分页的 `DataTable` 容器中展示模拟数据。
- * - 3. **响应式布局**:
- *      - **桌面端**: 包含一个内容丰富的表格，并支持“粘性”固定列。
+ * - 2. **健壮的表格架构**: 采用了 `colSpan` + `Flexbox` 的高级渲染模式，彻底分离了表格的结构布局与内容的视觉布局，从根本上解决了所有已知的布局塌陷和交互冲突问题。
+ * - 3. **数据展示**: 使用 Material-UI 的 `<Table>` 组件，在一个可分页的 `DataTable` 容器中展示模拟数据。
+ * - 4. **响应式布局**:
+ *      - **桌面端**: 包含一个内容丰富的表格。
  *      - **移动端**: 自动切换为列数更少、布局更紧凑的表格视图。
- * - 4. **统一的交互体验**:
- *      - **整行点击**: 通过统一的 `<ClickableTableRow>` 组件，每一行都是一个完整的可点击区域。
+ * - 5. **统一的交互体验**:
+ *      - **整行点击与涟漪**: 通过统一的 `<ClickableTableRow>` 组件，每一行都是一个完整的、带涟漪效果的可点击区域。
  *      - **行高亮**: 支持通过 URL 参数 (`:itemId`) 控制特定行的高亮显示。
  *      - **悬停效果**: 鼠标悬停在行上时，有统一的背景色变化反馈。
- * - 5. **健壮的渲染机制**:
+ *      - **智能悬浮提示**: 通过 `<TooltipCell>` 自动为溢出文本提供悬浮提示，且不会与行点击事件冲突。
+ * - 6. **健壮的渲染机制**:
  *      - **加载状态**: 在模拟数据获取时，会显示一个覆盖整个表格的半透明加载指示器。
  *      - **错误状态**: 在数据加载失败时，会显示清晰的错误提示信息。
- * - 6. **懒加载集成**: 右侧的搜索面板 (`TemplateSearchForm`) 和弹窗内容 (`TemplateModalContent`) 都通过 `React.lazy` 和 `Suspense` 实现按需加载，优化了初始加载性能。
- * - 7. **URL驱动状态**: 详情视图的打开状态完全由URL参数驱动，支持通过链接直接分享和访问特定项的详情。
- * - 8. **全局状态集成**: 与 `LayoutContext` 深度集成，用于控制和管理右侧搜索面板和全局模态框。
- * - 9. **统一错误处理**: 为所有可能在用户交互中出错的回调函数添加了 `try...catch` 块，并调用统一的错误处理机制。
- * - 10. **统一操作按钮**: 页面顶部的操作按钮由统一的 `<ActionButtons>` 组件提供，支持权限控制和响应式换行。
+ * - 7. **懒加载集成**: 右侧的搜索面板 (`TemplateSearchForm`) 和弹窗内容 (`TemplateModalContent`) 都通过 `React.lazy` 和 `Suspense` 实现按需加载，优化了初始加载性能。
+ * - 8. **URL驱动状态**: 详情视图的打开状态完全由URL参数驱动，支持通过链接直接分享和访问特定项的详情。
+ * - 9. **全局状态集成**: 与 `LayoutContext` 深度集成，用于控制和管理右侧搜索面板和全局模态框。
+ * - 10. **统一错误处理**: 为所有可能在用户交互中出错的回调函数添加了 `try...catch` 块，并调用统一的错误处理机制。
+ * - 11. **统一操作按钮**: 页面顶部的操作按钮由统一的 `<ActionButtons>` 组件提供，支持权限控制和响应式换行。
  *
  * @modification
- * - 【核心重构】引入了“配置驱动UI”模式，使用 `columns` 数组来动态渲染表格，彻底消除了桌面端和移动端视图的重复渲染逻辑。
- * - 【注释完善】根据要求，为整个文件添加了极其详尽的、教学级别的注释。
- * - 【架构统一】将此模板页面的布局和功能，与应用内其他页面（如 Servers.tsx）的最终最佳实践完全对齐。
+ * - 【核心架构重构】将表格渲染逻辑完全迁移到 `colSpan` + `Flexbox` 的新架构，以使用我们最终的、健壮的 `<ClickableTableRow>` 组件。
+ * - 【类型安全】为列配置数组添加了 `ColumnConfig` 类型注解，并更新了 `renderCell` 的实现以适应新的架构。
+ * - 【注释完善】根据要求，为整个文件添加了极其详尽的、教学级别的注释，使其成为一个合格的“终极模板”。
  */
 
 // --- 1. IMPORTS ---
@@ -49,8 +51,8 @@ import DataTable from '@/components/ui/DataTable.tsx';
 import TooltipCell from '@/components/ui/TooltipCell.tsx';
 import {type TemplateSearchValues} from '@/components/forms/TemplateSearchForm.tsx';
 import {handleAsyncError} from '@/utils/errorHandler.ts';
-// 导入我们最终的、健壮的可点击行组件和操作按钮组组件。
-import ClickableTableRow from '@/components/ui/ClickableTableRow.tsx';
+// 导入我们最终的、健壮的可点击行组件、其类型定义，以及操作按钮组组件。
+import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow.tsx';
 import ActionButtons from '@/components/ui/ActionButtons.tsx';
 
 
@@ -97,68 +99,49 @@ const templateRows: TemplateRow[] = [
     ),
 ];
 
-// 【核心重构】为桌面端定义列配置数组
-const desktopColumns = [
+// 【核心重构】为桌面端定义列配置数组，并应用 ColumnConfig<TemplateRow> 类型
+const desktopColumns: ColumnConfig<TemplateRow>[] = [
     {
         id: 'name', // 列的唯一标识符
         label: '项目名称', // 在表头中显示的文本
-        sx: { // 应用于表头 <TableCell> 的样式
-            width: '25%',
-            position: 'sticky', // 关键属性：使单元格“粘性”定位
-            left: 0, // 粘在左侧
-            zIndex: 1, // zIndex 确保在滚动时能覆盖其他列
-            bgcolor: 'background.paper', // 需要背景色以覆盖下方滚过的内容
-            fontWeight: 700
-        },
+        sx: { width: '25%' }, // 应用于 Flexbox 容器的宽度
         // 定义如何渲染该列的单元格，接收一整行数据作为参数
-        renderCell: (r: TemplateRow, isLoading: boolean) => (
-            <TooltipCell key="name" sx={{
-                // 单元格也需要保持粘性定位
-                position: 'sticky',
-                left: 0,
-                // 当数据加载时，背景色需要与表头同步，否则会透明
-                bgcolor: 'background.paper',
-                // 关键修复：加载时 zIndex 降级，以被遮罩层覆盖
-                zIndex: isLoading ? 'auto' : 1,
-            }}>
-                {r.name}
-            </TooltipCell>
-        )
+        renderCell: (r: TemplateRow) => <TooltipCell>{r.name}</TooltipCell>
     },
     {
         id: 'category',
         label: '类别',
-        sx: {width: '15%', fontWeight: 700},
-        // 对于不需要 Tooltip 的简单文本，直接使用 TableCell
-        renderCell: (r: TemplateRow) => <TableCell key="category">{r.category}</TableCell>
+        sx: { width: '15%' },
+        // 对于不需要 Tooltip 的简单文本，直接返回文本内容或简单组件
+        renderCell: (r: TemplateRow) => <Typography variant="body2">{r.category}</Typography>
     },
     {
         id: 'description',
         label: '描述',
-        sx: {width: '60%', fontWeight: 700},
-        renderCell: (r: TemplateRow) => <TooltipCell key="desc">{r.description}</TooltipCell>
+        // 不提供 sx.width，ClickableTableRow 会让这一列自动填充剩余空间
+        renderCell: (r: TemplateRow) => <TooltipCell>{r.description}</TooltipCell>
     },
 ];
 
 // 【核心重构】为移动端定义列配置数组
-const mobileColumns = [
+const mobileColumns: ColumnConfig<TemplateRow>[] = [
     {
         id: 'name',
         label: '项目名称',
-        sx: {width: '40%', fontWeight: 700},
-        renderCell: (r: TemplateRow) => <TooltipCell key="name">{r.name}</TooltipCell>
+        sx: { width: '40%' },
+        renderCell: (r: TemplateRow) => <TooltipCell>{r.name}</TooltipCell>
     },
     {
         id: 'category',
         label: '类别',
-        sx: {width: '20%', fontWeight: 700},
-        renderCell: (r: TemplateRow) => <TableCell key="category">{r.category}</TableCell>
+        sx: { width: '20%' },
+        renderCell: (r: TemplateRow) => <Typography variant="body2">{r.category}</Typography>
     },
     {
         id: 'description',
         label: '描述',
-        sx: {width: '40%', fontWeight: 700},
-        renderCell: (r: TemplateRow) => <TooltipCell key="desc">{r.description}</TooltipCell>
+        sx: { width: '40%' },
+        renderCell: (r: TemplateRow) => <TooltipCell>{r.description}</TooltipCell>
     },
 ];
 
@@ -403,21 +386,20 @@ const TemplatePage = (): JSX.Element => {
                             <TableRow>
                                 {/* 【核心重构】动态渲染表头 */}
                                 {columns.map(col => (
-                                    <TableCell key={col.id} sx={col.sx}>{col.label}</TableCell>
+                                    <TableCell key={col.id} sx={{...col.sx, fontWeight: 700}}>{col.label}</TableCell>
                                 ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {pageRows.map(row => (
-                                // 使用 ClickableTableRow 替代旧的实现
+                                // 【核心重构】使用新的 ClickableTableRow 组件，并传入 row 和 columns
                                 <ClickableTableRow
                                     key={row.id} // prop: React 列表渲染的必要 key
+                                    row={row} // prop: 传递整行数据
+                                    columns={columns} // prop: 传递列配置
                                     selected={row.id === itemId} // prop: 将高亮状态传递给组件
                                     onClick={() => navigate(`/app/template-page/${row.id}`, {replace: true})} // prop: 传递点击回调
-                                >
-                                    {/* 【核心重构】动态渲染单元格 */}
-                                    {columns.map(col => col.renderCell(row, isLoading))}
-                                </ClickableTableRow>
+                                />
                             ))}
                         </TableBody>
                     </Table>
