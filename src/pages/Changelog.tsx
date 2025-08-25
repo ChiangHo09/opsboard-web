@@ -2,8 +2,10 @@
  * @file src/pages/Changelog.tsx
  * @description 该文件负责渲染“更新日志”页面，并提供搜索功能。
  * @modification
- *   - [Layout Fix]: 彻底修复了表格右侧的空白问题。通过为前几列设置固定的像素宽度，并让最后一列（更新内容）自动填充所有剩余空间，确保了表格始终能精确地填满其容器的100%宽度。
- *   - [Refactor]: 更新了 `<PageHeader>` 组件的导入路径，以符合 `/src/layouts` 的标准目录结构。
+ *   - [架构重构]：更新了表格主体的渲染逻辑，以使用全新的 `<ClickableTableRow>` 组件架构。
+ *   - [核心修复]：现在不再手动遍历列来渲染 `<td>`，而是将整行数据 `r` 和列配置 `columns` 直接传递给 `<ClickableTableRow>`。该组件内部会使用 `colSpan` 和 `Flexbox` 来构建一个既能正确布局又不会产生交互冲突的行。
+ *   - [类型安全]：为列配置数组 `desktopColumns` 和 `mobileColumns` 添加了 `ColumnConfig<ChangelogRow>[]` 类型注解，确保了类型安全。
+ *   - [最终效果]：此修改与 `ClickableTableRow` 和 `TooltipCell` 的重构相配合，彻底解决了表格在交互时布局塌陷的根本性问题。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -19,59 +21,59 @@ import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDet
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
-import ClickableTableRow from '@/components/ui/ClickableTableRow';
+import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
 
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
-// 【核心修复】为固定宽度的列设置像素宽度，最后一列不设置宽度以自动填充。
-const desktopColumns = [
+// 【核心修复】为列配置数组添加正确的类型注解
+const desktopColumns: ColumnConfig<ChangelogRow>[] = [
     {
         id: 'customerName',
         label: '客户名称',
-        sx: {width: '180px', fontWeight: 700},
-        renderCell: (r: ChangelogRow) => <TooltipCell key="customerName">{r.customerName}</TooltipCell>
+        sx: {width: '180px'},
+        renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell>
     },
     {
         id: 'updateTime',
         label: '更新时间',
-        sx: {width: '180px', fontWeight: 700},
-        renderCell: (r: ChangelogRow) => <TooltipCell key="updateTime">{r.updateTime.split(' ')[0]}</TooltipCell>
+        sx: {width: '180px'},
+        renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split(' ')[0]}</TooltipCell>
     },
     {
         id: 'updateType',
         label: '更新类型',
-        sx: {width: '150px', fontWeight: 700},
-        renderCell: (r: ChangelogRow) => <TooltipCell key="updateType">{r.updateType}</TooltipCell>
+        sx: {width: '150px'},
+        renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell>
     },
     {
         id: 'updateContent',
         label: '更新内容',
-        sx: {fontWeight: 700}, // 不设置 width，让其自动填充剩余空间
-        renderCell: (r: ChangelogRow) => <TooltipCell key="updateContent">{r.updateContent}</TooltipCell>
+        // 不设置 width，让其自动填充剩余空间
+        renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateContent}</TooltipCell>
     },
 ];
 
-const mobileColumns = [
+const mobileColumns: ColumnConfig<ChangelogRow>[] = [
     {
         id: 'customerName',
         label: '客户名称',
-        sx: {width: '33.33%', fontWeight: 700},
-        renderCell: (r: ChangelogRow) => <TooltipCell key="customerName">{r.customerName}</TooltipCell>
+        sx: {width: '33.33%'},
+        renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell>
     },
     {
         id: 'updateTime',
         label: '更新时间',
-        sx: {width: '33.33%', fontWeight: 700},
-        renderCell: (r: ChangelogRow) => <TooltipCell key="updateTime">{r.updateTime.split(' ')[0]}</TooltipCell>
+        sx: {width: '33.33%'},
+        renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split(' ')[0]}</TooltipCell>
     },
     {
         id: 'updateType',
         label: '更新类型',
-        sx: {width: '33.33%', fontWeight: 700},
-        renderCell: (r: ChangelogRow) => <TooltipCell key="updateType">{r.updateType}</TooltipCell>
+        sx: {width: '33.33%'},
+        renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell>
     },
 ];
 
@@ -224,19 +226,20 @@ export default function Changelog(): JSX.Element {
                         <TableHead>
                             <TableRow>
                                 {columns.map(col => (
-                                    <TableCell key={col.id} sx={col.sx}>{col.label}</TableCell>
+                                    <TableCell key={col.id} sx={{...col.sx, fontWeight: 700}}>{col.label}</TableCell>
                                 ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
+                                // 【核心修复】使用新的 ClickableTableRow 组件
                                 <ClickableTableRow
                                     key={r.id}
+                                    row={r}
+                                    columns={columns}
                                     selected={r.id === logId}
                                     onClick={() => navigate(`/app/changelog/${r.id}`, {replace: true})}
-                                >
-                                    {columns.map(col => col.renderCell(r))}
-                                </ClickableTableRow>
+                                />
                             ))}
                         </TableBody>
                     </Table>
