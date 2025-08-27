@@ -1,28 +1,79 @@
+<!--
+/**
+* @file index.html
+* @description 应用的 HTML 主入口文件。
+* @modification
+*   - [UI/UX]：在加载动画下方新增了“正在加载运维信息表...”文本，为用户提供更明确的加载状态反馈。
+*   - [UI/UX]：创建了一个 `.app-loading-container` 的 Flexbox 容器，用于包裹加载动画和文本，确保它们能够作为一个整体垂直和水平居中。
+*   - [UI/UX]：调整了加载动画的 CSS，移除了其自身的定位逻辑，使其能够适应 Flexbox 容器布局。
+*/
+-->
+
 <!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
 
   <!-- ========= 浏览器标签图标 ========= -->
-  <!-- 1. 首选：矢量 SVG（已放在 public/favicon.svg） -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-  <!-- 2. 备用：位图 PNG（准备好文件后，去掉注释即可） -->
-  <!-- <link rel="alternate icon" type="image/png" href="/favicon.png" /> -->
-
-  <!-- 3. 兼容老浏览器的 ICO（准备好文件后，去掉注释即可） -->
-  <!-- <link rel="shortcut icon" href="/favicon.ico" /> -->
 
   <!-- ========= 视口设置（移动端缩放） ========= -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- ========= 浏览器标签文本 ========= -->
   <title>运维信息表</title>
+
+  <!-- 【核心修改】为初始加载动画和文本添加内联样式 -->
+  <style>
+    .app-loading-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px; /* 动画与文本之间的间距 */
+    }
+
+    .app-loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 5px solid #e0e0e0;
+      border-bottom-color: #1976d2;
+      border-radius: 50%;
+      display: inline-block;
+      box-sizing: border-box;
+      animation: app-loading-rotation 1s linear infinite;
+    }
+
+    .app-loading-text {
+      color: #555;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    @keyframes app-loading-rotation {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 </head>
 
 <body>
 <!-- React 挂载点 -->
-<div id="root"></div>
+<div id="root">
+  <!-- 【核心修改】使用容器包裹加载动画和新增的文本 -->
+  <div class="app-loading-container">
+    <div class="app-loading-spinner"></div>
+    <p class="app-loading-text">正在加载运维信息表...</p>
+  </div>
+</div>
 
 <!-- 主入口脚本（由 Vite 注入 ESM 模块） -->
 <script type="module" src="/src/main.tsx"></script>
