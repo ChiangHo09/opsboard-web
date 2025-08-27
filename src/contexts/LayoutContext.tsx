@@ -1,15 +1,13 @@
 /**
- * 文件名: src/contexts/LayoutContext.tsx
- *
- * 文件功能描述:
- * 此文件定义了全局布局上下文（LayoutContext），用于管理整个应用的共享布局状态。
- *
- * 本次修改内容:
- * - 【组件写法现代化】移除了 `LayoutProvider` 组件的 `React.FC` 写法。
- * - **解决方案**:
- *   1. 为 `LayoutProvider` 的 props 定义了独立的 `LayoutProviderProps` 接口，
- *      并显式地在其中定义了 `children: ReactNode`。
- *   2. 为组件注解了 props 类型和 `: JSX.Element` 返回值类型。
+ * @file src/contexts/LayoutContext.tsx
+ * @description 此文件定义了全局布局上下文（LayoutContext），用于管理整个应用的共享布局状态。
+ * @modification
+ *   - [Bug修复]：修复了 `dispatchValue` 的 `useMemo` 依赖数组中 `TS2304: Cannot find name 'setPanelConfig'` 的 TypeScript 错误。将错误的 `setPanelConfig` 更正为正确的 `setModalConfig`。
+ *   - [组件写法现代化]：移除了 `LayoutProvider` 组件的 `React.FC` 写法。
+ *   - **解决方案**:
+ *     1. 为 `LayoutProvider` 的 props 定义了独立的 `LayoutProviderProps` 接口，
+ *        并显式地在其中定义了 `children: ReactNode`。
+ *     2. 为组件注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
 import {createContext, useState, useContext, useMemo, useCallback, type ReactNode, useEffect, type JSX} from 'react';
 import {useTheme, useMediaQuery} from '@mui/material';
@@ -40,12 +38,12 @@ interface LayoutDispatchContextType {
 const LayoutStateContext = createContext<LayoutStateContextType | undefined>(undefined);
 const LayoutDispatchContext = createContext<LayoutDispatchContextType | undefined>(undefined);
 
-// 【核心修改】为 Provider 的 props 定义一个接口
+// 为 Provider 的 props 定义一个接口
 interface LayoutProviderProps {
     children: ReactNode;
 }
 
-// 【核心修改】移除 React.FC，使用现代写法
+// 移除 React.FC，使用现代写法
 export const LayoutProvider = ({children}: LayoutProviderProps): JSX.Element => {
     const [isPanelOpen, setIsPanelOpen] = useState<boolean>(() => {
         try {
@@ -101,7 +99,7 @@ export const LayoutProvider = ({children}: LayoutProviderProps): JSX.Element => 
         setPanelWidth,
         setIsModalOpen,
         setModalConfig,
-    }), [togglePanel, closePanel, setModalConfig]);
+    }), [togglePanel, closePanel, setModalConfig, setPanelContent, setPanelTitle, setPanelWidth, setIsModalOpen]); // 【核心修改】将 setPanelConfig 更正为 setModalConfig
 
     return (
         <LayoutStateContext.Provider value={stateValue}>

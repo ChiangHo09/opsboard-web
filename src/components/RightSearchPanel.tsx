@@ -1,12 +1,10 @@
 /**
- * 文件名: src/components/RightSearchPanel.tsx
- *
- * 文件功能描述:
- * 此文件定义了 RightSearchPanel 组件，一个带动画的右侧容器。
- *
- * 本次修改内容:
- * - 【组件写法现代化】移除了 `export default function` 的写法，采用了现代的、
- *   不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
+ * @file src/components/RightSearchPanel.tsx
+ * @description 此文件定义了 RightSearchPanel 组件，一个带动画的右侧容器。
+ * @modification
+ *   - [动画一致性]：简化 `AnimatePresence` 内部结构，使其只包含一个 `MotionBox`，并始终使用 `animationKey` 作为其 `key`。在该 `MotionBox` 内部根据 `children` 是否存在来条件渲染内容或加载指示器。这消除了 `AnimatePresence` 内部 `key` 切换导致的双重动画，确保与主面板动画同步。
+ *   - [样式调整]：将 `overflowY: 'auto'` 和 `overflowX: 'hidden'` 样式直接应用到动画 `MotionBox` 本身，以确保内容可滚动且动画裁剪正确。
+ *   - [组件写法现代化]：移除了 `export default function` 的写法，采用了现代的、不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
 import {type JSX, type ReactNode } from 'react';
 import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
@@ -25,7 +23,6 @@ export interface RightSearchPanelProps {
 
 const MotionBox = motion(Box);
 
-// 【核心修改】使用现代写法
 const RightSearchPanel = ({
                               open,
                               onClose,
@@ -66,7 +63,7 @@ const RightSearchPanel = ({
                     display: 'flex',
                     flexDirection: 'column',
                     boxSizing: 'border-box',
-                    position: 'relative',
+                    position: 'relative', // 确保此Box是定位上下文，以便内部的绝对定位元素正确参照
                 }}
             >
                 <IconButton
@@ -84,51 +81,56 @@ const RightSearchPanel = ({
                         height: '100%',
                         display: 'flex',
                         flexDirection: 'column',
-                        overflow: 'hidden',
+                        overflow: 'hidden', // 确保此父级 Box 裁剪内容
+                        position: 'relative', // 确保内部绝对定位的MotionBox正确参照此Box
                     }}
                 >
                     <AnimatePresence mode="wait">
-                        {open && !children ? (
+                        {open && ( // 仅当面板打开时渲染内部 MotionBox
                             <MotionBox
-                                key="loading-panel-content"
+                                key={animationKey} // 【核心修改】始终使用 animationKey 作为 key
                                 variants={panelContentVariants}
                                 transition={pageTransition}
                                 initial="initial"
                                 animate="animate"
                                 exit="exit"
                                 sx={{
-                                    width: '100%',
-                                    height: '100%',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <CircularProgress/>
-                            </MotionBox>
-                        ) : open && children ? (
-                            <MotionBox
-                                key={animationKey}
-                                variants={panelContentVariants}
-                                transition={pageTransition}
-                                initial="initial"
-                                animate="animate"
-                                exit="exit"
-                                sx={{
+                                    position: 'absolute',
+                                    inset: 0,
                                     width: '100%',
                                     height: '100%',
                                     display: 'flex',
                                     flexDirection: 'column',
+                                    overflowY: 'auto', // 【核心修改】将 overflow 移到 MotionBox 本身
+                                    overflowX: 'hidden', // 【核心修改】将 overflow 移到 MotionBox 本身
+                                    zIndex: 1,
                                 }}
                             >
-                                <Typography variant="h6" noWrap sx={{mb: 4, pr: 4, flexShrink: 0}}>
-                                    {title}
-                                </Typography>
-                                <Box sx={{flexGrow: 1, overflowY: 'auto', overflowX: 'hidden'}}>
-                                    {children}
-                                </Box>
+                                {children ? (
+                                    <>
+                                        <Typography variant="h6" noWrap sx={{mb: 4, pr: 4, flexShrink: 0}}>
+                                            {title}
+                                        </Typography>
+                                        <Box sx={{
+                                            flexGrow: 1,
+                                            // 【移除】此处的 overflowY/X 样式，因为已移到父级 MotionBox
+                                        }}>
+                                            {children}
+                                        </Box>
+                                    </>
+                                ) : (
+                                    <Box sx={{
+                                        width: '100%',
+                                        height: '100%',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}>
+                                        <CircularProgress/>
+                                    </Box>
+                                )}
                             </MotionBox>
-                        ) : null}
+                        )}
                     </AnimatePresence>
                 </Box>
             </Box>

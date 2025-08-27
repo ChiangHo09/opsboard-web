@@ -1,22 +1,20 @@
 /**
- * 文件名: src/layouts/MainLayout.tsx
- *
- * 代码功能:
- * 此文件定义了应用的主UI布局。
- *
- * 本次修改内容:
- * - 【体验优化】修复了在桌面端打开详情弹窗时，背景列表页面会不必要地重载（刷新）的问题。
- * - **问题根源**:
- *   包裹页面组件的 `ErrorBoundary` 使用了 `location.pathname` 作为其 `key`。当路由从
- *   `/app/tickets` 变为 `/app/tickets/tkt001` 时，`key` 发生变化，导致 React 卸载并
- *   重新挂载整个页面组件，丢失了其滚动位置等状态。
- * - **解决方案**:
- *   将 `ErrorBoundary` 的 `key` 从 `location.pathname` 修改为 `basePath`。
- *   `basePath` 代表了应用的主模块路径（如 `/app/tickets`），在打开详情弹窗这种
- *   子路由导航中，`basePath` 的值保持不变。
- * - **最终效果**:
- *   现在，当用户打开详情弹窗时，`ErrorBoundary` 的 `key` 不再改变，背景页面组件
- *   的状态（如滚动位置）得以保留，实现了无缝、平滑的弹窗体验。
+ * @file src/layouts/MainLayout.tsx
+ * @description 此文件定义了应用的主UI布局。
+ * @modification
+ *   - [动画一致性]：移除在 `basePath` 变化时清除 `LayoutContext` 中 `panelContent` 的逻辑。此举是为了让 `RightSearchPanel` 内部的 `AnimatePresence` 能够更直接地处理内容切换，避免额外的加载状态动画，从而与主面板的动画流程保持同步。
+ *   - [体验优化]：修复了在桌面端打开详情弹窗时，背景列表页面会不必要地重载（刷新）的问题。
+ *   - **问题根源**:
+ *     包裹页面组件的 `ErrorBoundary` 使用了 `location.pathname` 作为其 `key`。当路由从
+ *     `/app/tickets` 变为 `/app/tickets/tkt001` 时，`key` 发生变化，导致 React 卸载并
+ *     重新挂载整个页面组件，丢失了其滚动位置等状态。
+ *   - **解决方案**:
+ *     将 `ErrorBoundary` 的 `key` 从 `location.pathname` 修改为 `basePath`。
+ *     `basePath` 代表了应用的主模块路径（如 `/app/tickets`），在打开详情弹窗这种
+ *     子路由导航中，`basePath` 的值保持不变。
+ *   - **最终效果**:
+ *     现在，当用户打开详情弹窗时，`ErrorBoundary` 的 `key` 不再改变，背景页面组件
+ *     的状态（如滚动位置）得以保留，实现了无缝、平滑的弹窗体验。
  */
 import {useState, type JSX, Suspense, useEffect} from 'react';
 import {useLocation, useOutlet} from 'react-router-dom';
@@ -52,6 +50,7 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
         isMobile, isModalOpen, modalContent, onModalClose,
     } = useLayout();
 
+    // 【修改】不再需要从 useLayoutDispatch 中解构 setPanelContent，因为不再在此处调用它
     const {setIsModalOpen, setModalConfig} = useLayoutDispatch();
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
@@ -59,7 +58,8 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
     useEffect(() => {
         setIsModalOpen(false);
         setModalConfig({content: null, onClose: null});
-    }, [basePath, setIsModalOpen, setModalConfig]);
+        // 【核心修改】移除 setPanelContent(null); 这一行，让 RightSearchPanel 内部的 AnimatePresence 直接处理内容切换
+    }, [basePath, setIsModalOpen, setModalConfig]); // 移除 setPanelContent 依赖
 
     const modalJSX = (
         <AnimatePresence>
