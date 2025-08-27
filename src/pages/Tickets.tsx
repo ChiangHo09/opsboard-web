@@ -2,6 +2,7 @@
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
  * @modification
+ *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  *   - [架构重构]：更新了表格主体的渲染逻辑，以使用全新的 `<ClickableTableRow>` 组件架构。
  *   - [核心修复]：现在不再手动遍历列来渲染 `<td>`，而是将整行数据 `r` 和列配置 `columns` 直接传递给 `<ClickableTableRow>`。该组件内部会使用 `colSpan` 和 `Flexbox` 来构建一个既能正确布局又不会产生交互冲突的行。
  *   - [类型安全]：为列配置数组 `desktopColumns` 和 `mobileColumns` 添加了 `ColumnConfig<TicketRow>[]` 类型注解，确保了类型安全。
@@ -63,7 +64,7 @@ const statusConfig: Record<string, { label: string; sx: (theme: Theme) => object
     },
 };
 
-// 【核心修复】为列配置数组添加正确的类型注解
+// 为列配置数组添加正确的类型注解
 const desktopColumns: ColumnConfig<TicketRow>[] = [
     {
         id: 'customerName',
@@ -77,7 +78,6 @@ const desktopColumns: ColumnConfig<TicketRow>[] = [
         sx: {width: '90px'},
         renderCell: (r: TicketRow) => {
             const currentStatus = statusConfig[r.status] || statusConfig.default;
-            // 【核心修复】移除多余的 TableCell 包装
             return <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>;
         }
     },
@@ -90,7 +90,6 @@ const desktopColumns: ColumnConfig<TicketRow>[] = [
     {
         id: 'operationContent',
         label: '操作内容',
-        // 不设置 width，让其自动填充剩余空间
         renderCell: (r: TicketRow) => <TooltipCell>{r.operationContent}</TooltipCell>
     },
 ];
@@ -108,7 +107,6 @@ const mobileColumns: ColumnConfig<TicketRow>[] = [
         sx: {width: '33.33%'},
         renderCell: (r: TicketRow) => {
             const currentStatus = statusConfig[r.status] || statusConfig.default;
-            // 【核心修复】移除多余的 TableCell 包装
             return <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>;
         }
     },
@@ -212,6 +210,11 @@ const Tickets = (): JSX.Element => {
         togglePanel();
     };
 
+    // 【新增】记忆化行点击处理函数
+    const handleRowClick = useCallback((id: string) => {
+        navigate(`/app/tickets/${id}`, {replace: true});
+    }, [navigate]);
+
     const columns = isMobile ? mobileColumns : desktopColumns;
 
     return (
@@ -277,15 +280,13 @@ const Tickets = (): JSX.Element => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                // 【核心修复】使用新的 ClickableTableRow 组件
                                 <ClickableTableRow
                                     key={r.id}
                                     row={r}
                                     columns={columns}
                                     selected={r.id === ticketId}
-                                    onClick={() => {
-                                        navigate(`/app/tickets/${r.id}`, {replace: true});
-                                    }}
+                                    // 【核心修改】使用记忆化的 handleRowClick
+                                    onClick={() => handleRowClick(r.id)}
                                 />
                             ))}
                         </TableBody>

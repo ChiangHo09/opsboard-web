@@ -2,6 +2,7 @@
  * @file src/pages/Changelog.tsx
  * @description 该文件负责渲染“更新日志”页面，并提供搜索功能。
  * @modification
+ *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  *   - [架构重构]：更新了表格主体的渲染逻辑，以使用全新的 `<ClickableTableRow>` 组件架构。
  *   - [核心修复]：现在不再手动遍历列来渲染 `<td>`，而是将整行数据 `r` 和列配置 `columns` 直接传递给 `<ClickableTableRow>`。该组件内部会使用 `colSpan` 和 `Flexbox` 来构建一个既能正确布局又不会产生交互冲突的行。
  *   - [类型安全]：为列配置数组 `desktopColumns` 和 `mobileColumns` 添加了 `ColumnConfig<ChangelogRow>[]` 类型注解，确保了类型安全。
@@ -28,7 +29,7 @@ import PageHeader from '@/layouts/PageHeader';
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
-// 【核心修复】为列配置数组添加正确的类型注解
+// 为列配置数组添加正确的类型注解
 const desktopColumns: ColumnConfig<ChangelogRow>[] = [
     {
         id: 'customerName',
@@ -51,7 +52,6 @@ const desktopColumns: ColumnConfig<ChangelogRow>[] = [
     {
         id: 'updateContent',
         label: '更新内容',
-        // 不设置 width，让其自动填充剩余空间
         renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateContent}</TooltipCell>
     },
 ];
@@ -175,6 +175,11 @@ export default function Changelog(): JSX.Element {
         togglePanel();
     };
 
+    // 【新增】记忆化行点击处理函数
+    const handleRowClick = useCallback((id: string) => {
+        navigate(`/app/changelog/${id}`, {replace: true});
+    }, [navigate]);
+
     const columns = isMobile ? mobileColumns : desktopColumns;
 
     return (
@@ -232,13 +237,13 @@ export default function Changelog(): JSX.Element {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                // 【核心修复】使用新的 ClickableTableRow 组件
                                 <ClickableTableRow
                                     key={r.id}
                                     row={r}
                                     columns={columns}
                                     selected={r.id === logId}
-                                    onClick={() => navigate(`/app/changelog/${r.id}`, {replace: true})}
+                                    // 【核心修改】使用记忆化的 handleRowClick
+                                    onClick={() => handleRowClick(r.id)}
                                 />
                             ))}
                         </TableBody>

@@ -2,6 +2,7 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
  * @modification
+ *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  *   - [类型修复]：列配置数组 `desktopColumns` 和 `mobileColumns` 的类型 `ColumnConfig<ServerRow>[]` 现在是正确的。由于 `ColumnConfig` 接口已更新并包含了 `label` 属性，因此之前存在的 TypeScript 编译错误 (TS2353) 已被解决。
  *   - [架构重构]：更新了表格主体的渲染逻辑，以使用全新的 `<ClickableTableRow>` 组件架构。
  *   - [Layout Fix]: 修复了表格右侧的空白问题。
@@ -61,7 +62,6 @@ const desktopColumns: ColumnConfig<ServerRow>[] = [
     {
         id: 'note',
         label: '使用备注',
-        // 不设置 width，让其自动填充剩余空间
         renderCell: (r: ServerRow) => <TooltipCell>{r.note || '-'}</TooltipCell>
     },
 ];
@@ -182,6 +182,11 @@ export default function Servers(): JSX.Element {
         togglePanel();
     };
 
+    // 【新增】记忆化行点击处理函数
+    const handleRowClick = useCallback((id: string) => {
+        navigate(`/app/servers/${id}`, {replace: true});
+    }, [navigate]);
+
     const columns = isMobile ? mobileColumns : desktopColumns;
 
     return (
@@ -239,13 +244,13 @@ export default function Servers(): JSX.Element {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(r => (
-                                // 使用新的 ClickableTableRow 组件，并传入 row 和 columns
                                 <ClickableTableRow
                                     key={r.id}
                                     row={r}
                                     columns={columns}
                                     selected={r.id === serverId}
-                                    onClick={() => navigate(`/app/servers/${r.id}`, {replace: true})}
+                                    // 【核心修改】使用记忆化的 handleRowClick
+                                    onClick={() => handleRowClick(r.id)}
                                 />
                             ))}
                         </TableBody>

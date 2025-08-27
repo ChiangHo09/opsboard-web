@@ -27,6 +27,7 @@
  * - 11. **统一操作按钮**: 页面顶部的操作按钮由统一的 `<ActionButtons>` 组件提供，支持权限控制和响应式换行。
  *
  * @modification
+ * - 【性能优化】：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  * - 【核心架构重构】将表格渲染逻辑完全迁移到 `colSpan` + `Flexbox` 的新架构，以使用我们最终的、健壮的 `<ClickableTableRow>` 组件。
  * - 【类型安全】为列配置数组添加了 `ColumnConfig` 类型注解，并更新了 `renderCell` 的实现以适应新的架构。
  * - 【注释完善】根据要求，为整个文件添加了极其详尽的、教学级别的注释，使其成为一个合格的“终极模板”。
@@ -99,7 +100,7 @@ const templateRows: TemplateRow[] = [
     ),
 ];
 
-// 【核心重构】为桌面端定义列配置数组，并应用 ColumnConfig<TemplateRow> 类型
+// 为桌面端定义列配置数组，并应用 ColumnConfig<TemplateRow> 类型
 const desktopColumns: ColumnConfig<TemplateRow>[] = [
     {
         id: 'name', // 列的唯一标识符
@@ -123,7 +124,7 @@ const desktopColumns: ColumnConfig<TemplateRow>[] = [
     },
 ];
 
-// 【核心重构】为移动端定义列配置数组
+// 为移动端定义列配置数组
 const mobileColumns: ColumnConfig<TemplateRow>[] = [
     {
         id: 'name',
@@ -223,6 +224,11 @@ const TemplatePage = (): JSX.Element => {
         }
         togglePanel(); // 调用全局函数来切换面板的开关状态。
     };
+
+    // 【新增】记忆化行点击处理函数
+    const handleRowClick = useCallback((id: string) => {
+        navigate(`/app/template-page/${id}`, {replace: true});
+    }, [navigate]);
 
     // --- 3.4 Effects ---
     // 使用 useEffect 来处理副作用，如响应 props 或 state 的变化。
@@ -384,7 +390,6 @@ const TemplatePage = (): JSX.Element => {
                         sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%'}}>
                         <TableHead>
                             <TableRow>
-                                {/* 【核心重构】动态渲染表头 */}
                                 {columns.map(col => (
                                     <TableCell key={col.id} sx={{...col.sx, fontWeight: 700}}>{col.label}</TableCell>
                                 ))}
@@ -392,13 +397,13 @@ const TemplatePage = (): JSX.Element => {
                         </TableHead>
                         <TableBody>
                             {pageRows.map(row => (
-                                // 【核心重构】使用新的 ClickableTableRow 组件，并传入 row 和 columns
                                 <ClickableTableRow
                                     key={row.id} // prop: React 列表渲染的必要 key
                                     row={row} // prop: 传递整行数据
                                     columns={columns} // prop: 传递列配置
                                     selected={row.id === itemId} // prop: 将高亮状态传递给组件
-                                    onClick={() => navigate(`/app/template-page/${row.id}`, {replace: true})} // prop: 传递点击回调
+                                    // 【核心修改】使用记忆化的 handleRowClick
+                                    onClick={() => handleRowClick(row.id)} // prop: 传递点击回调
                                 />
                             ))}
                         </TableBody>
