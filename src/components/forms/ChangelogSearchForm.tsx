@@ -1,17 +1,21 @@
 /**
- * 文件名: src/components/forms/ChangelogSearchForm.tsx
- *
- * 文件功能描述:
- * 此文件定义了更新日志搜索表单组件（ChangelogSearchForm）。
- *
- * 本次修改内容:
- * - 【组件写法现代化】移除了 `React.FC`，采用了现代的函数组件定义方式，
- *   并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
+ * @file src/components/forms/ChangelogSearchForm.tsx
+ * @description 此文件定义了更新日志搜索表单组件（ChangelogSearchForm）。
+ * @modification
+ *   - [Bug修复]：修复 `TS6133: 'child' is declared but its value is never read.` 警告。将 `handleChange` 函数签名中的未使用参数 `child` 更名为 `_child`，以明确表示其为有意未使用的参数。
+ *   - [Bug修复]：更新 `handleChange` 函数签名，使其兼容 `TextField` 和 `TextField select` 组件的 `onChange` 事件类型，解决 `TS2322` 错误。
+ *   - [性能优化]：使用 `React.memo` 包裹 `ChangelogSearchForm` 组件，以减少不必要的重新渲染。
+ *   - [性能优化]：将所有独立的 `useState` 钩子合并为一个单一的 `useState` 对象，管理所有表单字段值，减少状态更新次数。
+ *   - [性能优化]：为每个输入字段的 `onChange` 处理函数创建记忆化的 `useCallback` 钩子，确保函数引用稳定，从而允许子组件进行更有效的渲染优化。
+ *   - [组件写法现代化]：移除了 `React.FC`，采用了现代的函数组件定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  */
-import {useState, type JSX} from 'react';
-import {Box, TextField, Button, Stack} from '@mui/material';
+import {useState, type JSX, memo, useCallback, type ChangeEvent} from 'react';
+import {Box, TextField, Button, Stack, type SelectChangeEvent} from '@mui/material';
 import {DatePicker} from '@mui/x-date-pickers/DatePicker';
 import {type Dayjs} from 'dayjs';
+
+// 定义一个联合类型，用于处理 TextField 和 Select 的 onChange 事件
+type FormChangeEvent = ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>;
 
 export interface ChangelogSearchValues {
     region: string;
@@ -26,45 +30,80 @@ interface ChangelogSearchFormProps {
     onReset?: () => void;
 }
 
-// 【核心修改】移除 React.FC，使用现代写法
-const ChangelogSearchForm = ({onSearch, onReset}: ChangelogSearchFormProps): JSX.Element => {
-    const [region, setRegion] = useState<string>('');
-    const [serverType, setServerType] = useState<string>('');
-    const [updateCategory, setUpdateCategory] = useState<string>('');
-    const [startTime, setStartTime] = useState<Dayjs | null>(null);
-    const [endTime, setEndTime] = useState<Dayjs | null>(null);
+const ChangelogSearchForm = memo(({onSearch, onReset}: ChangelogSearchFormProps): JSX.Element => {
+    const [formValues, setFormValues] = useState<ChangelogSearchValues>({
+        region: '',
+        startTime: null,
+        endTime: null,
+        serverType: '',
+        updateCategory: ''
+    });
 
-    const handleSearchClick = (): void => {
-        onSearch({region, startTime, endTime, serverType, updateCategory});
-    };
+    // 【核心修改】将 child 参数更名为 _child
+    const handleChange = useCallback((e: FormChangeEvent, _child?: React.ReactNode) => {
+        const name = (e.target as { name?: string }).name || '';
+        const value = e.target.value;
 
-    const handleResetClick = (): void => {
-        setRegion('');
-        setServerType('');
-        setUpdateCategory('');
-        setStartTime(null);
-        setEndTime(null);
+        if (name) {
+            setFormValues(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
+    }, []);
+
+    const handleDateChange = useCallback((field: 'startTime' | 'endTime') => (newValue: Dayjs | null) => {
+        setFormValues(prev => ({
+            ...prev,
+            [field]: newValue
+        }));
+    }, []);
+
+    const handleSearchClick = useCallback((): void => {
+        onSearch(formValues);
+    }, [onSearch, formValues]);
+
+    const handleResetClick = useCallback((): void => {
+        setFormValues({
+            region: '',
+            startTime: null,
+            endTime: null,
+            serverType: '',
+            updateCategory: ''
+        });
         if (onReset) onReset();
-    };
+    }, [onReset]);
 
     return (
         <Stack spacing={2} sx={{display: 'flex', flexDirection: 'column', height: '100%'}}>
             <Box sx={{flexGrow: 1, overflowY: 'auto', pr: 1, mr: -1}}>
-                <TextField fullWidth margin="normal" label="地区" variant="outlined" value={region}
-                           onChange={(e) => setRegion(e.target.value)}/>
-                <TextField fullWidth margin="normal" label="服务器类型" variant="outlined" value={serverType}
-                           onChange={(e) => setServerType(e.target.value)}/>
-                <TextField fullWidth margin="normal" label="更新类别" variant="outlined" value={updateCategory}
-                           onChange={(e) => setUpdateCategory(e.target.value)}/>
+                <TextField fullWidth margin="normal" label="地区" variant="outlined"
+                           name="region"
+                           value={formValues.region}
+                           onChange={handleChange}/>
+                <TextField fullWidth margin="normal" label="服务器类型" variant="outlined"
+                           name="serverType"
+                           value={formValues.serverType}
+                           onChange={handleChange}/>
+                <TextField fullWidth margin="normal" label="更新类别" variant="outlined"
+                           name="updateCategory"
+                           value={formValues.updateCategory}
+                           onChange={handleChange}/>
 
-                <DatePicker label="起始时间" value={startTime} onChange={(newValue) => setStartTime(newValue)}
+                <DatePicker label="起始时间"
+                            value={formValues.startTime}
+                            onChange={handleDateChange('startTime')}
                             format="YYYY-MM-DD" slotProps={{textField: {fullWidth: true, margin: 'normal'}}}/>
-                <DatePicker label="截止时间" value={endTime} onChange={(newValue) => setEndTime(newValue)}
+                <DatePicker label="截止时间"
+                            value={formValues.endTime}
+                            onChange={handleDateChange('endTime')}
                             format="YYYY-MM-DD" slotProps={{textField: {fullWidth: true, margin: 'normal'}}}/>
             </Box>
             <Stack direction="row" spacing={2} sx={{justifyContent: 'center', flexShrink: 0}}>
                 {onReset && (
-                    <Button variant="outlined" onClick={handleResetClick} fullWidth sx={{
+                    <Button variant="outlined"
+                            onClick={handleResetClick}
+                            fullWidth sx={{
                         height: 48,
                         borderRadius: 99,
                         borderColor: 'neutral.main',
@@ -74,7 +113,9 @@ const ChangelogSearchForm = ({onSearch, onReset}: ChangelogSearchFormProps): JSX
                         重置
                     </Button>
                 )}
-                <Button variant="contained" onClick={handleSearchClick} fullWidth sx={{
+                <Button variant="contained"
+                        onClick={handleSearchClick}
+                        fullWidth sx={{
                     height: 48,
                     borderRadius: 99,
                     bgcolor: 'neutral.main',
@@ -87,6 +128,6 @@ const ChangelogSearchForm = ({onSearch, onReset}: ChangelogSearchFormProps): JSX
             </Stack>
         </Stack>
     );
-};
+});
 
 export default ChangelogSearchForm;
