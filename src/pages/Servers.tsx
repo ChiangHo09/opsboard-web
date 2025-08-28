@@ -2,6 +2,7 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
  * @modification
+ *   - [性能优化]：将 `useResponsiveDetailView` 钩子中的 `queryKey` 从内联数组字面量更改为模块级别的常量 `SERVERS_QUERY_KEY`。此举确保了 `queryKey` 的引用稳定性，防止 `useQuery` 在页面组件重新渲染时触发不必要的数据重新获取和处理，从而显著减少 JavaScript 执行时间，解决页面切换时的卡顿问题。
  *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  *   - [类型修复]：列配置数组 `desktopColumns` 和 `mobileColumns` 的类型 `ColumnConfig<ServerRow>[]` 现在是正确的。由于 `ColumnConfig` 接口已更新并包含了 `label` 属性，因此之前存在的 TypeScript 编译错误 (TS2353) 已被解决。
  *   - [架构重构]：更新了表格主体的渲染逻辑，以使用全新的 `<ClickableTableRow>` 组件架构。
@@ -87,6 +88,8 @@ const mobileColumns: ColumnConfig<ServerRow>[] = [
     },
 ];
 
+// 【核心修改】将 queryKey 定义为模块级别的常量
+const SERVERS_QUERY_KEY = ['servers'];
 
 export default function Servers(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -109,7 +112,7 @@ export default function Servers(): JSX.Element {
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
         paramName: 'serverId',
         baseRoute: '/app/servers',
-        queryKey: ['servers'],
+        queryKey: SERVERS_QUERY_KEY, // 【核心修改】使用模块常量
         queryFn: serversApi.fetchAll,
         DetailContentComponent: ServerDetailContent,
     });
@@ -182,7 +185,6 @@ export default function Servers(): JSX.Element {
         togglePanel();
     };
 
-    // 【新增】记忆化行点击处理函数
     const handleRowClick = useCallback((id: string) => {
         navigate(`/app/servers/${id}`, {replace: true});
     }, [navigate]);
@@ -249,7 +251,6 @@ export default function Servers(): JSX.Element {
                                     row={r}
                                     columns={columns}
                                     selected={r.id === serverId}
-                                    // 【核心修改】使用记忆化的 handleRowClick
                                     onClick={() => handleRowClick(r.id)}
                                 />
                             ))}

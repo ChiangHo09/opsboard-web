@@ -27,12 +27,16 @@
  * - 10. **统一操作按钮**: 页面顶部的操作按钮由统一的 `<ActionButtons>` 组件提供，支持权限控制和响应式换行。
  *
  * @modification
- * - [Bug修复]：修复 `TS2322: Type 'string | boolean | undefined' is not assignable to type 'boolean'` 错误。将 `itemExists` 的赋值逻辑更改为 `typeof itemId === 'string' && templateRows.some(...)`，确保其类型始终为 `boolean`。
- * - [Bug修复]：修复 `TS2322: Type 'string | undefined' is not assignable to type 'string'` 错误。在 `<TemplateModalContent itemId={itemId}/>` 中，对 `itemId` 使用非空断言操作符 `!` (`itemId!`)。
- * - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
- * - [核心架构重构]：将表格渲染逻辑完全迁移到 `colSpan` + `Flexbox` 的新架构，以使用我们最终的、健壮的 `<ClickableTableRow>` 组件。
- * - [类型安全]：为列配置数组添加了 `ColumnConfig` 类型注解，并更新了 `renderCell` 的实现以适应新的架构。
- * - [注释完善]：根据要求，为整个文件添加了极其详尽的、教学级别的注释，使其成为一个合格的“终极模板”。
+ *   - [Bug修复]：修复 `TS2305: Module "@/api" has no exported member 'templateApi'.` 错误。通过从 `src/api` 导入 `templateApi`，并更新 `useResponsiveDetailView` 的 `queryFn` 为 `templateApi.fetchAll` 解决。
+ *   - [Bug修复]：修复 `TS6133: 'templateRows' is declared but its value is never read.` 错误。将 `templateRows` 模拟数据定义和 `TemplateRow` 接口移动到 `src/api/index.ts` 中，并从本文件移除。
+ *   - [Bug修复]：修复 `TS2304: Cannot find name 'useResponsiveDetailView'.` 错误。通过从 `src/hooks/useResponsiveDetailView` 导入 `useResponsiveDetailView` 解决。
+ *   - [性能优化]：将 `useResponsiveDetailView` 钩子中的 `queryKey` 从内联数组字面量更改为模块级别的常量 `TEMPLATE_QUERY_KEY`。此举确保了 `queryKey` 的引用稳定性，防止 `useQuery` 在页面组件重新渲染时触发不必要的数据重新获取和处理，从而显著减少 JavaScript 执行时间，解决页面切换时的卡顿问题。
+ *   - [Bug修复]：修复 `TS2322: Type 'string | boolean | undefined' is not assignable to type 'boolean'` 错误。将 `itemExists` 的赋值逻辑更改为 `typeof itemId === 'string' && rows.some(...)`，确保其类型始终为 `boolean`。
+ *   - [Bug修复]：修复 `TS2322: Type 'string | undefined' is not assignable to type 'string'` 错误。在 `<TemplateModalContent itemId={itemId}/>` 中，对 `itemId` 使用非空断言操作符 `!` (`itemId!`)。
+ *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
+ *   - [核心架构重构]：将表格渲染逻辑完全迁移到 `colSpan` + `Flexbox` 的新架构，以使用我们最终的、健壮的 `<ClickableTableRow>` 组件。
+ *   - [类型安全]：为列配置数组添加了 `ColumnConfig` 类型注解，并更新了 `renderCell` 的实现以适应新的架构。
+ *   - [注释完善]：根据要求，为整个文件添加了极其详尽的、教学级别的注释，使其成为一个合格的“终极模板”。
  */
 
 // --- 1. IMPORTS ---
@@ -47,7 +51,6 @@ import {
 } from '@mui/material';
 // 导入全局布局上下文的 Hooks，用于与主布局（如侧边栏、右侧面板、模态框）进行状态交互。
 import {useLayoutDispatch, useLayoutState} from '@/contexts/LayoutContext.tsx';
-// 导入全局通知上下文的 Hook，用于显示用户通知（如 Snackbar）。
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 // 导入页面级布局组件，提供统一的页面容器样式。
 import PageLayout from '@/layouts/PageLayout.tsx';
@@ -57,12 +60,14 @@ import DataTable from '@/components/ui/DataTable.tsx';
 import TooltipCell from '@/components/ui/TooltipCell.tsx';
 // 导入搜索表单的类型定义。
 import {type TemplateSearchValues} from '@/components/forms/TemplateSearchForm.tsx';
-// 导入统一的异步错误处理工具函数。
 import {handleAsyncError} from '@/utils/errorHandler.ts';
 // 导入我们最终的、健壮的可点击行组件及其类型定义。
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow.tsx';
-// 导入页面顶部的操作按钮组组件。
 import ActionButtons from '@/components/ui/ActionButtons.tsx';
+// 【核心修改】从 src/api 导入 templateApi 和 TemplateRow 接口
+import { templateApi, type TemplateRow } from '@/api';
+// 【核心修改】从 src/hooks/useResponsiveDetailView 导入 useResponsiveDetailView
+import { useResponsiveDetailView } from '@/hooks/useResponsiveDetailView';
 
 
 // 使用 React.lazy 进行代码分割，只有在需要时才加载这些组件，优化初始加载性能。
@@ -73,54 +78,36 @@ const TemplateModalContent = lazy(() => import('@/components/modals/TemplateModa
 
 // --- 2. TYPE, DATA, AND CONFIG DEFINITIONS ---
 
-/**
- * @interface TemplateRow
- * @description 定义了表格中单行数据的类型结构。
- * @property {string} id - 行的唯一标识符，通常用于 React 列表的 `key` 和详情页的 URL 参数。
- * @property {string} name - 项目的名称。
- * @property {'A' | 'B' | 'C'} category - 项目的分类，限定为 'A', 'B', 或 'C'。
- * @property {string} description - 项目的详细描述。
- */
-interface TemplateRow {
-    id: string;
-    name: string;
-    category: 'A' | 'B' | 'C';
-    description: string;
-}
+// 【核心修改】TemplateRow 接口已移至 src/api/index.ts
 
 /**
  * @function createData
  * @description 一个创建模拟数据的辅助函数，确保数据结构符合 TemplateRow 接口。
- * @param {string} id - 唯一ID，用于创建行数据。
- * @param {string} name - 项目名称，用于创建行数据。
- * @param {TemplateRow['category']} category - 类别，用于创建行数据。
- * @param {string} description - 描述，用于创建行数据。
+ * @param {string} id - 唯一ID。
+ * @param {string} name - 项目名称。
+ * @param {TemplateRow['category']} category - 类别。
+ * @param {string} description - 描述。
  * @returns {TemplateRow} - 一个符合类型定义的行数据对象。
  */
-const createData = (id: string, name: string, category: TemplateRow['category'], description: string): TemplateRow => ({
-    id, name, category, description,
-});
+// const createData = (id: string, name: string, category: TemplateRow['category'], description: string): TemplateRow => ({
+//     id, name, category, description,
+// });
 
 /**
  * @constant LONG_TEXT
- * @description 一个非常长的文本常量，用于测试表格单元格的文本溢出和 TooltipCell 组件的悬浮提示功能。
+ * @description 一个非常长的文本常量，用于测试表格单元格的文本溢出和 Tooltip 功能。
  */
-const LONG_TEXT = '这是一个非常长的描述，用于演示当文本内容超出单元格宽度时，TooltipCell 组件是如何自动截断文本并提供悬停提示的。';
+// const LONG_TEXT = '这是一个非常长的描述，用于演示当文本内容超出单元格宽度时，TooltipCell 组件是如何自动截断文本并提供悬停提示的。';
 
-/**
- * @constant templateRows
- * @description 模拟的表格数据数组，用于页面展示。包含少量固定数据和大量通过循环生成的随机数据。
- * @type {TemplateRow[]}
- */
-const templateRows: TemplateRow[] = [
-    createData('item-001', '模板项目 Alpha', 'A', '这是 Alpha 项目的简短描述。'),
-    createData('item-002', '模板项目 Beta', 'B', LONG_TEXT),
-    createData('item-003', '模板项目 Gamma', 'C', '这是 Gamma 项目的简短描述。'),
-    // 生成 20 条额外的模拟数据，以测试分页和滚动性能。
-    ...Array.from({length: 20}).map((_, i) =>
-        createData(`item-${i + 4}`, `模板项目 ${i + 4}`, ['A', 'B', 'C'][i % 3] as TemplateRow['category'], `这是第 ${i + 4} 条项目的描述。`)
-    ),
-];
+// 【核心修改】templateRows 模拟数据已移至 src/api/index.ts
+// const templateRows: TemplateRow[] = [
+//     createData('item-001', '模板项目 Alpha', 'A', '这是 Alpha 项目的简短描述。'),
+//     createData('item-002', '模板项目 Beta', 'B', LONG_TEXT),
+//     createData('item-003', '模板项目 Gamma', 'C', '这是 Gamma 项目的简短描述。'),
+//     ...Array.from({length: 20}).map((_, i) =>
+//         createData(`item-${i + 4}`, `模板项目 ${i + 4}`, ['A', 'B', 'C'][i % 3] as TemplateRow['category'], `这是第 ${i + 4} 条项目的描述。`)
+//     ),
+// ];
 
 /**
  * @constant desktopColumns
@@ -192,6 +179,9 @@ const mobileColumns: ColumnConfig<TemplateRow>[] = [
     },
 ];
 
+// 将 queryKey 定义为模块级别的常量
+const TEMPLATE_QUERY_KEY = ['template'];
+
 
 // --- 3. COMPONENT DEFINITION ---
 
@@ -207,7 +197,7 @@ const TemplatePage = (): JSX.Element => {
     // @param {boolean} isMobile - 当前是否为移动端视图（通过 Material-UI 的 useMediaQuery 判断）。
     // @param {boolean} isPanelOpen - 右侧搜索面板是否打开的状态。
     const {isMobile, isPanelOpen} = useLayoutState();
-    // useLayoutDispatch: 从全局布局上下文中获取用于更新状态的 dispatch 函数。
+    // useLayoutDispatch: 从全局布局上下文获取用于更新状态的 dispatch 函数。
     // @param {() => void} togglePanel - 切换右侧面板显示/隐藏的函数。
     // @param {(content: ReactNode | null) => void} setPanelContent - 设置右侧面板内容的函数。
     // @param {(title: string) => void} setPanelTitle - 设置右侧面板标题的函数。
@@ -314,27 +304,25 @@ const TemplatePage = (): JSX.Element => {
     // --- 3.4 Effects ---
     // useEffect: 用于处理组件的副作用，如数据获取、订阅事件、DOM 操作等。
 
-    /**
-     * @effect 模拟数据获取过程。
-     * @description 此 effect 在组件首次挂载时运行一次，模拟从后端获取数据的异步操作。
-     *              它会设置加载状态，并在模拟延迟后解除加载状态，并可能模拟错误。
-     * @dependencies [] - 空依赖数组表示此 effect 只在组件首次挂载时运行一次。
-     * @cleanup - 返回一个清理函数，用于在组件卸载时清除 `setTimeout` 定时器，防止内存泄漏。
-     */
+    // 使用 useResponsiveDetailView 钩子来获取数据
+    // 【核心修改】导入 useResponsiveDetailView 后，现在可以正常使用
+    const {data: rows = [], isLoading: isQueryLoading, isError: isQueryError, error: queryError} = useResponsiveDetailView<TemplateRow, { itemId: string }>({
+        paramName: 'itemId',
+        baseRoute: '/app/template-page',
+        queryKey: TEMPLATE_QUERY_KEY, // 使用模块常量
+        queryFn: templateApi.fetchAll, // 使用 templateApi.fetchAll
+        DetailContentComponent: TemplateModalContent,
+    });
+
+    // 将 useResponsiveDetailView 的加载和错误状态同步到本地状态
     useEffect(() => {
-        setIsLoading(true); // 开始时，将加载状态设置为 `true`。
-        setIsError(false); // 重置错误状态为 `false`。
-        const timer: NodeJS.Timeout = setTimeout(() => {
-            // 模拟成功或失败的逻辑：90% 概率成功，10% 概率失败。
-            if (Math.random() > 0.1) {
-                setIsLoading(false); // 模拟数据获取成功，解除加载状态。
-            } else {
-                setIsLoading(false); // 模拟数据获取失败，解除加载状态。
-                setIsError(true); // 设置错误状态为 `true`。
-            }
-        }, 1500); // 模拟 1.5 秒的网络延迟。
-        return () => clearTimeout(timer); // 组件卸载时清除定时器。
-    }, []);
+        setIsLoading(isQueryLoading);
+    }, [isQueryLoading]);
+
+    useEffect(() => {
+        setIsError(isQueryError);
+    }, [isQueryError]);
+
 
     /**
      * @effect 同步全局面板状态到本地加载状态。
@@ -354,17 +342,17 @@ const TemplatePage = (): JSX.Element => {
      * @description 此 effect 监听 URL 中的 `itemId` 和 `isMobile` 状态。
      *              如果 `itemId` 存在且当前是桌面端，则打开全局模态框并加载详情内容；
      *              否则，确保模态框关闭。
-     * @dependencies [itemId, isMobile, navigate, setIsModalOpen, setModalConfig] - 依赖于这些值的变化。
+     * @dependencies [itemId, isMobile, navigate, setIsModalOpen, setModalConfig, rows] - 依赖于这些值的变化。
      * @param {string | undefined} itemId - 从 URL 中获取的详情项 ID。
      * @param {boolean} isMobile - 当前是否为移动端视图。
      * @param {Function} navigate - React Router 的导航函数。
      * @param {Function} setIsModalOpen - 设置全局模态框打开状态的函数。
      * @param {Function} setModalConfig - 配置全局模态框内容的函数。
+     * @param {TemplateRow[]} rows - 从 `useResponsiveDetailView` 获取的表格数据。
      */
     useEffect(() => {
-        // 【核心修改】确保 itemExists 始终为 boolean 类型
         // 检查 URL 中的 `itemId` 是否存在，并且在模拟数据中能找到对应的项。
-        const itemExists: boolean = typeof itemId === 'string' && templateRows.some((row: TemplateRow) => row.id === itemId);
+        const itemExists: boolean = typeof itemId === 'string' && rows.some((row: TemplateRow) => row.id === itemId);
         // 仅当 `itemId` 存在、数据中能找到对应项且当前不是移动端视图时，才打开弹窗。
         if (itemExists && !isMobile) {
             setIsModalOpen(true); // 调用全局函数打开全局模态框。
@@ -379,7 +367,7 @@ const TemplatePage = (): JSX.Element => {
                         alignItems: 'center'
                     }}><CircularProgress/></Box>}>
                         {/* 懒加载的 TemplateModalContent 组件，并传入 itemId 作为 prop。 */}
-                        {/* 【核心修改】使用非空断言 itemId!，明确告诉 TypeScript itemId 在此处为 string。 */}
+                        // 使用非空断言 itemId!，明确告诉 TypeScript itemId 在此处为 string。
                         <TemplateModalContent itemId={itemId!}/>
                     </Suspense>
                 ),
@@ -391,7 +379,7 @@ const TemplatePage = (): JSX.Element => {
             setIsModalOpen(false);
             setModalConfig({content: null, onClose: null}); // 清空模态框内容和回调。
         }
-    }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig]); // 依赖于这些值的变化。
+    }, [itemId, isMobile, navigate, setIsModalOpen, setModalConfig, rows]); // 依赖于这些值的变化。
 
     /**
      * @effect 核心响应式逻辑 - 处理移动端的页面重定向。
@@ -406,7 +394,7 @@ const TemplatePage = (): JSX.Element => {
         // 如果 URL 中有 `itemId` 且当前是移动端视图，则重定向到专门的移动详情页。
         if (itemId && isMobile) {
             // 使用 `navigate` 函数重定向，`replace: true` 避免在历史记录中留下中间页。
-            // 【核心修改】使用非空断言 itemId!，明确告诉 TypeScript itemId 在此处为 string。
+            // 使用非空断言 itemId!，明确告诉 TypeScript itemId 在此处为 string。
             navigate(`/app/template-page/mobile/${itemId!}`, {replace: true});
         }
     }, [itemId, isMobile, navigate]);
@@ -457,9 +445,9 @@ const TemplatePage = (): JSX.Element => {
     }, [isPanelContentSet, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]); // 依赖于这些值的变化。
 
     // --- 3.5 Render Logic ---
-    // pageRows: 根据当前页码 (`page`) 和每页行数 (`rowsPerPage`)，从 `templateRows` 中截取当前页应显示的数据。
+    // pageRows: 根据当前页码 (`page`) 和每页行数 (`rowsPerPage`)，从 `rows`（从 useResponsiveDetailView 获取）中截取当前页应显示的数据。
     // @type {TemplateRow[]}
-    const pageRows: TemplateRow[] = templateRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const pageRows: TemplateRow[] = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
     // columns: 根据 `isMobile` 状态动态选择要使用的列配置（桌面端或移动端）。
     // @type {ColumnConfig<TemplateRow>[]}
     const columns: ColumnConfig<TemplateRow>[] = isMobile ? mobileColumns : desktopColumns;
@@ -509,13 +497,13 @@ const TemplatePage = (): JSX.Element => {
                         position: 'absolute', inset: 0, // 绝对定位并覆盖整个父容器。
                         display: 'flex', justifyContent: 'center', alignItems: 'center' // 使内容居中。
                     }}>
-                        <Typography color="error">加载失败: 模拟网络错误</Typography> {/* 错误提示文本。 */}
+                        <Typography color="error">加载失败: {queryError?.message || '未知错误'}</Typography> {/* 错误提示文本。 */}
                     </Box>
                 )}
                 {/* DataTable: 通用的数据表格包装组件，处理分页逻辑。 */}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]} // prop: 可选的每页行数选项。
-                    count={templateRows.length} // prop: 总行数，用于计算总页数。
+                    count={rows.length} // prop: 总行数，用于计算总页数。
                     rowsPerPage={rowsPerPage} // prop: 当前每页显示的行数。
                     page={page} // prop: 当前页码。
                     /**

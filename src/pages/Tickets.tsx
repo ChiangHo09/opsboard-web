@@ -2,6 +2,7 @@
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
  * @modification
+ *   - [性能优化]：将 `useResponsiveDetailView` 钩子中的 `queryKey` 从内联数组字面量更改为模块级别的常量 `TICKETS_QUERY_KEY`。此举确保了 `queryKey` 的引用稳定性，防止 `useQuery` 在页面组件重新渲染时触发不必要的数据重新获取和处理，从而显著减少 JavaScript 执行时间，解决页面切换时的卡卡顿问题。
  *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  *   - [架构重构]：更新了表格主体的渲染逻辑，以使用全新的 `<ClickableTableRow>` 组件架构。
  *   - [核心修复]：现在不再手动遍历列来渲染 `<td>`，而是将整行数据 `r` 和列配置 `columns` 直接传递给 `<ClickableTableRow>`。该组件内部会使用 `colSpan` 和 `Flexbox` 来构建一个既能正确布局又不会产生交互冲突的行。
@@ -118,6 +119,8 @@ const mobileColumns: ColumnConfig<TicketRow>[] = [
     },
 ];
 
+// 【核心修改】将 queryKey 定义为模块级别的常量
+const TICKETS_QUERY_KEY = ['tickets'];
 
 const Tickets = (): JSX.Element => {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -141,7 +144,7 @@ const Tickets = (): JSX.Element => {
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
         paramName: 'ticketId',
         baseRoute: '/app/tickets',
-        queryKey: ['tickets'],
+        queryKey: TICKETS_QUERY_KEY, // 【核心修改】使用模块常量
         queryFn: ticketsApi.fetchAll,
         DetailContentComponent: TicketDetailContent,
     });
@@ -210,7 +213,6 @@ const Tickets = (): JSX.Element => {
         togglePanel();
     };
 
-    // 【新增】记忆化行点击处理函数
     const handleRowClick = useCallback((id: string) => {
         navigate(`/app/tickets/${id}`, {replace: true});
     }, [navigate]);
@@ -285,7 +287,6 @@ const Tickets = (): JSX.Element => {
                                     row={r}
                                     columns={columns}
                                     selected={r.id === ticketId}
-                                    // 【核心修改】使用记忆化的 handleRowClick
                                     onClick={() => handleRowClick(r.id)}
                                 />
                             ))}
