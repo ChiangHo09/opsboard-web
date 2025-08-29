@@ -1,16 +1,11 @@
 /**
- * 文件名: src/pages/Dashboard.tsx
- *
- * 代码功能:
- * - 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
- *
- * 本次修改内容:
- * - 【组件写法现代化】移除了 `export default function` 的写法，并为内部的 `StatCard`
- *   组件和 `Dashboard` 组件本身采用了现代的、不使用 `React.FC` 的类型定义方式。
- * - 1. **StatCard**: 为其 props 定义了独立的 `StatCardProps` 接口，并显式注解了
- *      props 类型和 `: JSX.Element` 返回值类型。
- * - 2. **Dashboard**: 将其改造为 `const Dashboard = (): JSX.Element => { ... }` 的形式，
- *      并添加了 `export default`。
+ * @file src/pages/Dashboard.tsx
+ * @description 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
+ * @modification
+ *   - [动画优化]：修改 `useEffect` 钩子的依赖数组为 `[]`。此举确保 `closePanel()` 只在组件首次挂载时执行一次，从而解决首次登录或导航到 Dashboard 页面时，搜索面板“弹出一个面板然后自动收起”的用户体验问题。
+ *   - [组件写法现代化]：移除了 `export default function` 的写法，并为内部的 `StatCard` 组件和 `Dashboard` 组件本身采用了现代的、不使用 `React.FC` 的类型定义方式。
+ *   - 1. **StatCard**: 为其 props 定义了独立的 `StatCardProps` 接口，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
+ *   - 2. **Dashboard**: 将其改造为 `const Dashboard = (): JSX.Element => { ... }` 的形式，并添加了 `export default`。
  */
 import React, {useEffect, type JSX, type ReactNode} from 'react';
 import {
@@ -42,7 +37,7 @@ import {useNavigate} from 'react-router-dom';
 import {useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import PageLayout from '@/layouts/PageLayout';
 
-// 【核心修改】为 StatCard 的 props 定义一个接口
+// 为 StatCard 的 props 定义一个接口
 interface StatCardProps {
     icon: ReactNode;
     title: string;
@@ -50,7 +45,7 @@ interface StatCardProps {
     onClick?: () => void;
 }
 
-// 【核心修改】使用现代写法定义 StatCard 组件
+// 使用现代写法定义 StatCard 组件
 const StatCard = ({icon, title, value, onClick}: StatCardProps): JSX.Element => (
     <Card
         component={onClick ? ButtonBase : 'div'}
@@ -86,7 +81,7 @@ const recentActivities = [
     {id: 'log004', customer: '客户c', action: '常规维护，更新了服务器操作系统补丁。', time: '3天前'},
 ];
 
-// 【核心修改】使用现代写法定义 Dashboard 组件
+// 使用现代写法定义 Dashboard 组件
 const Dashboard = (): JSX.Element => {
     const nickname = 'chiangho';
     const navigate = useNavigate();
@@ -118,9 +113,10 @@ const Dashboard = (): JSX.Element => {
         },
     } as const;
 
+    // 【核心修改】将 useEffect 的依赖数组更改为 []
     useEffect(() => {
         closePanel();
-    }, [closePanel]);
+    }, []); // 仅在组件首次挂载时运行一次
 
     const label = (icon: ReactNode, text: string) => (
         <>

@@ -2,6 +2,7 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，并提供搜索功能。
  * @modification
+ *   - [动画优化]：移除 `isPanelContentSet` 状态及其相关 `useEffect`。修改设置搜索面板内容的 `useEffect`，使其直接依赖 `isPanelOpen` 并移除 `setTimeout(0)`。此举旨在消除面板内容设置的延迟和潜在竞态条件，解决搜索面板在页面切换时“闪现然后自动收起”的问题，确保面板内容与 `isPanelOpen` 状态同步。
  *   - [性能优化]：将 `useResponsiveDetailView` 钩子中的 `queryKey` 从内联数组字面量更改为模块级别的常量 `SERVERS_QUERY_KEY`。此举确保了 `queryKey` 的引用稳定性，防止 `useQuery` 在页面组件重新渲染时触发不必要的数据重新获取和处理，从而显著减少 JavaScript 执行时间，解决页面切换时的卡顿问题。
  *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  *   - [类型修复]：列配置数组 `desktopColumns` 和 `mobileColumns` 的类型 `ColumnConfig<ServerRow>[]` 现在是正确的。由于 `ColumnConfig` 接口已更新并包含了 `label` 属性，因此之前存在的 TypeScript 编译错误 (TS2353) 已被解决。
@@ -88,7 +89,7 @@ const mobileColumns: ColumnConfig<ServerRow>[] = [
     },
 ];
 
-// 【核心修改】将 queryKey 定义为模块级别的常量
+// 将 queryKey 定义为模块级别的常量
 const SERVERS_QUERY_KEY = ['servers'];
 
 export default function Servers(): JSX.Element {
@@ -105,14 +106,14 @@ export default function Servers(): JSX.Element {
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [isPanelContentSet, setIsPanelContentSet] = useState(false);
+    // 移除 isPanelContentSet 状态
 
     const [isAdmin] = useState(true);
 
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
         paramName: 'serverId',
         baseRoute: '/app/servers',
-        queryKey: SERVERS_QUERY_KEY, // 【核心修改】使用模块常量
+        queryKey: SERVERS_QUERY_KEY,
         queryFn: serversApi.fetchAll,
         DetailContentComponent: ServerDetailContent,
     });
@@ -129,11 +130,12 @@ export default function Servers(): JSX.Element {
         }
     }, [serverId, rows, rowsPerPage, page]);
 
-    useEffect(() => {
-        if (isPanelOpen) {
-            setIsPanelContentSet(true);
-        }
-    }, [isPanelOpen]);
+    // 移除同步 isPanelContentSet 的 useEffect
+    // useEffect(() => {
+    //     if (isPanelOpen) {
+    //         setIsPanelContentSet(true);
+    //     }
+    // }, [isPanelOpen]);
 
     const onSearch = useCallback((v: ServerSearchValues) => {
         try {
@@ -150,38 +152,44 @@ export default function Servers(): JSX.Element {
         setRowsPerPage(10);
     }, []);
 
+    // 修改设置面板内容的 useEffect
     useEffect(() => {
-        if (!isPanelContentSet) return;
+        // 如果面板未打开，则立即清除内容
+        if (!isPanelOpen) {
+            setPanelContent(null);
+            setPanelTitle('');
+            return;
+        }
 
-        const timerId = setTimeout(() => {
-            setPanelContent(
-                <Suspense fallback={<Box sx={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                }}><CircularProgress/></Box>}>
-                    <ServerSearchForm onSearch={onSearch} onReset={onReset}/>
-                </Suspense>
-            );
-            setPanelTitle('服务器搜索');
-            setPanelWidth(360);
-        }, 0);
+        // 如果面板打开，则设置内容（无需 setTimeout）
+        setPanelContent(
+            <Suspense fallback={<Box sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+            }}><CircularProgress/></Box>}>
+                <ServerSearchForm onSearch={onSearch} onReset={onReset}/>
+            </Suspense>
+        );
+        setPanelTitle('服务器搜索');
+        setPanelWidth(360);
 
+        // 清理函数：当 isPanelOpen 变为 false 或组件卸载时，清除内容
         return () => {
-            clearTimeout(timerId);
             setPanelContent(null);
             setPanelTitle('');
         };
-    }, [isPanelContentSet, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
+    }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]); // 依赖 isPanelOpen
 
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     const handleTogglePanel = () => {
-        if (!isPanelContentSet) {
-            setIsPanelContentSet(true);
-        }
+        // 移除 isPanelContentSet 的设置
+        // if (!isPanelContentSet) {
+        //     setIsPanelContentSet(true);
+        // }
         togglePanel();
     };
 

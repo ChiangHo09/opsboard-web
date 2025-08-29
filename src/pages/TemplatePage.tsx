@@ -27,6 +27,7 @@
  * - 10. **统一操作按钮**: 页面顶部的操作按钮由统一的 `<ActionButtons>` 组件提供，支持权限控制和响应式换行。
  *
  * @modification
+ *   - [动画优化]：移除 `isPanelContentSet` 状态及其相关 `useEffect`。修改设置搜索面板内容的 `useEffect`，使其直接依赖 `isPanelOpen` 并移除 `setTimeout(0)`。此举旨在消除面板内容设置的延迟和潜在竞态条件，解决搜索面板在页面切换时“闪现然后自动收起”的问题，确保面板内容与 `isPanelOpen` 状态同步。
  *   - [架构重构]：更新 `templateApi` 和 `TemplateRow` 的导入路径，使其指向新的 `src/api/templateApi.ts` 文件。
  *   - [Bug修复]：修复 `TS2305: Module "@/api" has no exported member 'templateApi'.` 错误。通过从 `src/api/templateApi` 导入 `templateApi`，并更新 `useResponsiveDetailView` 的 `queryFn` 为 `templateApi.fetchAll` 解决。
  *   - [Bug修复]：修复 `TS6133: 'templateRows' is declared but its value is never read.` 错误。将 `templateRows` 模拟数据定义和 `TemplateRow` 接口移动到 `src/api/templateApi.ts` 中，并从本文件移除。
@@ -65,9 +66,9 @@ import {handleAsyncError} from '@/utils/errorHandler.ts';
 // 导入我们最终的、健壮的可点击行组件及其类型定义。
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow.tsx';
 import ActionButtons from '@/components/ui/ActionButtons.tsx';
-// 【核心修改】从 src/api/templateApi 导入 templateApi 和 TemplateRow 接口
+// 从 src/api/templateApi 导入 templateApi 和 TemplateRow 接口
 import { templateApi, type TemplateRow } from '@/api/templateApi';
-// 【核心修改】从 src/hooks/useResponsiveDetailView 导入 useResponsiveDetailView
+// 从 src/hooks/useResponsiveDetailView 导入 useResponsiveDetailView
 import { useResponsiveDetailView } from '@/hooks/useResponsiveDetailView';
 
 
@@ -78,37 +79,6 @@ const TemplateSearchForm = lazy(() => import('@/components/forms/TemplateSearchF
 const TemplateModalContent = lazy(() => import('@/components/modals/TemplateModalContent.tsx'));
 
 // --- 2. TYPE, DATA, AND CONFIG DEFINITIONS ---
-
-// 【核心修改】TemplateRow 接口已移至 src/api/templateApi.ts
-
-/**
- * @function createData
- * @description 一个创建模拟数据的辅助函数，确保数据结构符合 TemplateRow 接口。
- * @param {string} id - 唯一ID。
- * @param {string} name - 项目名称。
- * @param {TemplateRow['category']} category - 类别。
- * @param {string} description - 描述。
- * @returns {TemplateRow} - 一个符合类型定义的行数据对象。
- */
-// const createData = (id: string, name: string, category: TemplateRow['category'], description: string): TemplateRow => ({
-//     id, name, category, description,
-// });
-
-/**
- * @constant LONG_TEXT
- * @description 一个非常长的文本常量，用于测试表格单元格的文本溢出和 Tooltip 功能。
- */
-// const LONG_TEXT = '这是一个非常长的描述，用于演示当文本内容超出单元格宽度时，TooltipCell 组件是如何自动截断文本并提供悬停提示的。';
-
-// 【核心修改】templateRows 模拟数据已移至 src/api/templateApi.ts
-// const templateRows: TemplateRow[] = [
-//     createData('item-001', '模板项目 Alpha', 'A', '这是 Alpha 项目的简短描述。'),
-//     createData('item-002', '模板项目 Beta', 'B', LONG_TEXT),
-//     createData('item-003', '模板项目 Gamma', 'C', '这是 Gamma 项目的简短描述。'),
-//     ...Array.from({length: 20}).map((_, i) =>
-//         createData(`item-${i + 4}`, `模板项目 ${i + 4}`, ['A', 'B', 'C'][i % 3] as TemplateRow['category'], `这是第 ${i + 4} 条项目的描述。`)
-//     ),
-// ];
 
 /**
  * @constant desktopColumns
@@ -230,10 +200,8 @@ const TemplatePage = (): JSX.Element => {
     // rowsPerPage: 每页显示的行数。
     // @type {number}
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
-    // isPanelContentSet: 一个布尔标志，用于控制搜索面板内容是否已设置。
-    // 确保面板内容只在需要时（首次打开或重新加载）才被加载和设置。
-    // @type {boolean}
-    const [isPanelContentSet, setIsPanelContentSet] = useState<boolean>(false);
+    // 移除 isPanelContentSet 状态
+    // const [isPanelContentSet, setIsPanelContentSet] = useState<boolean>(false);
     // isLoading: 模拟数据获取的加载状态。
     // @type {boolean}
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -283,10 +251,10 @@ const TemplatePage = (): JSX.Element => {
      * @returns {void}
      */
     const handleTogglePanel = (): void => {
-        // 首次打开面板时，设置 `isPanelContentSet` 为 `true`，以触发 `useEffect` 加载面板内容。
-        if (!isPanelContentSet) {
-            setIsPanelContentSet(true);
-        }
+        // 移除 isPanelContentSet 的设置
+        // if (!isPanelContentSet) {
+        //     setIsPanelContentSet(true);
+        // }
         togglePanel(); // 调用全局布局上下文提供的 `togglePanel` 函数来切换面板的开关状态。
     };
 
@@ -325,17 +293,50 @@ const TemplatePage = (): JSX.Element => {
 
 
     /**
-     * @effect 同步全局面板状态到本地加载状态。
-     * @description 当全局布局上下文中的 `isPanelOpen` 状态变为 `true` 时，
-     *              将本地的 `isPanelContentSet` 状态也设置为 `true`，
-     *              以触发后续 effect 加载搜索面板内容。
-     * @dependencies [isPanelOpen] - 依赖于 `isPanelOpen` 状态的变化。
+     * @effect 负责在需要时加载搜索面板的内容。
+     * @description 此 effect 监听 `isPanelOpen` 状态。当其为 `true` 时，
+     *              设置面板内容；当其为 `false` 时，清除面板内容。
+     *              移除了 `setTimeout(0)` 以确保内容设置与面板状态同步，避免动画冲突。
+     * @dependencies [isPanelOpen, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset] - 依赖于这些值的变化。
+     * @param {boolean} isPanelOpen - 右侧搜索面板是否打开的状态。
+     * @param {Function} setPanelContent - 设置右侧面板内容的全局函数。
+     * @param {Function} setPanelTitle - 设置右侧面板标题的全局函数。
+     * @param {Function} setPanelWidth - 设置右侧面板宽度的全局函数。
+     * @param {Function} handleSearch - 记忆化的搜索回调函数。
+     * @param {Function} handleReset - 记忆化的重置回调函数。
+     * @cleanup - 返回一个清理函数，用于在 effect 重新运行或组件卸载时，清空面板内容和标题。
      */
     useEffect(() => {
-        if (isPanelOpen) {
-            setIsPanelContentSet(true);
+        // 如果面板未打开，则立即清除内容
+        if (!isPanelOpen) {
+            setPanelContent(null);
+            setPanelTitle('');
+            return;
         }
-    }, [isPanelOpen]);
+
+        // 如果面板打开，则设置内容（无需 setTimeout）
+        setPanelContent(
+            // 使用 Suspense 包裹懒加载的搜索表单组件，提供加载中的后备 UI。
+            <Suspense fallback={<Box sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+            }}><CircularProgress/></Box>}>
+                {/* 懒加载的 TemplateSearchForm 组件，并传入记忆化的搜索和重置回调。 */}
+                <TemplateSearchForm onSearch={handleSearch} onReset={handleReset}/>
+            </Suspense>
+        );
+        setPanelTitle('模板搜索'); // 设置右侧面板的标题。
+        setPanelWidth(360); // 设置右侧面板的宽度。
+
+        // 返回一个清理函数。当 effect 重新运行或组件卸载时，此函数会被调用。
+        return () => {
+            setPanelContent(null); // 清空面板内容。
+            setPanelTitle(''); // 清空面板标题。
+        };
+    }, [isPanelOpen, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]); // 依赖于这些值的变化。
 
     /**
      * @effect 核心响应式逻辑 - 处理桌面端详情弹窗的显示。
@@ -401,11 +402,11 @@ const TemplatePage = (): JSX.Element => {
 
     /**
      * @effect 负责在需要时加载搜索面板的内容。
-     * @description 此 effect 监听 `isPanelContentSet` 状态。当其为 `true` 时，
-     *              通过 `setTimeout(..., 0)` 将面板内容的设置推迟到下一个事件循环，
-     *              以确保面板动画（宽度变化）能够流畅进行，避免内容加载阻塞动画。
-     * @dependencies [isPanelContentSet, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset] - 依赖于这些值的变化。
-     * @param {boolean} isPanelContentSet - 控制面板内容是否需要设置的本地状态。
+     * @description 此 effect 监听 `isPanelOpen` 状态。当其为 `true` 时，
+     *              设置面板内容；当其为 `false` 时，清除面板内容。
+     *              移除了 `setTimeout(0)` 以确保内容设置与面板状态同步，避免动画冲突。
+     * @dependencies [isPanelOpen, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset] - 依赖于这些值的变化。
+     * @param {boolean} isPanelOpen - 右侧搜索面板是否打开的状态。
      * @param {Function} setPanelContent - 设置右侧面板内容的全局函数。
      * @param {Function} setPanelTitle - 设置右侧面板标题的全局函数。
      * @param {Function} setPanelWidth - 设置右侧面板宽度的全局函数。
@@ -414,35 +415,36 @@ const TemplatePage = (): JSX.Element => {
      * @cleanup - 返回一个清理函数，用于在 effect 重新运行或组件卸载时，清空面板内容和标题。
      */
     useEffect(() => {
-        if (!isPanelContentSet) return; // 如果 `isPanelContentSet` 为 `false`，则提前返回，不设置内容。
+        // 如果面板未打开，则立即清除内容
+        if (!isPanelOpen) {
+            setPanelContent(null);
+            setPanelTitle('');
+            return;
+        }
 
-        // 使用 `setTimeout(..., 0)` 将内容设置推迟到下一个事件循环。
-        // 这允许浏览器在设置内容之前完成当前的渲染周期，确保面板的打开动画（宽度变化）能够流畅执行。
-        const timerId: NodeJS.Timeout = setTimeout(() => {
-            setPanelContent(
-                // 使用 Suspense 包裹懒加载的搜索表单组件，提供加载中的后备 UI。
-                <Suspense fallback={<Box sx={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                }}><CircularProgress/></Box>}>
-                    {/* 懒加载的 TemplateSearchForm 组件，并传入记忆化的搜索和重置回调。 */}
-                    <TemplateSearchForm onSearch={handleSearch} onReset={handleReset}/>
-                </Suspense>
-            );
-            setPanelTitle('模板搜索'); // 设置右侧面板的标题。
-            setPanelWidth(360); // 设置右侧面板的宽度。
-        }, 0);
+        // 如果面板打开，则设置内容（无需 setTimeout）
+        setPanelContent(
+            // 使用 Suspense 包裹懒加载的搜索表单组件，提供加载中的后备 UI。
+            <Suspense fallback={<Box sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+            }}><CircularProgress/></Box>}>
+                {/* 懒加载的 TemplateSearchForm 组件，并传入记忆化的搜索和重置回调。 */}
+                <TemplateSearchForm onSearch={handleSearch} onReset={handleReset}/>
+            </Suspense>
+        );
+        setPanelTitle('模板搜索'); // 设置右侧面板的标题。
+        setPanelWidth(360); // 设置右侧面板的宽度。
 
         // 返回一个清理函数。当 effect 重新运行或组件卸载时，此函数会被调用。
         return () => {
-            clearTimeout(timerId); // 清除定时器，防止在内容被替换或组件卸载时执行旧的设置。
             setPanelContent(null); // 清空面板内容。
             setPanelTitle(''); // 清空面板标题。
         };
-    }, [isPanelContentSet, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]); // 依赖于这些值的变化。
+    }, [isPanelOpen, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]); // 依赖于这些值的变化。
 
     // --- 3.5 Render Logic ---
     // pageRows: 根据当前页码 (`page`) 和每页行数 (`rowsPerPage`)，从 `rows`（从 useResponsiveDetailView 获取）中截取当前页应显示的数据。

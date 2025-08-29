@@ -2,6 +2,7 @@
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
  * @modification
+ *   - [动画优化]：移除 `isPanelContentSet` 状态及其相关 `useEffect`。修改设置搜索面板内容的 `useEffect`，使其直接依赖 `isPanelOpen` 并移除 `setTimeout(0)`。此举旨在消除面板内容设置的延迟和潜在竞态条件，解决搜索面板在页面切换时“闪现然后自动收起”的问题，确保面板内容与 `isPanelOpen` 状态同步。
  *   - [性能优化]：将 `useResponsiveDetailView` 钩子中的 `queryKey` 从内联数组字面量更改为模块级别的常量 `TICKETS_QUERY_KEY`。此举确保了 `queryKey` 的引用稳定性，防止 `useQuery` 在页面组件重新渲染时触发不必要的数据重新获取和处理，从而显著减少 JavaScript 执行时间，解决页面切换时的卡卡顿问题。
  *   - [性能优化]：将传递给 `ClickableTableRow` 的 `onClick` 回调函数使用 `useCallback` 进行记忆化。这确保了在父组件重新渲染时，`onClick` 函数的引用保持稳定，从而配合 `React.memo` 减少 `ClickableTableRow` 的不必要渲染，提高表格性能。
  *   - [架构重构]：更新了表格主体的渲染逻辑，以使用全新的 `<ClickableTableRow>` 组件架构。
@@ -119,7 +120,7 @@ const mobileColumns: ColumnConfig<TicketRow>[] = [
     },
 ];
 
-// 【核心修改】将 queryKey 定义为模块级别的常量
+// 将 queryKey 定义为模块级别的常量
 const TICKETS_QUERY_KEY = ['tickets'];
 
 const Tickets = (): JSX.Element => {
@@ -137,14 +138,14 @@ const Tickets = (): JSX.Element => {
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [isPanelContentSet, setIsPanelContentSet] = useState(false);
+    // 移除 isPanelContentSet 状态
 
     const [isAdmin] = useState(true);
 
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
         paramName: 'ticketId',
         baseRoute: '/app/tickets',
-        queryKey: TICKETS_QUERY_KEY, // 【核心修改】使用模块常量
+        queryKey: TICKETS_QUERY_KEY,
         queryFn: ticketsApi.fetchAll,
         DetailContentComponent: TicketDetailContent,
     });
@@ -161,11 +162,12 @@ const Tickets = (): JSX.Element => {
         }
     }, [ticketId, rows, rowsPerPage, page]);
 
-    useEffect(() => {
-        if (isPanelOpen) {
-            setIsPanelContentSet(true);
-        }
-    }, [isPanelOpen]);
+    // 移除同步 isPanelContentSet 的 useEffect
+    // useEffect(() => {
+    //     if (isPanelOpen) {
+    //         setIsPanelContentSet(true);
+    //     }
+    // }, [isPanelOpen]);
 
     const onSearch = useCallback((v: TicketSearchValues) => {
         try {
@@ -180,36 +182,44 @@ const Tickets = (): JSX.Element => {
         alert('重置工单搜索表单');
     }, []);
 
+    // 修改设置面板内容的 useEffect
     useEffect(() => {
-        if (!isPanelContentSet) return;
-        const timerId = setTimeout(() => {
-            setPanelContent(
-                <Suspense fallback={<Box sx={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                }}><CircularProgress/></Box>}>
-                    <TicketSearchForm onSearch={onSearch} onReset={onReset}/>
-                </Suspense>
-            );
-            setPanelTitle('工单搜索');
-            setPanelWidth(360);
-        }, 0);
+        // 如果面板未打开，则立即清除内容
+        if (!isPanelOpen) {
+            setPanelContent(null);
+            setPanelTitle('');
+            return;
+        }
+
+        // 如果面板打开，则设置内容（无需 setTimeout）
+        setPanelContent(
+            <Suspense fallback={<Box sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+            }}><CircularProgress/></Box>}>
+                <TicketSearchForm onSearch={onSearch} onReset={onReset}/>
+            </Suspense>
+        );
+        setPanelTitle('工单搜索');
+        setPanelWidth(360);
+
+        // 清理函数：当 isPanelOpen 变为 false 或组件卸载时，清除内容
         return () => {
-            clearTimeout(timerId);
             setPanelContent(null);
             setPanelTitle('');
         };
-    }, [isPanelContentSet, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
+    }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]); // 依赖 isPanelOpen
 
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     const handleTogglePanel = () => {
-        if (!isPanelContentSet) {
-            setIsPanelContentSet(true);
-        }
+        // 移除 isPanelContentSet 的设置
+        // if (!isPanelContentSet) {
+        //     setIsPanelContentSet(true);
+        // }
         togglePanel();
     };
 
