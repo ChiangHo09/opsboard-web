@@ -27,8 +27,9 @@
  * - 10. **统一操作按钮**: 页面顶部的操作按钮由统一的 `<ActionButtons>` 组件提供，支持权限控制和响应式换行。
  *
  * @modification
- *   - [Bug修复]：修复 `TS2305: Module "@/api" has no exported member 'templateApi'.` 错误。通过从 `src/api` 导入 `templateApi`，并更新 `useResponsiveDetailView` 的 `queryFn` 为 `templateApi.fetchAll` 解决。
- *   - [Bug修复]：修复 `TS6133: 'templateRows' is declared but its value is never read.` 错误。将 `templateRows` 模拟数据定义和 `TemplateRow` 接口移动到 `src/api/index.ts` 中，并从本文件移除。
+ *   - [架构重构]：更新 `templateApi` 和 `TemplateRow` 的导入路径，使其指向新的 `src/api/templateApi.ts` 文件。
+ *   - [Bug修复]：修复 `TS2305: Module "@/api" has no exported member 'templateApi'.` 错误。通过从 `src/api/templateApi` 导入 `templateApi`，并更新 `useResponsiveDetailView` 的 `queryFn` 为 `templateApi.fetchAll` 解决。
+ *   - [Bug修复]：修复 `TS6133: 'templateRows' is declared but its value is never read.` 错误。将 `templateRows` 模拟数据定义和 `TemplateRow` 接口移动到 `src/api/templateApi.ts` 中，并从本文件移除。
  *   - [Bug修复]：修复 `TS2304: Cannot find name 'useResponsiveDetailView'.` 错误。通过从 `src/hooks/useResponsiveDetailView` 导入 `useResponsiveDetailView` 解决。
  *   - [性能优化]：将 `useResponsiveDetailView` 钩子中的 `queryKey` 从内联数组字面量更改为模块级别的常量 `TEMPLATE_QUERY_KEY`。此举确保了 `queryKey` 的引用稳定性，防止 `useQuery` 在页面组件重新渲染时触发不必要的数据重新获取和处理，从而显著减少 JavaScript 执行时间，解决页面切换时的卡顿问题。
  *   - [Bug修复]：修复 `TS2322: Type 'string | boolean | undefined' is not assignable to type 'boolean'` 错误。将 `itemExists` 的赋值逻辑更改为 `typeof itemId === 'string' && rows.some(...)`，确保其类型始终为 `boolean`。
@@ -64,8 +65,8 @@ import {handleAsyncError} from '@/utils/errorHandler.ts';
 // 导入我们最终的、健壮的可点击行组件及其类型定义。
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow.tsx';
 import ActionButtons from '@/components/ui/ActionButtons.tsx';
-// 【核心修改】从 src/api 导入 templateApi 和 TemplateRow 接口
-import { templateApi, type TemplateRow } from '@/api';
+// 【核心修改】从 src/api/templateApi 导入 templateApi 和 TemplateRow 接口
+import { templateApi, type TemplateRow } from '@/api/templateApi';
 // 【核心修改】从 src/hooks/useResponsiveDetailView 导入 useResponsiveDetailView
 import { useResponsiveDetailView } from '@/hooks/useResponsiveDetailView';
 
@@ -78,7 +79,7 @@ const TemplateModalContent = lazy(() => import('@/components/modals/TemplateModa
 
 // --- 2. TYPE, DATA, AND CONFIG DEFINITIONS ---
 
-// 【核心修改】TemplateRow 接口已移至 src/api/index.ts
+// 【核心修改】TemplateRow 接口已移至 src/api/templateApi.ts
 
 /**
  * @function createData
@@ -99,7 +100,7 @@ const TemplateModalContent = lazy(() => import('@/components/modals/TemplateModa
  */
 // const LONG_TEXT = '这是一个非常长的描述，用于演示当文本内容超出单元格宽度时，TooltipCell 组件是如何自动截断文本并提供悬停提示的。';
 
-// 【核心修改】templateRows 模拟数据已移至 src/api/index.ts
+// 【核心修改】templateRows 模拟数据已移至 src/api/templateApi.ts
 // const templateRows: TemplateRow[] = [
 //     createData('item-001', '模板项目 Alpha', 'A', '这是 Alpha 项目的简短描述。'),
 //     createData('item-002', '模板项目 Beta', 'B', LONG_TEXT),
@@ -305,7 +306,6 @@ const TemplatePage = (): JSX.Element => {
     // useEffect: 用于处理组件的副作用，如数据获取、订阅事件、DOM 操作等。
 
     // 使用 useResponsiveDetailView 钩子来获取数据
-    // 【核心修改】导入 useResponsiveDetailView 后，现在可以正常使用
     const {data: rows = [], isLoading: isQueryLoading, isError: isQueryError, error: queryError} = useResponsiveDetailView<TemplateRow, { itemId: string }>({
         paramName: 'itemId',
         baseRoute: '/app/template-page',
