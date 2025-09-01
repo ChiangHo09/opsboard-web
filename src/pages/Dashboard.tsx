@@ -1,30 +1,29 @@
 /**
  * @file src/pages/Dashboard.tsx
  * @description 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
- * @modification
+ * @modification 本次提交中所做的具体修改摘要。
  *   - [动画优化]：修改 `useEffect` 钩子的依赖数组为 `[]`。此举确保 `closePanel()` 只在组件首次挂载时执行一次，从而解决首次登录或导航到 Dashboard 页面时，搜索面板“弹出一个面板然后自动收起”的用户体验问题。
  *   - [组件写法现代化]：移除了 `export default function` 的写法，并为内部的 `StatCard` 组件和 `Dashboard` 组件本身采用了现代的、不使用 `React.FC` 的类型定义方式。
  *   - 1. **StatCard**: 为其 props 定义了独立的 `StatCardProps` 接口，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
  *   - 2. **Dashboard**: 将其改造为 `const Dashboard = (): JSX.Element => { ... }` 的形式，并添加了 `export default`。
+ *   - [视觉简化]：移除了 `StatCard` 组件在悬浮（hover）时的动画效果（如阴影和位移），现在仅保留背景色变为灰色的效果，以简化交互。
  */
 import React, {useEffect, type JSX, type ReactNode} from 'react';
 import {
     Box,
-    Typography,
     Button,
-    Stack,
+    ButtonBase,
     Card,
     CardContent,
+    Divider,
     List,
     ListItem,
+    ListItemButton,
     ListItemText,
-    Divider,
-    ButtonBase,
-    ListItemButton
+    Stack,
+    Typography,
 } from '@mui/material';
-
 import {motion, type Transition} from 'framer-motion';
-
 import RestorePageIcon from '@mui/icons-material/RestorePage';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PlaylistAddCheckCircleIcon from '@mui/icons-material/PlaylistAddCheckCircle';
@@ -32,7 +31,6 @@ import PollRoundedIcon from '@mui/icons-material/PollRounded';
 import DnsIcon from '@mui/icons-material/Dns';
 import UpdateIcon from '@mui/icons-material/Update';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-
 import {useNavigate} from 'react-router-dom';
 import {useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import PageLayout from '@/layouts/PageLayout';
@@ -58,6 +56,7 @@ const StatCard = ({icon, title, value, onClick}: StatCardProps): JSX.Element => 
             alignItems: 'center',
             textAlign: 'initial',
             '&:hover': {
+                // 根据用户要求，悬浮时仅改变背景色为灰色（action.hover），移除了动画效果
                 bgcolor: onClick ? 'action.hover' : 'transparent',
             },
         }}
