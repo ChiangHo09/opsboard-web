@@ -40,5 +40,5 @@ jobs:
         run: |
           # 这个命令会把构建好的文件（通常在 dist 目录）强制复制到您之前设定的 IIS 网站根目录
           # !!! 请务必将下面的目标路径修改为您自己的 IIS 网站物理路径 !!!
-          Copy-Item -Path ./dist/* -Destination C:\inetpub\wwwroot\my-frontend-project -Recurse -Force
+          Copy-Item -Path ./dist/* -Destination C:\Users\Administrator\Documents\opsboard-web -Recurse -Force
         # 注意：如果您的项目构建产物目录不是 dist，请修改 -Path ./dist/*
