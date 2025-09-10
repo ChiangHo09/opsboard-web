@@ -1,17 +1,16 @@
 /**
  * @file src/App.tsx
  * @description 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
- * @modification
- *   - [UI/UX]：修复了应用首次启动时，初始加载动画和路由懒加载动画之间的“闪烁”问题。
- *   - [原因]：之前的实现中，顶层的布局“外壳”组件（如 `AppLayout`）被懒加载。这导致在初始HTML动画结束后，React `Suspense`会因等待加载布局外壳的代码而立即显示另一个加载动画，造成视觉上的闪烁。
- *   - [解决方案]：将渲染首屏所必需的顶层布局组件 `Login` 和 `AppLayout` 从 `React.lazy()` 动态导入改回静态导入。
- *   - [最终效果]：现在，当初始加载动画消失时，无论是登录页还是已登录页面的基础布局都可以被立即渲染，无需等待，彻底解决了首次加载时的闪烁问题。应用内部的深层页面继续保持懒加载以优化性能。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [性能监控]：新增了 `PerformanceObserver` 来监控并报告耗时超过50毫秒的长任务（Long Task）。这有助于在开发过程中识别并解决阻塞主线程的性能瓶瓶颈。
+ *   - [代码分割]：确认了 `Changelog` 组件及其他页面级组件已通过 `React.lazy()` 实现代码分割，符合优化方案要求。
+ *   - [脚本移除说明]：根据优化方案，应移除 AdBlock 检测等非关键脚本。当前代码库中未发现此类脚本，此项为最佳实践提醒。
  */
 import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom';
 import {QueryClient, QueryClientProvider, QueryCache} from '@tanstack/react-query';
 import {ThemeProvider} from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { lazy, Suspense, type JSX } from 'react';
+import { lazy, Suspense, type JSX, useEffect } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 
 import theme from './theme';
@@ -122,6 +121,32 @@ const AppLogic = (): JSX.Element => {
 };
 
 const App = (): JSX.Element => {
+    // [性能监控]：实现长任务监控
+    useEffect(() => {
+        // 检查 PerformanceObserver 是否受支持，以避免在旧版浏览器中出错
+        if ('PerformanceObserver' in window) {
+            const perfObserver = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                    // 报告所有耗时超过 50ms 的任务
+                    if (entry.duration > 50) {
+                        console.warn('Long task detected:', {
+                            name: entry.name,
+                            duration: entry.duration,
+                            entry: entry,
+                        });
+                    }
+                }
+            });
+            // 开始观察 'longtask' 类型的性能条目
+            perfObserver.observe({ entryTypes: ['longtask'] });
+
+            // 组件卸载时断开观察者，以进行清理
+            return () => {
+                perfObserver.disconnect();
+            };
+        }
+    }, []); // 空依赖数组确保此 effect 仅在组件挂载时运行一次
+
     return (
         <ErrorBoundary fallback={<GlobalErrorFallback/>}>
             <ThemeProvider theme={theme}>

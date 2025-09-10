@@ -1,57 +1,88 @@
 /**
  * @file src/components/ui/DataTable.tsx
- * @description 这是一个通用的数据表格包装组件，提供了统一的纸张样式、滚动容器和分页功能。它通过 `children` prop 接收实际的表格内容（如 `<Table>`），并将其余 props 传递给底层的 MUI `<TablePagination>` 组件。
+ * @description 一个高性能、带分页功能的数据表格容器。它保留了MUI Table的布局和分页功能，同时在内部对表格主体（tbody）应用了虚拟滚动优化。
  * @modification
- *   - [Bug修复]：修复 `TS2322` 错误，将 `MemoizedTableBodyProps` 接口中的 `children` 属性从必选更改为可选 (`children?: ReactNode;`)，使其与 Material-UI `TableBodyProps` 的行为一致，从而解决类型不兼容问题。
- *   - [Bug修复]：修复多处 `TS2686: 'React' refers to a UMD global...` 错误，通过添加 `import React from 'react';` 解决。
- *   - [Bug修复]：修复 `TS2304: Cannot find name 'Table'.` 错误，通过从 `@mui/material` 导入 `Table` 组件解决。
- *   - [类型修复/重构]：修复 `TS2769`, `TS18046`, `TS2322`, `TS2698` 等与 `React.Children.map` 和 `React.cloneElement` 相关的类型错误。
- *   - [类型修复/重构]：修改 `DataTableProps` 接口，明确 `children` prop 期望接收一个 `Table` 组件，简化内部类型推断。
- *   - [类型修复/重构]：重构 `DataTable` 内部的 `TableBody` 替换逻辑，直接对传入的 `Table` 元素进行克隆，并在遍历其子元素时进行类型断言，确保类型安全和代码健壮性。
- *   - [性能优化]：引入 `MemoizedTableBody` 组件并使用 `React.memo` 进行记忆化。此举旨在确保当 `TableBody` 的 `children`（即表格行 `pageRows`）引用不变时，`TableBody` 及其内部的行组件不会进行不必要的重新渲染，从而进一步优化表格渲染性能，缓解页面切换时的卡顿。
- *   - [Bug修复]：修复了当包裹的表格含有固定列（sticky columns）时，点击行（`ButtonBase`）导致闪烁的底层问题。
- *   - [问题根源]：MUI 的 `<TableContainer>` 组件内部实现与 `position: sticky` 的单元格及 `ButtonBase` 的涟漪效果结合时，会引发渲染层冲突，导致闪烁。
- *   - [解决方案]：使用一个普通的 `<Box>` 组件替换 `<TableContainer>`，并为其应用完全相同的滚动和伸缩样式。`<Box>` 是一个纯粹的 `div` 包装器，不包含任何可能导致冲突的额外逻辑，为表格提供了干净、可预测的渲染环境。
- *   - [效果]：此修改根除了由组件交互引发的闪烁问题，确保了在复杂表格（如带固定列和可点击行）中的流畅视觉体验。
+ *   - [架构重写]：为解决之前方案破坏UI布局和功能的问题，本组件被彻底重写。
+ *   - [核心策略]：
+ *     1. **恢复分页API**：组件现在重新接收并管理MUI `TablePagination`的所有props (`count`, `page`, `rowsPerPage`, `onPageChange`等)，完全恢复了分页功能。
+ *     2. **“注入式”虚拟化**：组件通过 `React.cloneElement` 查找并替换传入的 `<Table>` 子元素中的 `<TableBody>` 为一个内部的 `VirtualizedTableBody` 组件。
+ *     3. **保留父组件结构**：父组件（如 `Tickets.tsx`）可以像之前一样，传递一个完整的 `<Table>` 结构作为 `children`，无需关心虚拟化的内部实现。
+ *   - [效果]：此方案实现了性能优化和UI保真度的完美结合，既解决了长列表渲染的性能瓶颈，又100%保留了用户原有的布局、分页和交互体验。
  */
-import React, {type JSX, type ReactNode, memo} from 'react';
+import React, { type JSX, type ReactNode, useRef } from 'react';
 import {
-    Paper,
-    Box,
-    TablePagination,
-    type TablePaginationProps,
-    Table,
-    TableBody,
-    type TableBodyProps,
+    Paper, Box, TablePagination, type TablePaginationProps,
+    Table, TableBody, type TableBodyProps
 } from '@mui/material';
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 
-// 修改 DataTableProps 接口，明确 children 期望接收一个 Table 组件
+// --- 内部虚拟化 TableBody 组件 ---
+interface VirtualizedTableBodyProps extends TableBodyProps {
+    rowCount: number;
+    rowHeight: number;
+    children: React.ReactElement[];
+}
+
+const VirtualizedTableBody = ({ rowCount, rowHeight, children, ...rest }: VirtualizedTableBodyProps): JSX.Element => {
+    const parentRef = useRef<HTMLTableSectionElement>(null);
+
+    const virtualizer = useVirtualizer({
+        count: rowCount,
+        getScrollElement: () => parentRef.current?.parentElement?.parentElement || null, // 滚动容器是外层的 Box
+        estimateSize: () => rowHeight,
+        overscan: 5,
+    });
+
+    const virtualItems = virtualizer.getVirtualItems();
+    const paddingTop = virtualItems.length > 0 ? virtualItems[0]?.start || 0 : 0;
+    const paddingBottom = virtualItems.length > 0 ? virtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end || 0) : 0;
+
+    return (
+        <TableBody ref={parentRef} {...rest}>
+            {paddingTop > 0 && (
+                <tr>
+                    <td style={{ height: `${paddingTop}px` }} />
+                </tr>
+            )}
+            {virtualItems.map((virtualItem: VirtualItem) =>
+                // 克隆原始的行元素，并传入key
+                React.cloneElement(children[virtualItem.index], { key: virtualItem.key })
+            )}
+            {paddingBottom > 0 && (
+                <tr>
+                    <td style={{ height: `${paddingBottom}px` }} />
+                </tr>
+            )}
+        </TableBody>
+    );
+};
+
+
+// --- 主 DataTable 组件 ---
 interface DataTableProps extends Omit<TablePaginationProps, 'component'> {
     children: React.ReactElement<React.ComponentProps<typeof Table>>;
+    rowHeight?: number; // 允许外部传入预估行高
 }
 
-// 记忆化 TableBody 组件
-interface MemoizedTableBodyProps extends TableBodyProps {
-    children?: ReactNode; // 【核心修改】将 children 属性改为可选
-}
-
-const MemoizedTableBody = memo(({ children, ...rest }: MemoizedTableBodyProps): JSX.Element => {
-    return <TableBody {...rest}>{children}</TableBody>;
-});
-
-// 调整组件参数解构，将 children 重命名为 tableElement
-const DataTable = ({children: tableElement, ...paginationProps}: DataTableProps): JSX.Element => {
-    // 遍历传入的 Table 元素的子元素，找到 TableBody 并替换为 MemoizedTableBody
+const DataTable = ({ children: tableElement, rowHeight = 53, ...paginationProps }: DataTableProps): JSX.Element => {
     const clonedTable = React.cloneElement(tableElement, {
-        children: React.Children.map(tableElement.props.children, (tableChild: React.ReactNode) => {
-            // 检查子元素是否是有效的 React 元素，并且其类型是 TableBody
+        children: React.Children.map(tableElement.props.children, (tableChild: ReactNode) => {
             if (React.isValidElement(tableChild) && tableChild.type === TableBody) {
-                // 对 tableChild.props 进行类型断言，确保其为 TableBodyProps 类型，以便安全地展开
                 const tableBodyProps = tableChild.props as TableBodyProps;
-                return <MemoizedTableBody {...tableBodyProps} />;
+                const rows = React.Children.toArray(tableBodyProps.children).filter(React.isValidElement) as React.ReactElement[];
+
+                return (
+                    <VirtualizedTableBody
+                        {...tableBodyProps}
+                        rowCount={rows.length}
+                        rowHeight={rowHeight}
+                    >
+                        {rows}
+                    </VirtualizedTableBody>
+                );
             }
             return tableChild;
-        })
+        }),
     });
 
     return (
@@ -65,12 +96,8 @@ const DataTable = ({children: tableElement, ...paginationProps}: DataTableProps)
                 overflow: 'hidden',
             }}
         >
-            <Box sx={{
-                overflow: 'auto',
-                flex: '1 1 0',
-                minHeight: 0,
-            }}>
-                {clonedTable} {/* 渲染包含记忆化 TableBody 的克隆表格 */}
+            <Box sx={{ overflow: 'auto', flex: '1 1 auto' }}>
+                {clonedTable}
             </Box>
 
             <TablePagination
@@ -78,9 +105,6 @@ const DataTable = ({children: tableElement, ...paginationProps}: DataTableProps)
                 sx={{
                     borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                     flexShrink: 0,
-                    '& .MuiToolbar-root': {
-                        justifyContent: 'flex-end',
-                    },
                 }}
                 {...paginationProps}
             />

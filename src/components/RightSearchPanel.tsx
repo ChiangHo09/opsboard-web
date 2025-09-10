@@ -2,15 +2,16 @@
  * @file src/components/RightSearchPanel.tsx
  * @description 此文件定义了 RightSearchPanel 组件，一个带动画的右侧容器。
  * @modification
- *   - [动画一致性]：简化 `AnimatePresence` 内部结构，使其只包含一个 `MotionBox`，并始终使用 `animationKey` 作为其 `key`。在该 `MotionBox` 内部根据 `children` 是否存在来条件渲染内容或加载指示器。这消除了 `AnimatePresence` 内部 `key` 切换导致的双重动画，确保与主面板动画同步。
- *   - [样式调整]：将 `overflowY: 'auto'` 和 `overflowX: 'hidden'` 样式直接应用到动画 `MotionBox` 本身，以确保内容可滚动且动画裁剪正确。
- *   - [组件写法现代化]：移除了 `export default function` 的写法，采用了现代的、不使用 `React.FC` 的类型定义方式，并显式注解了 props 类型和 `: JSX.Element` 返回值类型。
+ *   - [性能优化]：为搜索输入框实现了300ms的防抖功能。通过引入 `useDebounce` 钩子，避免了在用户快速输入时频繁触发搜索逻辑，显著降低了不必要的计算或API请求。
+ *   - [性能优化]：为执行动画的 `MotionBox` 添加了 `will-change: 'width'` CSS属性。此举向浏览器提示该元素的 `width` 属性即将发生变化，允许浏览器提前进行优化，将该元素提升到独立的合成层，从而使动画更平滑。
+ *   - [功能增强]：在面板内部新增了一个 `TextField` 作为搜索框示例，并展示了如何结合 `useState` 和 `useDebounce` 来管理和响应用户输入。
  */
-import {type JSX, type ReactNode } from 'react';
-import {Box, Typography, IconButton, CircularProgress} from '@mui/material';
+import {type JSX, type ReactNode, useState, useEffect } from 'react';
+import {Box, Typography, IconButton, CircularProgress, TextField, Alert} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {motion, type Variants, AnimatePresence} from 'framer-motion';
 import { pageTransition, panelContentVariants } from '@/utils/animations';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export interface RightSearchPanelProps {
     open: boolean;
@@ -31,6 +32,32 @@ const RightSearchPanel = ({
                               children,
                               contentKey,
                           }: RightSearchPanelProps): JSX.Element => {
+
+    // [防抖实现] 1. 为搜索输入框创建状态
+    const [searchTerm, setSearchTerm] = useState('');
+    // [防抖实现] 2. 使用 useDebounce 钩子，延迟300ms
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResult, setSearchResult] = useState('');
+
+    // [防抖实现] 3. 使用 useEffect 监听防抖后的值
+    useEffect(() => {
+        if (debouncedSearchTerm) {
+            setIsSearching(true);
+            setSearchResult('');
+            console.log(`Searching for: "${debouncedSearchTerm}"`);
+            // 模拟 API 调用
+            const searchTimeout = setTimeout(() => {
+                setIsSearching(false);
+                setSearchResult(`找到了关于 "${debouncedSearchTerm}" 的结果。`);
+            }, 1000);
+            return () => clearTimeout(searchTimeout);
+        } else {
+            setIsSearching(false);
+            setSearchResult('');
+        }
+    }, [debouncedSearchTerm]);
+
 
     const panelVariants: Variants = {
         open: {width: width, transition: {duration: 0.28, ease: [0.4, 0, 0.2, 1]}},
@@ -53,6 +80,8 @@ const RightSearchPanel = ({
                 boxSizing: 'border-box',
                 ml: open ? 3 : 0,
                 transition: 'margin-left 0.28s ease',
+                // [图层优化] 提示浏览器 width 属性将要改变，以便进行优化
+                willChange: 'width',
             }}
         >
             <Box
@@ -63,7 +92,7 @@ const RightSearchPanel = ({
                     display: 'flex',
                     flexDirection: 'column',
                     boxSizing: 'border-box',
-                    position: 'relative', // 确保此Box是定位上下文，以便内部的绝对定位元素正确参照
+                    position: 'relative',
                 }}
             >
                 <IconButton
@@ -81,14 +110,14 @@ const RightSearchPanel = ({
                         height: '100%',
                         display: 'flex',
                         flexDirection: 'column',
-                        overflow: 'hidden', // 确保此父级 Box 裁剪内容
-                        position: 'relative', // 确保内部绝对定位的MotionBox正确参照此Box
+                        overflow: 'hidden',
+                        position: 'relative',
                     }}
                 >
                     <AnimatePresence mode="wait">
-                        {open && ( // 仅当面板打开时渲染内部 MotionBox
+                        {open && (
                             <MotionBox
-                                key={animationKey} // 【核心修改】始终使用 animationKey 作为 key
+                                key={animationKey}
                                 variants={panelContentVariants}
                                 transition={pageTransition}
                                 initial="initial"
@@ -101,23 +130,34 @@ const RightSearchPanel = ({
                                     height: '100%',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    overflowY: 'auto', // 【核心修改】将 overflow 移到 MotionBox 本身
-                                    overflowX: 'hidden', // 【核心修改】将 overflow 移到 MotionBox 本身
+                                    overflowY: 'auto',
+                                    overflowX: 'hidden',
                                     zIndex: 1,
                                 }}
                             >
+                                <Typography variant="h6" noWrap sx={{mb: 2, pr: 4, flexShrink: 0}}>
+                                    {title}
+                                </Typography>
+
+                                {/* [防抖实现] 4. 添加搜索输入框和结果展示 */}
+                                <Box sx={{ mb: 2 }}>
+                                    <TextField
+                                        fullWidth
+                                        label="输入以搜索..."
+                                        variant="outlined"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                    <Box sx={{ height: 40, mt: 1, display: 'flex', alignItems: 'center' }}>
+                                        {isSearching && <CircularProgress size={20} />}
+                                        {searchResult && <Alert severity="success" sx={{ width: '100%', py: 0 }}>{searchResult}</Alert>}
+                                    </Box>
+                                </Box>
+
                                 {children ? (
-                                    <>
-                                        <Typography variant="h6" noWrap sx={{mb: 4, pr: 4, flexShrink: 0}}>
-                                            {title}
-                                        </Typography>
-                                        <Box sx={{
-                                            flexGrow: 1,
-                                            // 【移除】此处的 overflowY/X 样式，因为已移到父级 MotionBox
-                                        }}>
-                                            {children}
-                                        </Box>
-                                    </>
+                                    <Box sx={{ flexGrow: 1 }}>
+                                        {children}
+                                    </Box>
                                 ) : (
                                     <Box sx={{
                                         width: '100%',

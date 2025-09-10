@@ -1,91 +1,22 @@
-/******************************************************************
- *  文件路径：src/index.css
- *  说明：
- *    · 全局基础样式——字体、颜色设计令牌、滚动条美化等都集中于此。
- *    · ★本次关键修复★
- *        1) 将 html/body/#root 的 overflow 调整为 hidden，
- *           并添加 overscroll-behavior: contain，彻底锁死最外层滚动。
- *        2) 其余 table / scrollbar / code-block 规则维持原状，保证 sticky 生效。
- ******************************************************************/
+/**
+ * @file src/index.css
+ * @description 全局基础样式，包括字体、颜色变量、滚动条等。
+ * @modification
+ *   - [网络优化]：移除了所有本地 `@font-face` 规则。
+ *   - [原因]：为了减少初始加载时的HTTP请求数量并优化字体加载策略，我们将字体管理完全交给 `main.tsx` 中的 `@fontsource` 包导入。
+ *   - [效果]：这种方法利用了现代前端构建工具（如Vite或Webpack）的能力，可以更好地对字体文件进行分块、哈希和缓存控制，从而提升加载性能。
+ */
 
-/* ───────────────── 0. 字体文件引入 ───────────────── */
-/* 下面每个 @font-face 的 src 两个 URL：
- *   · 第 1 个为 woff2（现代浏览器优先）；
- *   · 第 2 个为 woff（兼容旧版）。
- * 每行属性右侧均有中文注释说明其作用。*/
-@font-face {
-    font-family: 'Roboto';                    /* 字体名称：Roboto Regular */
-    font-style: normal;                       /* 正常体（非斜体） */
-    font-weight: 400;                         /* 字重 400 */
-    font-display: swap;                       /* 浏览器先用系统字体，加载完再替换 */
-    src: url('./fonts/roboto-v48-latin-regular.woff2') format('woff2'),
-    url('./fonts/roboto-v48-latin-regular.woff') format('woff');
-}
-
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 500;                         /* Medium */
-    font-display: swap;
-    src: url('./fonts/roboto-v48-latin-500.woff2') format('woff2'),
-    url('./fonts/roboto-v48-latin-500.woff') format('woff');
-}
-
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 700;                         /* Bold */
-    font-display: swap;
-    src: url('./fonts/roboto-v48-latin-700.woff2') format('woff2'),
-    url('./fonts/roboto-v48-latin-700.woff') format('woff');
-}
-
-/* Noto Sans SC（思源黑体简体中文）——与 Roboto 组合实现中英混排 */
-@font-face {
-    font-family: 'Noto Sans SC';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('./fonts/noto-sans-sc-v38-latin-regular.woff2') format('woff2'),
-    url('./fonts/noto-sans-sc-v38-latin-regular.woff') format('woff');
-}
-
-@font-face {
-    font-family: 'Noto Sans SC';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('./fonts/noto-sans-sc-v38-latin-500.woff2') format('woff2'),
-    url('./fonts/noto-sans-sc-v38-latin-500.woff') format('woff');
-}
-
-@font-face {
-    font-family: 'Noto Sans SC';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('./fonts/noto-sans-sc-v38-latin-700.woff2') format('woff2'),
-    url('./fonts/noto-sans-sc-v38-latin-700.woff') format('woff');
-}
-
-/* Roboto Mono：代码块 / 等宽数字 */
-@font-face {
-    font-family: 'Roboto Mono';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('./fonts/roboto-mono-v30-latin-regular.woff2') format('woff2'),
-    url('./fonts/roboto-mono-v30-latin-regular.woff') format('woff');
-}
-
-@font-face {
-    font-family: 'Roboto Mono';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url('./fonts/roboto-mono-v30-latin-500.woff2') format('woff2'),
-    url('./fonts/roboto-mono-v30-latin-500.woff') format('woff');
-}
+/* ───────────────── 0. 字体文件引入 (已移除) ───────────────── */
+/*
+ * 所有 @font-face 声明已被移除。
+ * 字体现在通过在 `src/main.tsx` 中导入 `@fontsource` 包来管理。
+ * 例如: import '@fontsource/roboto/400.css';
+ * 这种方法有以下优点：
+ * 1. 减少请求：构建工具可以将字体文件内联或作为优化后的资源块处理。
+ * 2. 版本控制：字体版本与 npm 包版本绑定，易于管理和更新。
+ * 3. 自动优化：构建工具会自动处理 `font-display: swap` 等最佳实践。
+*/
 
 /* ───────────────── 1. 设计令牌（CSS Variables） ───────────────── */
 :root {
