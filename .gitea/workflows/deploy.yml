@@ -1,0 +1,44 @@
+# 工作流的名称
+name: Build and Deploy Frontend Project
+
+# 触发条件：当有代码 push 到 main 分支时触发
+on:
+  push:
+    branches:
+      - master  # 您可以修改为您需要部署的分支，比如 master
+
+# 任务列表
+jobs:
+  # 定义一个名为 build-and-deploy 的任务
+  build-and-deploy:
+    # 关键！这里的标签必须和您注册 Runner 时设置的标签完全一致
+    runs-on: windows-iis
+
+    # 任务包含的步骤
+    steps:
+      # 第1步：检出代码
+      # 这个步骤会从 Gitea 仓库把最新的代码下载到 Runner 所在的虚拟机里
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 第2步：设置 Node.js 环境
+      # 如果您的项目需要 npm install 和 npm run build，就需要这一步
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # 请根据您的项目要求，指定正确的 Node.js 版本
+
+      # 第3步：安装依赖并执行构建
+      - name: Install Dependencies and Build
+        run: |
+          npm install
+          npm run build
+        # 注意：如果您的构建命令不是 npm run build，请修改它
+
+      # 第4步：部署到 IIS 网站目录
+      - name: Deploy to IIS Directory
+        run: |
+          # 这个命令会把构建好的文件（通常在 dist 目录）强制复制到您之前设定的 IIS 网站根目录
+          # !!! 请务必将下面的目标路径修改为您自己的 IIS 网站物理路径 !!!
+          Copy-Item -Path ./dist/* -Destination C:\inetpub\wwwroot\my-frontend-project -Recurse -Force
+        # 注意：如果您的项目构建产物目录不是 dist，请修改 -Path ./dist/*
