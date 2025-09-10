@@ -17,28 +17,26 @@ jobs:
     # 任务包含的步骤
     steps:
       # 第1步：检出代码
-      # 这个步骤会从 Gitea 仓库把最新的代码下载到 Runner 所在的虚拟机里
       - name: Checkout Repository
+        # 直接指向本地缓存的 actions/checkout
         uses: actions/checkout@v4
 
       # 第2步：设置 Node.js 环境
-      # 如果您的项目需要 npm install 和 npm run build，就需要这一步
       - name: Setup Node.js
+        # 直接指向本地缓存的 actions/setup-node
         uses: actions/setup-node@v4
-        with:
-          node-version: '18' # 请根据您的项目要求，指定正确的 Node.js 版本
+          
+          # 第3步：安装依赖并执行构建
+          - name: Install Dependencies and Build
+            run: |
+              npm install
+              npm run build
+            # 注意：如果您的构建命令不是 npm run build，请修改它
 
-      # 第3步：安装依赖并执行构建
-      - name: Install Dependencies and Build
-        run: |
-          npm install
-          npm run build
-        # 注意：如果您的构建命令不是 npm run build，请修改它
-
-      # 第4步：部署到 IIS 网站目录
-      - name: Deploy to IIS Directory
-        run: |
-          # 这个命令会把构建好的文件（通常在 dist 目录）强制复制到您之前设定的 IIS 网站根目录
-          # !!! 请务必将下面的目标路径修改为您自己的 IIS 网站物理路径 !!!
-          Copy-Item -Path ./dist/* -Destination C:\inetpub\wwwroot\opsboard-web -Recurse -Force
-        # 注意：如果您的项目构建产物目录不是 dist，请修改 -Path ./dist/*
+          # 第4步：部署到 IIS 网站目录
+          - name: Deploy to IIS Directory
+            run: |
+              # 这个命令会把构建好的文件（通常在 dist 目录）强制复制到您之前设定的 IIS 网站根目录
+              # !!! 请务必将下面的目标路径修改为您自己的 IIS 网站物理路径 !!!
+              Copy-Item -Path ./dist/* -Destination C:\inetpub\wwwroot\opsboard-web -Recurse -Force
+            # 注意：如果您的项目构建产物目录不是 dist，请修改 -Path ./dist/*
