@@ -2,13 +2,16 @@
  * @file src/pages/Tickets.tsx
  * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
  * @modification
- *   - [布局恢复]：完全恢复了组件的原始布局和功能，以解决之前虚拟化方案导致的UI错乱问题。
- *   - [分页恢复]：重新引入了 `page` 和 `rowsPerPage` state，恢复了客户端分页逻辑。表格现在按页显示数据，分页器功能完全正常。
- *   - [DataTable用法恢复]：`DataTable` 组件的用法已恢复至原始模式，现在它接收分页相关的 props，并将一个完整的 `<Table>` 结构作为 `children`。虚拟化现在由 `DataTable` 内部透明处理。
- *   - [性能优化]：虽然恢复了布局，但通过新的“注入式”虚拟化 `DataTable`，表格主体（tbody）的渲染性能依然得到了优化，实现了UI保真和性能的统一。
+ *   - [最终UX修复]：修复了在所有平台上，点击行导致弹窗打开时，行本身会“闪烁”一下的视觉问题。
+ *   - [原因]：行的高亮状态更新与弹窗的出现被捆绑在同一次React渲染周期中，两个视觉事件同时发生，被人眼感知为“闪烁”。
+ *   - [解决方案]：
+ *     1. 引入了一个新的本地state `clickedRowId`，用于提供即时的视觉反馈。
+ *     2. 当行被点击时，**立即**更新`clickedRowId`来高亮该行，让用户瞬间看到操作响应。
+ *     3. **然后**再调用`useDelayedNavigate`来启动延迟导航，从而触发弹窗逻辑。
+ *     4. 通过在时间和渲染周期上分离“行高亮”和“弹窗出现”这两个视觉事件，彻底消除了“闪烁”感，实现了平滑的交互体验。
  */
-import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
+import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
+import {useParams} from 'react-router-dom';
 import {
     Box, Typography, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress, Chip, type Theme
@@ -27,6 +30,7 @@ import {red} from '@mui/material/colors';
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
+import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
 
 const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm'));
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
@@ -56,13 +60,14 @@ const Tickets = (): JSX.Element => {
     const {isMobile, isPanelOpen} = useLayoutState();
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth } = useLayoutDispatch();
     const showNotification = useNotification();
-    const navigate = useNavigate();
     const {ticketId} = useParams<{ ticketId: string }>();
     const [isAdmin] = useState(true);
-
-    // [恢复] 重新引入分页 state
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const delayedNavigate = useDelayedNavigate();
+
+    // [核心修复] 1. 新增一个 state 用于即时视觉反馈
+    const [clickedRowId, setClickedRowId] = useState<string | null>(null);
 
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
         paramName: 'ticketId',
@@ -83,6 +88,14 @@ const Tickets = (): JSX.Element => {
             }
         }
     }, [ticketId, rows, rowsPerPage, page]);
+
+    // [核心修复] 4. 添加一个 effect 来清理临时的 clickedRowId
+    useEffect(() => {
+        // 当弹窗关闭（即 ticketId 从 URL 中消失）时，清空临时点击状态。
+        if (!ticketId) {
+            setClickedRowId(null);
+        }
+    }, [ticketId]);
 
     const onSearch = useCallback((v: TicketSearchValues) => {
         try {
@@ -116,14 +129,43 @@ const Tickets = (): JSX.Element => {
         };
     }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
-    // [恢复] 重新引入 pageRows 计算逻辑
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+    // [核心修复] 2. 修改点击处理函数
     const handleRowClick = useCallback((id: string) => {
-        navigate(`/app/tickets/${id}`, {replace: true});
-    }, [navigate]);
+        // 步骤 A: 立即设置点击状态，触发即时的高亮效果
+        setClickedRowId(id);
+        // 步骤 B: 然后再启动延迟导航，以触发弹窗
+        delayedNavigate(`/app/tickets/${id}`, {replace: true});
+    }, [delayedNavigate]);
 
     const columns = isMobile ? mobileColumns : desktopColumns;
+
+    const tableContent = useMemo(() => (
+        <Table stickyHeader aria-label="工单信息表" sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%'}}>
+            <TableHead>
+                <TableRow>
+                    {columns.map(col => (
+                        <TableCell key={col.id} sx={{...col.sx, fontWeight: 700}}>{col.label}</TableCell>
+                    ))}
+                </TableRow>
+            </TableHead>
+            <TableBody>
+                {pageRows.map(r => (
+                    <ClickableTableRow
+                        key={r.id}
+                        row={r}
+                        columns={columns}
+                        // [核心修复] 3. 修改高亮逻辑
+                        // 行被视为选中，如果它的 ID 匹配 URL 参数，或者匹配我们临时的点击状态
+                        selected={r.id === ticketId || r.id === clickedRowId}
+                        onClick={() => handleRowClick(r.id)}
+                    />
+                ))}
+            </TableBody>
+        </Table>
+        // 依赖项数组现在也需要包含 clickedRowId
+    ), [pageRows, columns, ticketId, clickedRowId, handleRowClick]);
 
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -136,7 +178,6 @@ const Tickets = (): JSX.Element => {
                 {isLoading && ( <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}> <CircularProgress/> </Box> )}
                 {isError && ( <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}> <Typography color="error">加载失败: {error.message}</Typography> </Box> )}
 
-                {/* [恢复] 使用原始的 DataTable 用法，传入分页 props 和完整的 Table 结构 */}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
@@ -150,26 +191,7 @@ const Tickets = (): JSX.Element => {
                     labelRowsPerPage="每页行数:"
                     labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    <Table stickyHeader sx={{borderCollapse: 'separate', tableLayout: 'fixed', width: '100%'}}>
-                        <TableHead>
-                            <TableRow>
-                                {columns.map(col => (
-                                    <TableCell key={col.id} sx={{...col.sx, fontWeight: 700}}>{col.label}</TableCell>
-                                ))}
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {pageRows.map(r => (
-                                <ClickableTableRow
-                                    key={r.id}
-                                    row={r}
-                                    columns={columns}
-                                    selected={r.id === ticketId}
-                                    onClick={() => handleRowClick(r.id)}
-                                />
-                            ))}
-                        </TableBody>
-                    </Table>
+                    {tableContent}
                 </DataTable>
             </Box>
         </PageLayout>

@@ -2,13 +2,16 @@
  * @file src/pages/Changelog.tsx
  * @description 该文件负责渲染“更新日志”页面，并提供搜索功能。
  * @modification
- *   - [布局恢复]：完全恢复了组件的原始布局和功能，以解决之前虚拟化方案导致的UI错乱问题。
- *   - [分页恢复]：重新引入了 `page` 和 `rowsPerPage` state，恢复了客户端分页逻辑。表格现在按页显示数据，分页器功能完全正常。
- *   - [DataTable用法恢复]：`DataTable` 组件的用法已恢复至原始模式，现在它接收分页相关的 props，并将一个完整的 `<Table>` 结构作为 `children`。虚拟化现在由 `DataTable` 内部透明处理。
- *   - [性能优化]：虽然恢复了布局，但通过新的“注入式”虚拟化 `DataTable`，表格主体（tbody）的渲染性能依然得到了优化，实现了UI保真和性能的统一。
+ *   - [最终UX修复]：修复了在所有平台上，点击行导致弹窗打开时，行本身会“闪烁”一下的视觉问题。
+ *   - [原因]：行的高亮状态更新与弹窗的出现被捆绑在同一次React渲染周期中，两个视觉事件同时发生，被人眼感知为“闪烁”。
+ *   - [解决方案]：
+ *     1. 引入了一个新的本地state `clickedRowId`，用于提供即时的视觉反馈。
+ *     2. 当行被点击时，**立即**更新`clickedRowId`来高亮该行，让用户瞬间看到操作响应。
+ *     3. **然后**再调用`useDelayedNavigate`来启动延迟导航，从而触发弹窗逻辑。
+ *     4. 通过在时间和渲染周期上分离“行高亮”和“弹窗出现”这两个视觉事件，彻底消除了“闪烁”感，实现了平滑的交互体验。
  */
-import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent} from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
+import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
+import {useParams} from 'react-router-dom';
 import {
     Box, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress
@@ -24,6 +27,7 @@ import DataTable from '@/components/ui/DataTable';
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
+import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
 
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
@@ -46,13 +50,14 @@ const CHANGELOGS_QUERY_KEY = ['changelogs'];
 export default function Changelog(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
     const { togglePanel, setPanelContent, setPanelTitle, setPanelWidth } = useLayoutDispatch();
-    const navigate = useNavigate();
     const {logId} = useParams<{ logId: string }>();
-    const [isAdmin] = useState(true);
-
-    // [恢复] 重新引入分页 state
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [isAdmin] = useState(true);
+    const delayedNavigate = useDelayedNavigate();
+
+    // [核心修复] 1. 新增一个 state 用于即时视觉反馈
+    const [clickedRowId, setClickedRowId] = useState<string | null>(null);
 
     const { data: rows = [], isLoading, isError, error } = useResponsiveDetailView<ChangelogRow, ChangelogDetailContentProps>({
         paramName: 'logId',
@@ -73,6 +78,13 @@ export default function Changelog(): JSX.Element {
             }
         }
     }, [logId, rows, rowsPerPage, page]);
+
+    // [核心修复] 4. 添加一个 effect 来清理临时的 clickedRowId
+    useEffect(() => {
+        if (!logId) {
+            setClickedRowId(null);
+        }
+    }, [logId]);
 
     const onSearch = useCallback((v: ChangelogSearchValues) => {
         alert(`搜索: ${JSON.stringify({ ...v, startTime: v.startTime?.format('YYYY-MM-DD'), endTime: v.endTime?.format('YYYY-MM-DD'), })}`);
@@ -100,14 +112,39 @@ export default function Changelog(): JSX.Element {
         };
     }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
-    // [恢复] 重新引入 pageRows 计算逻辑
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
+    // [核心修复] 2. 修改点击处理函数
     const handleRowClick = useCallback((id: string) => {
-        navigate(`/app/changelog/${id}`, {replace: true});
-    }, [navigate]);
+        setClickedRowId(id);
+        delayedNavigate(`/app/changelog/${id}`, {replace: true});
+    }, [delayedNavigate]);
 
     const columns = isMobile ? mobileColumns : desktopColumns;
+
+    const tableContent = useMemo(() => (
+        <Table stickyHeader aria-label="更新日志表" sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
+            <TableHead>
+                <TableRow>
+                    {columns.map(col => (
+                        <TableCell key={col.id} sx={{...col.sx, fontWeight: 700}}>{col.label}</TableCell>
+                    ))}
+                </TableRow>
+            </TableHead>
+            <TableBody>
+                {pageRows.map(r => (
+                    <ClickableTableRow
+                        key={r.id}
+                        row={r}
+                        columns={columns}
+                        // [核心修复] 3. 修改高亮逻辑
+                        selected={r.id === logId || r.id === clickedRowId}
+                        onClick={() => handleRowClick(r.id)}
+                    />
+                ))}
+            </TableBody>
+        </Table>
+    ), [pageRows, columns, logId, clickedRowId, handleRowClick]);
 
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -119,8 +156,6 @@ export default function Changelog(): JSX.Element {
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {isLoading && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}><CircularProgress/></Box>}
                 {isError && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Box>加载失败: {error?.message || '未知错误'}</Box></Box>}
-
-                {/* [恢复] 使用原始的 DataTable 用法，传入分页 props 和完整的 Table 结构 */}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
@@ -134,26 +169,7 @@ export default function Changelog(): JSX.Element {
                     labelRowsPerPage="每页行数:"
                     labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
                 >
-                    <Table stickyHeader sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
-                        <TableHead>
-                            <TableRow>
-                                {columns.map(col => (
-                                    <TableCell key={col.id} sx={{...col.sx, fontWeight: 700}}>{col.label}</TableCell>
-                                ))}
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {pageRows.map(r => (
-                                <ClickableTableRow
-                                    key={r.id}
-                                    row={r}
-                                    columns={columns}
-                                    selected={r.id === logId}
-                                    onClick={() => handleRowClick(r.id)}
-                                />
-                            ))}
-                        </TableBody>
-                    </Table>
+                    {tableContent}
                 </DataTable>
             </Box>
         </PageLayout>

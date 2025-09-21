@@ -1,10 +1,9 @@
 /**
  * @file src/App.tsx
  * @description 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
- * @modification 本次提交中所做的具体修改摘要。
- *   - [性能监控]：新增了 `PerformanceObserver` 来监控并报告耗时超过50毫秒的长任务（Long Task）。这有助于在开发过程中识别并解决阻塞主线程的性能瓶瓶颈。
- *   - [代码分割]：确认了 `Changelog` 组件及其他页面级组件已通过 `React.lazy()` 实现代码分割，符合优化方案要求。
- *   - [脚本移除说明]：根据优化方案，应移除 AdBlock 检测等非关键脚本。当前代码库中未发现此类脚本，此项为最佳实践提醒。
+ * @modification
+ *   - [平台适配]：新增了一个 `useEffect`，用于在应用加载时检测当前操作系统。如果检测到是 macOS，则为 `document.body` 添加一个 `platform-mac` CSS 类。
+ *   - [原因]：这是为了配合在全局 CSS (`index.css`) 中定义的平台特定样式。通过这种方式，我们可以为 macOS 浏览器提供专属的样式覆盖（如修复涟漪动画），而完全不影响其他平台，也避免了在动态主题中进行平台判断可能引发的重渲染问题。
  */
 import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom';
 import {QueryClient, QueryClientProvider, QueryCache} from '@tanstack/react-query';
@@ -20,11 +19,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import GlobalErrorFallback from './components/GlobalErrorFallback';
 import {ApiError} from './api';
 
-// 【核心修改】将顶层布局“外壳”组件改为静态导入
 import Login from './pages/Login';
 import AppLayout from './layouts/AppLayout';
 
-// 其他非首屏的、深层次的布局和页面组件继续使用 React.lazy 进行代码分割
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Servers = lazy(() => import('./pages/Servers'));
@@ -77,7 +74,6 @@ const AppLogic = (): JSX.Element => {
         },
     });
 
-    // 定义一个通用的加载后备UI，用于 Suspense
     const loadingFallback = (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
             <CircularProgress />
@@ -86,10 +82,8 @@ const AppLogic = (): JSX.Element => {
 
     return (
         <QueryClientProvider client={queryClient}>
-            {/* Suspense 现在只处理懒加载的深层路由 */}
             <Suspense fallback={loadingFallback}>
                 <Routes>
-                    {/* Login 和 AppLayout 路由现在可以被立即渲染，不会触发 Suspense */}
                     <Route path="/login" element={<Login onFakeLogin={handleFakeLogin}/>}/>
                     <Route path="/" element={<AppLayout/>}>
                         <Route index element={<Navigate to="/app/dashboard" replace/>}/>
@@ -121,31 +115,15 @@ const AppLogic = (): JSX.Element => {
 };
 
 const App = (): JSX.Element => {
-    // [性能监控]：实现长任务监控
+    // [核心修复] 在应用加载时，进行一次平台检测
     useEffect(() => {
-        // 检查 PerformanceObserver 是否受支持，以避免在旧版浏览器中出错
-        if ('PerformanceObserver' in window) {
-            const perfObserver = new PerformanceObserver((list) => {
-                for (const entry of list.getEntries()) {
-                    // 报告所有耗时超过 50ms 的任务
-                    if (entry.duration > 50) {
-                        console.warn('Long task detected:', {
-                            name: entry.name,
-                            duration: entry.duration,
-                            entry: entry,
-                        });
-                    }
-                }
-            });
-            // 开始观察 'longtask' 类型的性能条目
-            perfObserver.observe({ entryTypes: ['longtask'] });
-
-            // 组件卸载时断开观察者，以进行清理
-            return () => {
-                perfObserver.disconnect();
-            };
+        // 通过 navigator.userAgent 检查字符串中是否包含 'Mac'
+        if (navigator.userAgent.includes('Mac')) {
+            // 如果是 macOS，则为 body 元素添加一个 CSS 类
+            document.body.classList.add('platform-mac');
         }
-    }, []); // 空依赖数组确保此 effect 仅在组件挂载时运行一次
+        // 空依赖数组 [] 确保此 effect 仅在组件首次挂载时运行一次
+    }, []);
 
     return (
         <ErrorBoundary fallback={<GlobalErrorFallback/>}>
