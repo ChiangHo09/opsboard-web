@@ -2,11 +2,10 @@
  * @file src/pages/Dashboard.tsx
  * @description 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [运行时性能]：引入了 Web Worker 来处理模拟的密集型日期计算。通过 `useDateProcessor` 钩子，将耗时任务移至后台线程，防止主线程被阻塞，保证了UI的流畅响应。
- *   - [内存管理]：使用 `useCallback` 优化了 `StatCard` 的 `onClick` 事件处理器。这可以防止在每次重渲染时都创建新的函数实例，从而减少不必要的子组件重渲染，并降低内存开销。
- *   - [内存管理]：新增了一个 `useEffect` 示例，用于演示如何正确地添加和移除DOM事件监听器（如 `resize`），确保在组件卸载时清理监听器，避免内存泄漏。
+ *   - [UI/Cleanup]：恢复了原始的欢迎语，并移除了不再需要的窗口尺寸检测逻辑（`resize`事件监听器及其相关state）。
+ *   - [原因]：窗口尺寸检测仅为技术演示目的，实际业务中无需在欢迎语中展示，移除后可使代码更整洁。
  */
-import React, {useEffect, type JSX, type ReactNode, useCallback, useState} from 'react';
+import React, {useEffect, type JSX, type ReactNode, useCallback} from 'react';
 import {
     Box,
     Button,
@@ -20,7 +19,8 @@ import {
     ListItemText,
     Stack,
     Typography,
-    LinearProgress, CircularProgress, Alert
+    CircularProgress,
+    Alert
 } from '@mui/material';
 import {motion, type Transition} from 'framer-motion';
 import RestorePageIcon from '@mui/icons-material/RestorePage';
@@ -41,15 +41,6 @@ interface StatCardProps {
     title: string;
     value: string;
     onClick?: () => void;
-}
-
-// 定义客户存储数据接口
-interface ClientStorageData {
-    id: string;
-    clientName: string;
-    total: string;
-    used: string;
-    percentage: number;
 }
 
 // 使用现代写法定义 StatCard 组件
@@ -90,38 +81,23 @@ const recentActivities = [
     {id: 'log004', customer: '客户c', action: '常规维护，更新了服务器操作系统补丁。', time: '3天前'},
 ];
 
-const mockClientStorageUsage: ClientStorageData[] = [
-    {id: 'c1', clientName: '客户A', total: '1TB', used: '950GB', percentage: 95},
-    {id: 'c2', clientName: '客户B', total: '500GB', used: '400GB', percentage: 80},
-    {id: 'c3', clientName: '客户C', total: '2TB', used: '1.5TB', percentage: 75},
-    {id: 'c4', clientName: '客户D', total: '750GB', used: '500GB', percentage: 66},
-    {id: 'c5', clientName: '客户E', total: '1.5TB', used: '900GB', percentage: 60},
-    {id: 'c6', clientName: '客户F', total: '300GB', used: '150GB', percentage: 50},
-    {id: 'c7', clientName: '客户G', total: '1TB', used: '400GB', percentage: 40},
-    {id: 'c8', clientName: '客户H', total: '200GB', used: '60GB', percentage: 30},
-    {id: 'c9', clientName: '客户I', total: '1.2TB', used: '240GB', percentage: 20},
-    {id: 'c10', clientName: '客户J', total: '800GB', used: '80GB', percentage: 10},
-    {id: 'c11', clientName: '客户K', total: '600GB', used: '30GB', percentage: 5},
-    {id: 'c12', clientName: '客户L', total: '400GB', used: '0GB', percentage: 0},
-];
-
 
 const Dashboard = (): JSX.Element => {
     const nickname = 'chiangho';
     const navigate = useNavigate();
     const {closePanel} = useLayoutDispatch();
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-    // [Web Worker] 1. 引入 Web Worker 钩子
+    // [移除] 移除了 windowWidth state
+
+    // [Web Worker] 引入 Web Worker 钩子
     const { result: workerResult, isLoading: isWorkerLoading, processData } = useDateProcessor();
 
     const handleProcessData = () => {
-        // 模拟需要处理的大量数据
         const datesToProcess = Array.from({ length: 100 }, () => new Date());
         processData(datesToProcess);
     };
 
-    // [内存管理] 1. 使用 useCallback 包装导航函数，避免在渲染中创建新函数
+    // [内存管理] 使用 useCallback 包装导航函数
     const handleNavigation = useCallback((path: string) => {
         navigate(path);
     }, [navigate]);
@@ -156,22 +132,7 @@ const Dashboard = (): JSX.Element => {
         closePanel();
     }, [closePanel]);
 
-    // [内存管理] 2. 演示事件监听器的正确添加与销毁
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowWidth(window.innerWidth);
-        };
-        // 添加事件监听器
-        window.addEventListener('resize', handleResize);
-        console.log('Resize event listener added.');
-
-        // 在组件卸载时返回一个清理函数，以移除监听器
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            console.log('Resize event listener removed.');
-        };
-    }, []); // 空依赖数组确保监听器只在挂载和卸载时处理
-
+    // [移除] 移除了用于监听窗口尺寸变化的 useEffect
 
     const label = (icon: ReactNode, text: string) => (
         <>
@@ -210,16 +171,6 @@ const Dashboard = (): JSX.Element => {
         },
     ];
 
-    const getStorageProgressColor = (percentage: number) => {
-        if (percentage > 85) return 'error';
-        if (percentage > 70) return 'warning';
-        return 'primary';
-    };
-
-    const sortedClientStorageUsage = [...mockClientStorageUsage]
-        .sort((a, b) => b.percentage - a.percentage)
-        .slice(0, 10);
-
     const motionTransition: Transition = {
         type: 'spring',
         stiffness: 500,
@@ -233,8 +184,9 @@ const Dashboard = (): JSX.Element => {
                 <Box>
                     <Stack spacing={1}>
                         <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>运维信息表</Typography>
+                        {/* [核心修改] 恢复原始的欢迎语 */}
                         <Typography variant="h6" color="text.secondary" sx={{fontSize: '1.5rem'}}>
-                            欢迎回来，{nickname}！当前窗口宽度: {windowWidth}px
+                            欢迎回来，{nickname}！接下来想做些什么？
                         </Typography>
                     </Stack>
                 </Box>
@@ -292,7 +244,6 @@ const Dashboard = (): JSX.Element => {
                                 </motion.div>
                             </Box>
 
-                            {/* [Web Worker] 2. 添加UI以触发和显示Worker结果 */}
                             <Box>
                                 <Typography variant="h6" mb={2}>主线程性能优化 (Web Worker)</Typography>
                                 <Card variant="outlined">
@@ -309,39 +260,6 @@ const Dashboard = (): JSX.Element => {
                                             </Alert>
                                         )}
                                     </CardContent>
-                                </Card>
-                            </Box>
-
-                            <Box>
-                                <Typography variant="h6" mb={2}>客户存储空间用量排行 (Top 10)</Typography>
-                                <Card variant="outlined">
-                                    <List sx={{padding: 0}}>
-                                        {sortedClientStorageUsage.map((client, index) => (
-                                            <React.Fragment key={client.id}>
-                                                <ListItem disablePadding>
-                                                    <ListItemButton onClick={() => handleNavigation(`/app/clients/${client.id}/storage`)}>
-                                                        <ListItemText
-                                                            primary={client.clientName}
-                                                            secondary={`已用 ${client.used} / 总计 ${client.total}`}
-                                                            secondaryTypographyProps={{ noWrap: true, textOverflow: 'ellipsis' }}
-                                                        />
-                                                        <Box sx={{minWidth: 100, ml: 2}}>
-                                                            <LinearProgress
-                                                                variant="determinate"
-                                                                value={client.percentage}
-                                                                color={getStorageProgressColor(client.percentage)}
-                                                                sx={{height: 8, borderRadius: 4}}
-                                                            />
-                                                            <Typography variant="caption" color="text.secondary" sx={{mt: 0.5, display: 'block', textAlign: 'right'}}>
-                                                                {client.percentage}%
-                                                            </Typography>
-                                                        </Box>
-                                                    </ListItemButton>
-                                                </ListItem>
-                                                {index < sortedClientStorageUsage.length - 1 && <Divider component="li"/>}
-                                            </React.Fragment>
-                                        ))}
-                                    </List>
                                 </Card>
                             </Box>
                         </Stack>
