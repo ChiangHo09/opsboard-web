@@ -1,55 +1,41 @@
-# 工作流的名称
+# .gitea/workflows/deploy.yml (最终修复版)
 name: Build and Deploy Frontend Project
 
-# 触发条件：当有代码 push 到 master 分支时触发
-# (注意：Git 的默认主分支名现在通常是 main，如果您的仓库是 main，请将 master 改为 main)
 on:
   push:
     branches:
       - master
 
-# 任务列表
 jobs:
   build-and-deploy:
-    # 关键！这里的标签必须和您注册 Runner 时设置的标签完全一致
     runs-on: windows-iis
 
-    # 任务包含的步骤
     steps:
-      # 第1步：检出代码
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 第2步：设置 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # 请根据您的项目要求，指定正确的 Node.js 版本
-          # [优化建议] 添加缓存以加速后续构建
+          node-version: '18'
           cache: 'npm'
           cache-dependency-path: 'opsboard-frontend/package-lock.json'
 
-      # 第3步：安装依赖并执行构建
       - name: Install Dependencies and Build
-        # [核心修复] 使用 working-directory 指定所有命令都在 opsboard-frontend 目录内执行
         working-directory: ./opsboard-frontend
         run: |
-          echo "==> Installing dependencies in $(pwd)..."
           npm install
-          echo "==> Building project in $(pwd)..."
           npm run build
 
       # 第4步：部署到 IIS 网站目录
       - name: Deploy to IIS Directory
-        # [核心修复] 使用 PowerShell (pwsh) 以获得更好的脚本体验，并更新源路径
         shell: powershell
         run: |
-          $sourcePath = ".\opsboard-frontend\dist"
+          $sourceBuildPath = ".\opsboard-frontend\dist"
+          $sourceConfigPath = ".\web.config" # <-- 新增：指向根目录的 web.config
           $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
           
-          Write-Host "Source path: $sourcePath"
-          Write-Host "Destination path: $destinationPath"
-          
+          Write-Host "Checking destination path: $destinationPath"
           if (-not (Test-Path $destinationPath)) {
             Write-Host "Destination directory does not exist. Creating it..."
             New-Item -ItemType Directory -Force -Path $destinationPath
@@ -58,7 +44,11 @@ jobs:
           Write-Host "Clearing destination directory..."
           Remove-Item -Recurse -Force -Path "$destinationPath\*"
           
-          Write-Host "Copying build artifacts..."
-          Copy-Item -Path "$sourcePath\*" -Destination $destinationPath -Recurse -Force
+          Write-Host "Copying build artifacts from $sourceBuildPath..."
+          Copy-Item -Path "$sourceBuildPath\*" -Destination $destinationPath -Recurse -Force
+          
+          # [核心修复] 新增一步：明确地将 web.config 复制到部署目录的根部
+          Write-Host "Copying web.config from $sourceConfigPath..."
+          Copy-Item -Path $sourceConfigPath -Destination $destinationPath -Force
           
           Write-Host "Deployment successful!"
