@@ -1,14 +1,8 @@
 /**
  * @file src/pages/Tickets.tsx
- * @description 此文件负责渲染“工单信息”页面，通过数据表格展示工单列表，并提供搜索功能。
+ * @description 此文件负责渲染“工单信息”页面。
  * @modification
- *   - [最终UX修复]：修复了在所有平台上，点击行导致弹窗打开时，行本身会“闪烁”一下的视觉问题。
- *   - [原因]：行的高亮状态更新与弹窗的出现被捆绑在同一次React渲染周期中，两个视觉事件同时发生，被人眼感知为“闪烁”。
- *   - [解决方案]：
- *     1. 引入了一个新的本地state `clickedRowId`，用于提供即时的视觉反馈。
- *     2. 当行被点击时，**立即**更新`clickedRowId`来高亮该行，让用户瞬间看到操作响应。
- *     3. **然后**再调用`useDelayedNavigate`来启动延迟导航，从而触发弹窗逻辑。
- *     4. 通过在时间和渲染周期上分离“行高亮”和“弹窗出现”这两个视觉事件，彻底消除了“闪烁”感，实现了平滑的交互体验。
+ *   - [API导入修复]: 经过 API 目录重构，确认从此文件的角度看，`import { ticketsApi, type TicketRow } from '@/api'` 依然是正确的导入方式。无需修改此文件。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -65,8 +59,6 @@ const Tickets = (): JSX.Element => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const delayedNavigate = useDelayedNavigate();
-
-    // [核心修复] 1. 新增一个 state 用于即时视觉反馈
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
 
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
@@ -89,9 +81,7 @@ const Tickets = (): JSX.Element => {
         }
     }, [ticketId, rows, rowsPerPage, page]);
 
-    // [核心修复] 4. 添加一个 effect 来清理临时的 clickedRowId
     useEffect(() => {
-        // 当弹窗关闭（即 ticketId 从 URL 中消失）时，清空临时点击状态。
         if (!ticketId) {
             setClickedRowId(null);
         }
@@ -131,11 +121,8 @@ const Tickets = (): JSX.Element => {
 
     const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
-    // [核心修复] 2. 修改点击处理函数
     const handleRowClick = useCallback((id: string) => {
-        // 步骤 A: 立即设置点击状态，触发即时的高亮效果
         setClickedRowId(id);
-        // 步骤 B: 然后再启动延迟导航，以触发弹窗
         delayedNavigate(`/app/tickets/${id}`, {replace: true});
     }, [delayedNavigate]);
 
@@ -156,15 +143,12 @@ const Tickets = (): JSX.Element => {
                         key={r.id}
                         row={r}
                         columns={columns}
-                        // [核心修复] 3. 修改高亮逻辑
-                        // 行被视为选中，如果它的 ID 匹配 URL 参数，或者匹配我们临时的点击状态
                         selected={r.id === ticketId || r.id === clickedRowId}
                         onClick={() => handleRowClick(r.id)}
                     />
                 ))}
             </TableBody>
         </Table>
-        // 依赖项数组现在也需要包含 clickedRowId
     ), [pageRows, columns, ticketId, clickedRowId, handleRowClick]);
 
     return (

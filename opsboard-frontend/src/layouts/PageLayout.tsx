@@ -2,35 +2,28 @@
  * @file src/layouts/PageLayout.tsx
  * @description 定义了一个可重用的 `PageLayout` 组件，用于统一所有标准内容页面的基础布局和样式。
  * @modification
- *   - [UI/UX]：精确地增加了白色工作区内部的顶部内边距，为页面标题和顶部边缘提供了更多的呼吸空间，以匹配设计要求。
- *   - [解决方案]：将 `sx` 属性中的通用 `p` 分解为更具体的 `pt`（顶部）、`pb`（底部）和 `px`（水平方向），并为它们设置了更合理的默认值。这使得页面级组件可以精确地覆盖单个方向的内边距，而不会意外重置其他方向。
- *   - [UI/UX]：恢复并优化了桌面端视图的动态边距效果。
- *   - [移动端布局]：在 `xs` 断点，容器宽度保持 `100%`，实现边到边布局。
+ *   - [类型修复]: 重写了 `PageLayoutProps` 的类型定义，采用正确的泛型模式来包装 MUI 的 `Box` 组件。这解决了在传递 `component` 等复杂属性时出现的 `TS2558` 和 `TS2769` 类型重载错误。
  */
-import {type JSX} from 'react';
-import {Box, type BoxProps} from '@mui/material';
+import { type JSX, type ElementType } from 'react';
+import { Box, type BoxProps } from '@mui/material';
 
-type PageLayoutProps = BoxProps;
+// 采用更健壮的泛型模式来定义 props，以正确继承 MUI Box 的所有属性，特别是泛型的 `component` prop。
+type PageLayoutProps<C extends ElementType = 'div'> = BoxProps<C, { component?: C }>;
 
-const PageLayout = ({sx, ...rest}: PageLayoutProps): JSX.Element => {
+const PageLayout = <C extends ElementType = 'div'>(props: PageLayoutProps<C>): JSX.Element => {
+    const { sx, ...rest } = props;
     return (
         <Box
             sx={{
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-
-                // --- 动态宽度与最大宽度限制 ---
-                width: {xs: '95%', md: '80%'}, // 移动端95%宽度，桌面端80%宽度以创建动态边距
-                maxWidth: {md: 1280, lg: 1440, xl: 1600}, // 桌面端最大宽度限制
-                mx: 'auto', // 始终水平居中
-
-                // --- 默认的、可被覆盖的响应式内边距 ---
-                pt: {xs: 4, md: 5}, // 顶部内边距
-                pb: {xs: 2, md: 3}, // 底部内边距
-                px: {xs: 2, md: 3}, // 水平内边距
-
-                // --- 合并传入的 sx，允许覆盖以上所有默认值 ---
+                width: { xs: '95%', md: '80%' },
+                maxWidth: { md: 1280, lg: 1440, xl: 1600 },
+                mx: 'auto',
+                pt: { xs: 4, md: 5 },
+                pb: { xs: 2, md: 3 },
+                px: { xs: 2, md: 3 },
                 ...sx
             }}
             {...rest}

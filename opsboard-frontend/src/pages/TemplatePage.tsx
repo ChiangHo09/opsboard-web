@@ -56,7 +56,7 @@ import ActionButtons from '@/components/ui/ActionButtons.tsx';
 // 导入页面头部组件。
 import PageHeader from '@/layouts/PageHeader.tsx';
 // 导入页面对应的 API 模块和数据行类型。
-import { templateApi, type TemplateRow } from '@/api/templateApi';
+import { templateApi, type TemplateRow } from '@/api/templateApi.ts';
 // 导入用于处理响应式详情视图的自定义 Hook。
 import { useResponsiveDetailView } from '@/hooks/useResponsiveDetailView';
 // 导入为解决动画竞态问题而创建的延迟导航 Hook。

@@ -1,11 +1,11 @@
 /**
  * @file src/pages/Dashboard.tsx
  * @description 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
- * @modification 本次提交中所做的具体修改摘要。
- *   - [UI/Cleanup]：恢复了原始的欢迎语，并移除了不再需要的窗口尺寸检测逻辑（`resize`事件监听器及其相关state）。
- *   - [原因]：窗口尺寸检测仅为技术演示目的，实际业务中无需在欢迎语中展示，移除后可使代码更整洁。
+ * @modification
+ *   - [认证集成]: 移除了硬编码的 `nickname`。现在使用 `useAuth` 钩子从全局 `AuthContext` 中获取当前登录的用户信息，并动态显示其昵称。
+ *   - [健壮性]: 如果用户信息仍在加载或获取失败，会显示一个通用的欢迎语，从而避免了UI渲染错误。
  */
-import React, {useEffect, type JSX, type ReactNode, useCallback} from 'react';
+import React, { useEffect, type JSX, type ReactNode, useCallback } from 'react';
 import {
     Box,
     Button,
@@ -22,7 +22,7 @@ import {
     CircularProgress,
     Alert
 } from '@mui/material';
-import {motion, type Transition} from 'framer-motion';
+import { motion, type Transition } from 'framer-motion';
 import RestorePageIcon from '@mui/icons-material/RestorePage';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PlaylistAddCheckCircleIcon from '@mui/icons-material/PlaylistAddCheckCircle';
@@ -30,12 +30,12 @@ import PollRoundedIcon from '@mui/icons-material/PollRounded';
 import DnsIcon from '@mui/icons-material/Dns';
 import UpdateIcon from '@mui/icons-material/Update';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-import {useNavigate} from 'react-router-dom';
-import {useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import { useNavigate } from 'react-router-dom';
+import { useLayoutDispatch } from '@/contexts/LayoutContext.tsx';
 import PageLayout from '@/layouts/PageLayout';
 import { useDateProcessor } from '@/hooks/useDateProcessor';
+import { useAuth } from '@/hooks/useAuth'; // 引入 useAuth 钩子
 
-// 为 StatCard 的 props 定义一个接口
 interface StatCardProps {
     icon: ReactNode;
     title: string;
@@ -43,11 +43,10 @@ interface StatCardProps {
     onClick?: () => void;
 }
 
-// 使用现代写法定义 StatCard 组件
-const StatCard = ({icon, title, value, onClick}: StatCardProps): JSX.Element => (
+const StatCard = ({ icon, title, value, onClick }: StatCardProps): JSX.Element => (
     <Card
         component={onClick ? ButtonBase : 'div'}
-        {...(onClick && {disableRipple: true})}
+        {...(onClick && { disableRipple: true })}
         onClick={onClick}
         variant="outlined"
         sx={{
@@ -62,12 +61,12 @@ const StatCard = ({icon, title, value, onClick}: StatCardProps): JSX.Element => 
             },
         }}
     >
-        <CardContent sx={{width: '100%'}}>
-            <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
+        <CardContent sx={{ width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {icon}
                 <Box>
                     <Typography variant="h6" component="div">{value}</Typography>
-                    <Typography color="text.secondary" sx={{whiteSpace: 'nowrap'}}>{title}</Typography>
+                    <Typography color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{title}</Typography>
                 </Box>
             </Box>
         </CardContent>
@@ -75,21 +74,18 @@ const StatCard = ({icon, title, value, onClick}: StatCardProps): JSX.Element => 
 );
 
 const recentActivities = [
-    {id: 'log001', customer: '客户a', action: '新增了用户导出功能...', time: '2小时前'},
-    {id: 'log002', customer: '客户b', action: '修复了一个潜在的XSS漏洞。', time: '昨天'},
-    {id: 'log003', customer: '客户a', action: '优化了数据查询逻辑，首页加载速度提升 30%。', time: '3天前'},
-    {id: 'log004', customer: '客户c', action: '常规维护，更新了服务器操作系统补丁。', time: '3天前'},
+    { id: 'log001', customer: '客户a', action: '新增了用户导出功能...', time: '2小时前' },
+    { id: 'log002', customer: '客户b', action: '修复了一个潜在的XSS漏洞。', time: '昨天' },
+    { id: 'log003', customer: '客户a', action: '优化了数据查询逻辑，首页加载速度提升 30%。', time: '3天前' },
+    { id: 'log004', customer: '客户c', action: '常规维护，更新了服务器操作系统补丁。', time: '3天前' },
 ];
 
 
 const Dashboard = (): JSX.Element => {
-    const nickname = 'chiangho';
+    const { user } = useAuth(); // 从 AuthContext 获取用户信息
     const navigate = useNavigate();
-    const {closePanel} = useLayoutDispatch();
+    const { closePanel } = useLayoutDispatch();
 
-    // [移除] 移除了 windowWidth state
-
-    // [Web Worker] 引入 Web Worker 钩子
     const { result: workerResult, isLoading: isWorkerLoading, processData } = useDateProcessor();
 
     const handleProcessData = () => {
@@ -97,7 +93,6 @@ const Dashboard = (): JSX.Element => {
         processData(datesToProcess);
     };
 
-    // [内存管理] 使用 useCallback 包装导航函数
     const handleNavigation = useCallback((path: string) => {
         navigate(path);
     }, [navigate]);
@@ -132,15 +127,13 @@ const Dashboard = (): JSX.Element => {
         closePanel();
     }, [closePanel]);
 
-    // [移除] 移除了用于监听窗口尺寸变化的 useEffect
-
     const label = (icon: ReactNode, text: string) => (
         <>
             {icon}
             <Typography
                 component="span"
                 variant="button"
-                sx={{lineHeight: 1, transform: 'translateY(1px)', fontWeight: 500}}
+                sx={{ lineHeight: 1, transform: 'translateY(1px)', fontWeight: 500 }}
             >
                 {text}
             </Typography>
@@ -151,21 +144,21 @@ const Dashboard = (): JSX.Element => {
         {
             key: 'servers',
             onClick: () => handleNavigation('/app/servers'),
-            icon: <DnsIcon color="primary" sx={{fontSize: 40, transform: 'translateY(4px)'}}/>,
+            icon: <DnsIcon color="primary" sx={{ fontSize: 40, transform: 'translateY(4px)' }} />,
             title: "服务器总数",
             value: "102"
         },
         {
             key: 'changelog',
             onClick: () => handleNavigation('/app/changelog'),
-            icon: <UpdateIcon color="secondary" sx={{fontSize: 40, transform: 'translateY(4px)'}}/>,
+            icon: <UpdateIcon color="secondary" sx={{ fontSize: 40, transform: 'translateY(4px)' }} />,
             title: "本周更新",
             value: "12次"
         },
         {
             key: 'tickets',
             onClick: () => handleNavigation('/app/tickets'),
-            icon: <AssignmentTurnedInIcon color="error" sx={{fontSize: 40, transform: 'translateY(4px)'}}/>,
+            icon: <AssignmentTurnedInIcon color="error" sx={{ fontSize: 40, transform: 'translateY(4px)' }} />,
             title: "待处理工单",
             value: "3个"
         },
@@ -183,16 +176,15 @@ const Dashboard = (): JSX.Element => {
             <Stack spacing={4}>
                 <Box>
                     <Stack spacing={1}>
-                        <Typography variant="h5" sx={{color: 'primary.main', fontSize: '2rem'}}>运维信息表</Typography>
-                        {/* [核心修改] 恢复原始的欢迎语 */}
-                        <Typography variant="h6" color="text.secondary" sx={{fontSize: '1.5rem'}}>
-                            欢迎回来，{nickname}！接下来想做些什么？
+                        <Typography variant="h5" sx={{ color: 'primary.main', fontSize: '2rem' }}>运维信息表</Typography>
+                        <Typography variant="h6" color="text.secondary" sx={{ fontSize: '1.5rem' }}>
+                            欢迎回来，{user?.nickname || '用户'}！接下来想做些什么？
                         </Typography>
                     </Stack>
                 </Box>
 
-                <Stack direction={{xs: 'column', md: 'row'}} spacing={{xs: 4, md: 6}}>
-                    <Box sx={{width: {xs: '100%', md: '50%'}}}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 4, md: 6 }}>
+                    <Box sx={{ width: { xs: '100%', md: '50%' } }}>
                         <Stack spacing={4}>
                             <Box>
                                 <motion.div
@@ -200,12 +192,12 @@ const Dashboard = (): JSX.Element => {
                                     style={{ display: 'flex', flexWrap: 'wrap', gap: 16, paddingTop: 16 }}
                                 >
                                     {[
-                                        { key: 'new-changelog', text: '新建更新记录', icon: <RestorePageIcon/>, to: '/app/changelog' },
-                                        { key: 'new-ticket', text: '生成工单', icon: <AssignmentIcon/>, to: '/app/tickets' },
-                                        { key: 'new-inspection-backup', text: '新建巡检备份任务', icon: <PlaylistAddCheckCircleIcon/>, to: '/app/inspection-backup' },
-                                        { key: 'view-stats', text: '查看统计信息', icon: <PollRoundedIcon/>, to: '/app/stats' },
-                                        { key: 'view-servers', text: '查看服务器信息', icon: <DnsIcon/>, to: '/app/servers' }
-                                    ].map(({key, text, icon, to}) => (
+                                        { key: 'new-changelog', text: '新建更新记录', icon: <RestorePageIcon />, to: '/app/changelog' },
+                                        { key: 'new-ticket', text: '生成工单', icon: <AssignmentIcon />, to: '/app/tickets' },
+                                        { key: 'new-inspection-backup', text: '新建巡检备份任务', icon: <PlaylistAddCheckCircleIcon />, to: '/app/inspection-backup' },
+                                        { key: 'view-stats', text: '查看统计信息', icon: <PollRoundedIcon />, to: '/app/stats' },
+                                        { key: 'view-servers', text: '查看服务器信息', icon: <DnsIcon />, to: '/app/servers' }
+                                    ].map(({ key, text, icon, to }) => (
                                         <motion.div
                                             key={key}
                                             layout
@@ -214,7 +206,7 @@ const Dashboard = (): JSX.Element => {
                                         >
                                             <Button
                                                 variant="contained"
-                                                sx={{...quickBtnSX, width: '100%'}}
+                                                sx={{ ...quickBtnSX, width: '100%' }}
                                                 onClick={() => handleNavigation(to)}
                                                 startIcon={icon}
                                             >
@@ -236,9 +228,9 @@ const Dashboard = (): JSX.Element => {
                                             key={card.key}
                                             layout
                                             transition={motionTransition}
-                                            style={{flex: '1 1 160px', minWidth: 160}}
+                                            style={{ flex: '1 1 160px', minWidth: 160 }}
                                         >
-                                            <StatCard onClick={card.onClick} icon={card.icon} title={card.title} value={card.value}/>
+                                            <StatCard onClick={card.onClick} icon={card.icon} title={card.title} value={card.value} />
                                         </motion.div>
                                     ))}
                                 </motion.div>
@@ -265,17 +257,17 @@ const Dashboard = (): JSX.Element => {
                         </Stack>
                     </Box>
 
-                    <Box sx={{width: {xs: '100%', md: '50%'}}}>
+                    <Box sx={{ width: { xs: '100%', md: '50%' } }}>
                         <Box>
                             <Typography variant="h6" mb={2}>最近操作</Typography>
                             <Card variant="outlined">
-                                <List sx={{padding: 0}}>
+                                <List sx={{ padding: 0 }}>
                                     {recentActivities.map((activity, index) => (
                                         <React.Fragment key={activity.id}>
                                             <ListItem
                                                 disablePadding
                                                 secondaryAction={
-                                                    <Typography variant="caption" color="text.secondary" sx={{pr: 2}}>{activity.time}</Typography>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ pr: 2 }}>{activity.time}</Typography>
                                                 }
                                             >
                                                 <ListItemButton onClick={() => handleNavigation(`/app/changelog/${activity.id}`)}>
@@ -286,7 +278,7 @@ const Dashboard = (): JSX.Element => {
                                                     />
                                                 </ListItemButton>
                                             </ListItem>
-                                            {index < recentActivities.length - 1 && <Divider component="li"/>}
+                                            {index < recentActivities.length - 1 && <Divider component="li" />}
                                         </React.Fragment>
                                     ))}
                                 </List>

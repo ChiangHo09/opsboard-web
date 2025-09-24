@@ -2,23 +2,12 @@
  * @file src/layouts/MainLayout.tsx
  * @description 此文件定义了应用的主UI布局。
  * @modification
- *   - [动画一致性]：移除在 `basePath` 变化时清除 `LayoutContext` 中 `panelContent` 的逻辑。此举是为了让 `RightSearchPanel` 内部的 `AnimatePresence` 能够更直接地处理内容切换，避免额外的加载状态动画，从而与主面板的动画流程保持同步。
- *   - [体验优化]：修复了在桌面端打开详情弹窗时，背景列表页面会不必要地重载（刷新）的问题。
- *   - **问题根源**:
- *     包裹页面组件的 `ErrorBoundary` 使用了 `location.pathname` 作为其 `key`。当路由从
- *     `/app/tickets` 变为 `/app/tickets/tkt001` 时，`key` 发生变化，导致 React 卸载并
- *     重新挂载整个页面组件，丢失了其滚动位置等状态。
- *   - **解决方案**:
- *     将 `ErrorBoundary` 的 `key` 从 `location.pathname` 修改为 `basePath`。
- *     `basePath` 代表了应用的主模块路径（如 `/app/tickets`），在打开详情弹窗这种
- *     子路由导航中，`basePath` 的值保持不变。
- *   - **最终效果**:
- *     现在，当用户打开详情弹窗时，`ErrorBoundary` 的 `key` 不再改变，背景页面组件
- *     的状态（如滚动位置）得以保留，实现了无缝、平滑的弹窗体验。
+ *   - [认证集成]: 移除了旧的 `onFakeLogout` 属性。现在使用 `useAuth` 钩子来获取真实的 `logout` 函数，并将其传递给 `SideNav` 组件。
+ *   - [代码清理]: 简化了组件的 props 接口，使其不再依赖于从顶层 `App` 组件传递下来的模拟函数。
  */
-import {useState, type JSX, Suspense, useEffect} from 'react';
-import {useLocation, useOutlet} from 'react-router-dom';
-import {motion, AnimatePresence} from 'framer-motion';
+import { useState, type JSX, Suspense, useEffect } from 'react';
+import { useLocation, useOutlet } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Box,
     IconButton,
@@ -28,18 +17,20 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 
 import SideNav from '@/components/SideNav';
-import {LayoutProvider, useLayout, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
+import { LayoutProvider, useLayout, useLayoutDispatch } from '@/contexts/LayoutContext.tsx';
 import RightSearchPanel from '@/components/RightSearchPanel';
 import Modal from '@/components/Modal';
-import {pageVariants, pageTransition, mobileOverlayVariants} from '@/utils/animations';
+import { pageVariants, pageTransition, mobileOverlayVariants } from '@/utils/animations';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import LocalErrorFallback from '@/components/LocalErrorFallback';
+import { useAuth } from '@/hooks/useAuth'; // 引入 useAuth 钩子
 
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
-function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.Element {
+function MainContentWrapper(): JSX.Element {
+    const { logout } = useAuth(); // 从 AuthContext 获取真实的 logout 函数
     const location = useLocation();
     const currentOutlet = useOutlet();
     const basePath = location.pathname.split('/').slice(0, 3).join('/');
@@ -50,16 +41,14 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
         isMobile, isModalOpen, modalContent, onModalClose,
     } = useLayout();
 
-    // 【修改】不再需要从 useLayoutDispatch 中解构 setPanelContent，因为不再在此处调用它
-    const {setIsModalOpen, setModalConfig} = useLayoutDispatch();
+    const { setIsModalOpen, setModalConfig } = useLayoutDispatch();
 
     const [sideNavOpen, setSideNavOpen] = useState(false);
 
     useEffect(() => {
         setIsModalOpen(false);
-        setModalConfig({content: null, onClose: null});
-        // 【核心修改】移除 setPanelContent(null); 这一行，让 RightSearchPanel 内部的 AnimatePresence 直接处理内容切换
-    }, [basePath, setIsModalOpen, setModalConfig]); // 移除 setPanelContent 依赖
+        setModalConfig({ content: null, onClose: null });
+    }, [basePath, setIsModalOpen, setModalConfig]);
 
     const modalJSX = (
         <AnimatePresence>
@@ -83,20 +72,20 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
             <SideNav
                 open={sideNavOpen}
                 onToggle={() => setSideNavOpen(o => !o)}
-                onFakeLogout={onFakeLogout}
+                onLogout={logout} // 传递真实的 logout 函数
             />
             <Box
                 component="main"
                 sx={{
                     flexGrow: 1,
                     height: '100%',
-                    pt: {xs: `${MOBILE_TOP_BAR_HEIGHT}px`, md: 3},
-                    pb: {xs: 0, md: 3},
-                    pr: {xs: 0, md: 3},
+                    pt: { xs: `${MOBILE_TOP_BAR_HEIGHT}px`, md: 3 },
+                    pb: { xs: 0, md: 3 },
+                    pr: { xs: 0, md: 3 },
                     pl: 0,
                     boxSizing: 'border-box',
                     display: 'flex',
-                    flexDirection: {xs: 'column', md: 'row'},
+                    flexDirection: { xs: 'column', md: 'row' },
                     overflow: 'hidden',
                     position: 'relative',
                     transition: 'padding-top 0.2s',
@@ -106,7 +95,7 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                     sx={{
                         flexGrow: 1,
                         bgcolor: 'background.paper',
-                        borderRadius: {xs: '16px 16px 0 0', md: 2},
+                        borderRadius: { xs: '16px 16px 0 0', md: 2 },
                         boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
@@ -125,14 +114,13 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                                 justifyContent: 'center',
                                 alignItems: 'center'
                             }}>
-                                <CircularProgress/>
+                                <CircularProgress />
                             </Box>
                         }
                     >
                         <AnimatePresence mode="wait">
                             {currentOutlet && (
-                                // 【核心修复】将 ErrorBoundary 的 key 从 location.pathname 修改为 basePath
-                                <ErrorBoundary key={basePath} fallback={<LocalErrorFallback/>}>
+                                <ErrorBoundary key={basePath} fallback={<LocalErrorFallback />}>
                                     <MotionBox
                                         key={basePath}
                                         variants={pageVariants}
@@ -185,7 +173,7 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                                 }}>
                                     <Typography variant="h6" noWrap>{panelTitle}</Typography>
                                     <IconButton size="small" onClick={togglePanel} aria-label="close search panel">
-                                        <CloseIcon/>
+                                        <CloseIcon />
                                     </IconButton>
                                 </Box>
                                 <Box sx={{
@@ -207,7 +195,7 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
                                                 justifyContent: 'center',
                                                 alignItems: 'center',
                                             }}>
-                                                <CircularProgress/>
+                                                <CircularProgress />
                                             </MotionBox>
                                         ) : isPanelOpen && panelContent ? (
                                             <MotionBox key={basePath} variants={pageVariants}
@@ -247,14 +235,11 @@ function MainContentWrapper({onFakeLogout}: { onFakeLogout: () => void }): JSX.E
     );
 }
 
-interface MainLayoutProps {
-    onFakeLogout: () => void;
-}
-
-const MainLayout = ({onFakeLogout}: MainLayoutProps): JSX.Element => {
+// MainLayout 不再需要接收任何 props
+const MainLayout = (): JSX.Element => {
     return (
         <LayoutProvider>
-            <MainContentWrapper onFakeLogout={onFakeLogout}/>
+            <MainContentWrapper />
         </LayoutProvider>
     );
 };
