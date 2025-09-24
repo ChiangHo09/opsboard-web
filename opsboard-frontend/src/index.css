@@ -2,9 +2,8 @@
  * @file src/index.css
  * @description 全局基础样式，包括字体、颜色变量、滚动条等。
  * @modification
- *   - [网络优化]：移除了所有本地 `@font-face` 规则。
- *   - [原因]：为了减少初始加载时的HTTP请求数量并优化字体加载策略，我们将字体管理完全交给 `main.tsx` 中的 `@fontsource` 包导入。
- *   - [效果]：这种方法利用了现代前端构建工具（如Vite或Webpack）的能力，可以更好地对字体文件进行分块、哈希和缓存控制，从而提升加载性能。
+ *   - [UI修复]：重写了 WebKit 滚动条样式，以解决悬停时不可见的问题，并实现现代化的自动隐藏效果。
+ *   - [实现]：滑块默认透明，当鼠标悬停至滚动条轨道区域时才显现。当鼠标直接悬停于滑块或拖动时，颜色会进一步加深以提供明确的交互反馈。
  */
 
 /* ───────────────── 0. 字体文件引入 (已移除) ───────────────── */
@@ -69,23 +68,43 @@ table {
 }
 
 /* ───────────────── 4. WebKit 滚动条美化 ───────────────── */
+/*
+ * 修复悬停时不可见的问题，并实现现代化的“自动隐藏”悬浮滚动条。
+ * 策略:
+ * 1. 默认状态下，滑块(thumb)完全透明，不可见但其交互区域依然存在。
+ * 2. 当鼠标悬停在整个滚动条的区域(track)上时，滑块才会显现。
+ * 3. 当鼠标进一步悬停在滑块本身或进行拖动时，颜色会加深，提供清晰的交互反馈。
+ */
 ::-webkit-scrollbar {
     width: 8px; /* 竖向滚动条宽 */
     height: 8px; /* 横向滚动条高 */
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent; /* 轨道透明 */
+    background: transparent; /* 轨道始终保持透明 */
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2); /* 滑块主体 */
-    border-radius: 4px; /* 圆角 */
+    background: transparent; /* 1. 默认状态下，滑块完全透明 */
+    border-radius: 4px; /* 保留圆角 */
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3); /* 悬停加深 */
+/* 2. 核心修复：当鼠标悬停在滚动条的“轨道”区域时，显示滑块 */
+/*    这是一个非标准的 WebKit 扩展, 但在现代浏览器中能很好地实现所需效果。*/
+::-webkit-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.25);
 }
+
+/* 3. 当鼠标直接悬停在滑块上时，加深颜色以提供更好的反馈 */
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+/* 4. 当用户点击并拖动滑块时，使用最深的颜色以示区分 */
+::-webkit-scrollbar-thumb:active {
+    background: rgba(0, 0, 0, 0.5);
+}
+
 
 /* ───────────────── 5. 文本 / 代码块样式 ───────────────── */
 a {
