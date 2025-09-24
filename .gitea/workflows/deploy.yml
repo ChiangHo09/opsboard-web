@@ -16,7 +16,7 @@ jobs:
     # 任务包含的步骤
     steps:
       # 第1步：检出代码
-      # 恢复为标准格式。这将依赖于您 Runner 服务器上的本地缓存或回退机制。
+      # 使用标准语法，这将利用您 Runner 的本地缓存/回退机制
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -40,6 +40,8 @@ jobs:
         shell: powershell
         run: |
           $sourceBuildPath = ".\opsboard-frontend\dist"
+          # [核心修复] 将源路径指向仓库根目录下的 web.config
+          $sourceConfigPath = ".\web.config"
           $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
           
           Write-Host "Preparing deployment to $destinationPath..."
@@ -48,32 +50,11 @@ jobs:
           }
           Remove-Item -Recurse -Force -Path "$destinationPath\*"
           
-          Write-Host "Copying build artifacts..."
+          Write-Host "Copying build artifacts from $sourceBuildPath..."
           Copy-Item -Path "$sourceBuildPath\*" -Destination $destinationPath -Recurse -Force
           
-          # [核心修复] 直接在 Runner 中创建 web.config 文件
-          Write-Host "Creating web.config for SPA routing..."
-          $webConfigContent = @"
-          <?xml version="1.0" encoding="UTF-8"?>
-          <configuration>
-            <system.webServer>
-              <rewrite>
-                <rules>
-                  <rule name="React-Router Rule" stopProcessing="true">
-                    <match url=".*" />
-                    <conditions logicalGrouping="MatchAll">
-                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
-                      <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
-                    </conditions>
-                    <action type="Rewrite" url="/" />
-                  </rule>
-                </rules>
-              </rewrite>
-            </system.webServer>
-          </configuration>
-          "@
-          
-          # 使用 Set-Content 将内容写入文件，并指定 UTF8 编码
-          Set-Content -Path "$destinationPath\web.config" -Value $webConfigContent -Encoding UTF8
+          # [核心修复] 明确地将根目录的 web.config 复制到部署目录
+          Write-Host "Copying web.config from $sourceConfigPath..."
+          Copy-Item -Path $sourceConfigPath -Destination $destinationPath -Force
           
           Write-Host "Deployment successful!"
