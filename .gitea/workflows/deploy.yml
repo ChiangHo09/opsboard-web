@@ -42,7 +42,7 @@ jobs:
       # 第4步：部署到 IIS 网站目录
       - name: Deploy to IIS Directory
         # [核心修复] 使用 PowerShell (pwsh) 以获得更好的脚本体验，并更新源路径
-        shell: pwsh
+        shell: powershell
         run: |
           $sourcePath = ".\opsboard-frontend\dist"
           $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
