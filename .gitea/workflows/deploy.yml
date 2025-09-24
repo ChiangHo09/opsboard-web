@@ -16,12 +16,13 @@ jobs:
     # 任务包含的步骤
     steps:
       # 第1步：检出代码
+      # 恢复为标准格式。这将依赖于您 Runner 服务器上的本地缓存或回退机制。
       - name: Checkout Repository
-        uses: C:/Program Files/gitea-runner/actions-local/actions/checkout
+        uses: actions/checkout@v4
 
       # 第2步：设置 Node.js 环境
       - name: Setup Node.js
-        uses: C:/Program Files/gitea-runner/actions-local/actions/setup-node
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
@@ -31,9 +32,7 @@ jobs:
       - name: Install Dependencies and Build
         working-directory: ./opsboard-frontend
         run: |
-          echo "==> Installing dependencies in $(pwd)..."
           npm install
-          echo "==> Building project in $(pwd)..."
           npm run build
 
       # 第4步：部署到 IIS 网站目录
@@ -41,24 +40,40 @@ jobs:
         shell: powershell
         run: |
           $sourceBuildPath = ".\opsboard-frontend\dist"
-          $sourceConfigPath = ".\web.config"
           $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
           
-          Write-Host "Source path: $sourceBuildPath"
-          Write-Host "Destination path: $destinationPath"
-          
+          Write-Host "Preparing deployment to $destinationPath..."
           if (-not (Test-Path $destinationPath)) {
-            Write-Host "Destination directory does not exist. Creating it..."
             New-Item -ItemType Directory -Force -Path $destinationPath
           }
-          
-          Write-Host "Clearing destination directory..."
           Remove-Item -Recurse -Force -Path "$destinationPath\*"
           
           Write-Host "Copying build artifacts..."
           Copy-Item -Path "$sourceBuildPath\*" -Destination $destinationPath -Recurse -Force
           
-          Write-Host "Copying web.config..."
-          Copy-Item -Path $sourceConfigPath -Destination $destinationPath -Force
+          # [核心修复] 直接在 Runner 中创建 web.config 文件
+          Write-Host "Creating web.config for SPA routing..."
+          $webConfigContent = @"
+          <?xml version="1.0" encoding="UTF-8"?>
+          <configuration>
+            <system.webServer>
+              <rewrite>
+                <rules>
+                  <rule name="React-Router Rule" stopProcessing="true">
+                    <match url=".*" />
+                    <conditions logicalGrouping="MatchAll">
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+                      <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+                    </conditions>
+                    <action type="Rewrite" url="/" />
+                  </rule>
+                </rules>
+              </rewrite>
+            </system.webServer>
+          </configuration>
+          "@
+          
+          # 使用 Set-Content 将内容写入文件，并指定 UTF8 编码
+          Set-Content -Path "$destinationPath\web.config" -Value $webConfigContent -Encoding UTF8
           
           Write-Host "Deployment successful!"
