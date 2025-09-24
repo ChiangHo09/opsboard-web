@@ -1,41 +1,54 @@
-# .gitea/workflows/deploy.yml (最终修复版)
+# 工作流的名称
 name: Build and Deploy Frontend Project
 
+# 触发条件：当有代码 push 到 master 分支时触发
 on:
   push:
     branches:
       - master
 
+# 任务列表
 jobs:
   build-and-deploy:
+    # 这里的标签必须和您注册 Runner 时设置的标签完全一致
     runs-on: windows-iis
 
+    # 任务包含的步骤
     steps:
+      # 第1步：检出代码
+      # [核心修复] 使用本地磁盘上的 checkout action
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: C:/Program Files/gitea-runner/actions-local/actions/checkout@v4
 
+      # 第2步：设置 Node.js 环境
+      # [核心修复] 使用本地磁盘上的 setup-node action
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: C:/Program Files/gitea-runner/actions-local/actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: 'opsboard-frontend/package-lock.json'
 
+      # 第3步：安装依赖并执行构建
       - name: Install Dependencies and Build
         working-directory: ./opsboard-frontend
         run: |
+          echo "==> Installing dependencies in $(pwd)..."
           npm install
+          echo "==> Building project in $(pwd)..."
           npm run build
 
       # 第4步：部署到 IIS 网站目录
       - name: Deploy to IIS Directory
-        shell: powershell
+        shell: pwsh
         run: |
           $sourceBuildPath = ".\opsboard-frontend\dist"
-          $sourceConfigPath = ".\web.config" # <-- 新增：指向根目录的 web.config
+          $sourceConfigPath = ".\web.config"
           $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
           
-          Write-Host "Checking destination path: $destinationPath"
+          Write-Host "Source path: $sourceBuildPath"
+          Write-Host "Destination path: $destinationPath"
+          
           if (-not (Test-Path $destinationPath)) {
             Write-Host "Destination directory does not exist. Creating it..."
             New-Item -ItemType Directory -Force -Path $destinationPath
@@ -44,11 +57,95 @@ jobs:
           Write-Host "Clearing destination directory..."
           Remove-Item -Recurse -Force -Path "$destinationPath\*"
           
-          Write-Host "Copying build artifacts from $sourceBuildPath..."
+          Write-Host "Copying build artifacts..."
           Copy-Item -Path "$sourceBuildPath\*" -Destination $destinationPath -Recurse -Force
           
-          # [核心修复] 新增一步：明确地将 web.config 复制到部署目录的根部
-          Write-Host "Copying web.config from $sourceConfigPath..."
+          Write-Host "Copying web.config..."
+          Copy-Item -Path $sourceConfigPath -Destination $destinationPath -Force
+          
+          Write-Host "Deployment successful!"```
+
+### **修改点解析**
+
+1.  **`uses: C:/Program Files/gitea-runner/actions-local/actions/checkout@v4`**:
+    *   我们将 `actions/checkout@v4` 替换为了一个**绝对文件路径**。
+    *   我们使用了正斜杠 `/` 来避免 YAML 的转义问题。Gitea Runner 在 Windows 上能够正确地处理这种路径。
+    *   `@v4` 这个版本号在这里实际上是**文件夹名称的一部分**。当您从 GitHub 下载 Action 时，通常会将其解压到一个带有版本号的目录中。**请您务必检查一下**，在您的 `C:\...actions\checkout` 文件夹下，是否还有一个名为 `v4` 的子文件夹。
+        *   **如果结构是 `...\actions\checkout\v4\...`**，那么 `uses: C:/.../checkout@v4` 是不正确的，应该直接指向包含 `action.yml` 的目录。
+        *   **但是**，Gitea Actions 的 `uses` 语法非常智能，它会尝试解析。通常，`@v4` 会被视为一个 Git ref。当使用本地路径时，我们应该**移除 `@v4`**，因为我们是直接引用文件，而不是一个 Git 引用。
+
+**让我们使用一个更健壮、更不容易出错的版本。**
+
+---
+
+### **最终的、最推荐的 `deploy.yml` (移除 `@v4`)**
+
+这个版本移除了本地路径末尾的版本号，这是引用本地磁盘 Action 的**标准做法**。
+
+```yaml
+# 工作流的名称
+name: Build and Deploy Frontend Project
+
+# 触发条件：当有代码 push 到 master 分支时触发
+on:
+  push:
+    branches:
+      - master
+
+# 任务列表
+jobs:
+  build-and-deploy:
+    # 这里的标签必须和您注册 Runner 时设置的标签完全一致
+    runs-on: windows-iis
+
+    # 任务包含的步骤
+    steps:
+      # 第1步：检出代码
+      # [核心修复] 使用本地磁盘上的 checkout action，并移除 @v4
+      - name: Checkout Repository
+        uses: C:/Program Files/gitea-runner/actions-local/actions/checkout
+
+      # 第2步：设置 Node.js 环境
+      # [核心修复] 使用本地磁盘上的 setup-node action，并移除 @v4
+      - name: Setup Node.js
+        uses: C:/Program Files/gitea-runner/actions-local/actions/setup-node
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'opsboard-frontend/package-lock.json'
+
+      # 第3步：安装依赖并执行构建
+      - name: Install Dependencies and Build
+        working-directory: ./opsboard-frontend
+        run: |
+          echo "==> Installing dependencies in $(pwd)..."
+          npm install
+          echo "==> Building project in $(pwd)..."
+          npm run build
+
+      # 第4步：部署到 IIS 网站目录
+      - name: Deploy to IIS Directory
+        shell: powershell
+        run: |
+          $sourceBuildPath = ".\opsboard-frontend\dist"
+          $sourceConfigPath = ".\web.config"
+          $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
+          
+          Write-Host "Source path: $sourceBuildPath"
+          Write-Host "Destination path: $destinationPath"
+          
+          if (-not (Test-Path $destinationPath)) {
+            Write-Host "Destination directory does not exist. Creating it..."
+            New-Item -ItemType Directory -Force -Path $destinationPath
+          }
+          
+          Write-Host "Clearing destination directory..."
+          Remove-Item -Recurse -Force -Path "$destinationPath\*"
+          
+          Write-Host "Copying build artifacts..."
+          Copy-Item -Path "$sourceBuildPath\*" -Destination $destinationPath -Recurse -Force
+          
+          Write-Host "Copying web.config..."
           Copy-Item -Path $sourceConfigPath -Destination $destinationPath -Force
           
           Write-Host "Deployment successful!"
