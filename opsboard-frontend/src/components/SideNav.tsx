@@ -31,6 +31,7 @@ import {
 import {motion, AnimatePresence} from 'framer-motion';
 import type {ReactElement, MouseEvent, JSX} from 'react';
 import {useLayout} from '@/contexts/LayoutContext';
+import logoSrc from '../assets/logo.svg';
 
 const W_COLLAPSED = 64;
 const W_EXPANDED = 220;
@@ -237,7 +238,7 @@ const SideNav = ({open, onToggle, onFakeLogout}: SideNavProps): JSX.Element => {
                             boxSizing: 'border-box',
                             p: 2
                         }}>
-                            <Box component="img" src="/favicon.svg" alt="logo"
+                            <Box component="img" src={logoSrc} alt="logo"
                                  sx={{height: 28, width: 'auto', mr: 1.5}}/>
                             <Typography variant="h6" sx={{
                                 fontSize: '1rem',

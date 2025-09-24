@@ -17,6 +17,7 @@ import {useTheme} from '@mui/material/styles';
 import LoginIcon from '@mui/icons-material/Login';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import HoneypotInfo from './HoneypotInfo';
+import logoSrc from '../assets/logo.svg';
 
 interface LoginProps {
     onFakeLogin: () => void;
@@ -86,7 +87,7 @@ const Login = ({onFakeLogin}: LoginProps): JSX.Element => {
                 >
                     <Box
                         component="img"
-                        src="/favicon.svg"
+                        src={logoSrc}
                         alt="logo"
                         sx={{
                             height: {xs: '4rem', sm: '5rem', md: 120},
