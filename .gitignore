@@ -1,0 +1,30 @@
+# JetBrains IDEs (WebStorm, GoLand, etc.)
+.idea/
+
+# Dependencies
+# 忽略所有名为 node_modules 的文件夹，无论它在哪一级目录下
+**/node_modules/
+node_modules/
+
+# Build output
+**/dist/
+dist/
+dist-ssr/
+*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Vite specific
+.vite/
+
+# macOS specific
+.DS_Store
