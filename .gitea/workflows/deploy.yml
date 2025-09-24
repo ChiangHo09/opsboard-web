@@ -2,6 +2,7 @@
 name: Build and Deploy Frontend Project
 
 # 触发条件：当有代码 push 到 master 分支时触发
+# (注意：Git 的默认主分支名现在通常是 main，如果您的仓库是 main，请将 master 改为 main)
 on:
   push:
     branches:
@@ -24,14 +25,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18' # 请根据您的项目要求，指定正确的 Node.js 版本
+          # [优化建议] 添加缓存以加速后续构建
+          cache: 'npm'
+          cache-dependency-path: 'opsboard-frontend/package-lock.json'
 
       # 第3步：安装依赖并执行构建
       - name: Install Dependencies and Build
+        # [核心修复] 使用 working-directory 指定所有命令都在 opsboard-frontend 目录内执行
+        working-directory: ./opsboard-frontend
         run: |
+          echo "==> Installing dependencies in $(pwd)..."
           npm install
+          echo "==> Building project in $(pwd)..."
           npm run build
 
       # 第4步：部署到 IIS 网站目录
       - name: Deploy to IIS Directory
+        # [核心修复] 使用 PowerShell (pwsh) 以获得更好的脚本体验，并更新源路径
+        shell: pwsh
         run: |
-          Copy-Item -Path ./dist/* -Destination C:\inetpub\wwwroot\opsboard-web -Recurse -Force
+          $sourcePath = ".\opsboard-frontend\dist"
+          $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
+          
+          Write-Host "Source path: $sourcePath"
+          Write-Host "Destination path: $destinationPath"
+          
+          if (-not (Test-Path $destinationPath)) {
+            Write-Host "Destination directory does not exist. Creating it..."
+            New-Item -ItemType Directory -Force -Path $destinationPath
+          }
+          
+          Write-Host "Clearing destination directory..."
+          Remove-Item -Recurse -Force -Path "$destinationPath\*"
+          
+          Write-Host "Copying build artifacts..."
+          Copy-Item -Path "$sourcePath\*" -Destination $destinationPath -Recurse -Force
+          
+          Write-Host "Deployment successful!"
