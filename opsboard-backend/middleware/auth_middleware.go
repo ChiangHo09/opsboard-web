@@ -1,9 +1,8 @@
-// File: opsboard-backend/middleware/auth_middleware.go
 /**
  * @file auth_middleware.go
  * @description 提供 JWT 认证中间件。
  * @modification
- *   - [New File]: 创建此文件以保护需要认证的路由。
+ *   - [UUID Migration]: 从 JWT claims 中提取 `user_id` 后，将其作为字符串直接存储到 Gin 的上下文中，不再转换为 `int64`。
  */
 package middleware
 
@@ -15,7 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware 检查请求头中的 JWT
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -37,16 +35,15 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 从 claims 中提取 user_id 并将其转换为 int64
-		userIDFloat, ok := claims["user_id"].(float64)
+		// [核心修改] 从 claims 中提取 user_id 字符串
+		userIDStr, ok := claims["user_id"].(string)
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Token 中缺少用户信息"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Token 中缺少或格式错误的用户信息"})
 			return
 		}
-		userID := int64(userIDFloat)
 
-		// 将用户 ID 存储在 context 中，以便后续的 handler 使用
-		c.Set("user_id", userID)
+		// 将用户 ID 字符串存储在 context 中
+		c.Set("user_id", userIDStr)
 
 		c.Next()
 	}

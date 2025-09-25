@@ -1,19 +1,18 @@
-///**
-// * @file go.mod
-// * @description Go 模块定义文件，用于管理项目依赖。
-// * @modification
-// *   - [DB Migration]: 将 Oracle 驱动 `github.com/godror/godror` 替换为 MySQL 驱动 `github.com/go-sql-driver/mysql`。
-// *   - [Cleanup]: 移除了不再需要的间接依赖，`go mod tidy` 会自动重新整理。
-// */
+//@file go.mod
+//@description Go 模块定义文件，用于管理项目依赖。
+//@modification
+//  - [UUID Migration]: 新增了 `github.com/google/uuid` 依赖，用于在应用层生成和处理 UUID。
+
 module opsboard-backend
 
-go 1.25 // 保持 Go 版本一致性
+go 1.25
 
 require (
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/go-sql-driver/mysql v1.7.1 // [核心修改] 添加 MySQL 驱动
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/google/uuid v1.6.0 // [核心修改] 添加 UUID 库
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.17.0
 )
