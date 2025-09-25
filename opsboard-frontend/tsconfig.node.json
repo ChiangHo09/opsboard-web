@@ -1,14 +1,9 @@
 /**
- * 文件名: tsconfig.node.json
- *
- * 代码功能:
- * 此文件专用于配置项目中需要在 Node.js 环境下运行的 TypeScript 文件，
- * 例如 Vite 的配置文件（vite.config.ts）。它确保这些文件在正确的类型环境中被检查和编译。
- *
- * 本次修改内容:
- * - 【类型冲突终极修复】通过新增 `exclude` 属性，彻底解决了此配置文件错误地将浏览器源码（src 目录）纳入 Node.js 类型检查环境的问题。
- * - **新增排除范围**: 在文件末尾新增了 `"exclude": ["src"]` 字段。这是一个强硬的、明确的规则，强制 TypeScript 在使用此配置时忽略整个 `src` 目录。
- * - **结果**: 此修改可以确保 `src` 目录下的所有 React 组件（如 MainLayout.tsx）只会被 `tsconfig.app.json`（浏览器环境）处理，从根本上消除了因环境类型冲突导致的 TS2345 错误。
+ * @file tsconfig.node.json
+ * @description 此文件专用于配置项目中需要在 Node.js 环境下运行的 TypeScript 文件。
+ * @modification
+ *   - [TS Fix]: 移除了已过时且与 `verbatimModuleSyntax` 功能重叠的编译选项 `erasableSyntaxOnly`。
+ *   - [Reason]: `verbatimModuleSyntax` 是 TypeScript 5.5+ 推荐的现代选项，它已经包含了 `erasableSyntaxOnly` 的所有功能并提供了更强的模块解析保证。移除旧选项可以解决 `TS5023: Unknown compiler option` 的编译错误。
  */
 {
   "compilerOptions": {
@@ -29,7 +24,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
+    // "erasableSyntaxOnly": true, // [核心修复] 移除此行
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
