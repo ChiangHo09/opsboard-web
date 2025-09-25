@@ -1,9 +1,9 @@
-// File: opsboard-backend/handlers/auth_handler.go
 /**
  * @file auth_handler.go
  * @description 处理认证相关的 HTTP 请求，例如登录。
  * @modification
- *   - [New File]: 创建此文件以处理 /api/auth 路由。
+ *   - [Temp Change]: 根据测试要求，将密码验证逻辑从 `utils.CheckPasswordHash` 更改为直接的明文比较。
+ *   - [Security Warning]: 明确指出这是一个临时性的、不安全的改动，仅用于测试目的。
  */
 package handlers
 
@@ -29,7 +29,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// 1. 查找用户
 	user, err := services.GetUserByUsername(req.Username)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -40,13 +39,15 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// 2. 验证密码
-	if !utils.CheckPasswordHash(req.Password, user.Password) {
+	// --- [核心修改] 密码验证逻辑 ---
+	// 警告：这是一个临时的、不安全的明文密码比较，仅用于简化测试。
+	// 在生产环境中，必须使用哈希密码验证。
+	if req.Password != user.Password {
+		// 原始的安全代码: if !utils.CheckPasswordHash(req.Password, user.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "用户名或密码错误"})
 		return
 	}
 
-	// 3. 生成 JWT
 	token, err := utils.GenerateToken(user.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "生成 token 失败"})

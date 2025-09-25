@@ -1,18 +1,18 @@
-// File: opsboard-backend/go.mod
 ///**
 // * @file go.mod
 // * @description Go 模块定义文件，用于管理项目依赖。
 // * @modification
-// *   - [New File]: 初始化 Go 模块，并声明所有必要的第三方库依赖。
+// *   - [DB Migration]: 将 Oracle 驱动 `github.com/godror/godror` 替换为 MySQL 驱动 `github.com/go-sql-driver/mysql`。
+// *   - [Cleanup]: 移除了不再需要的间接依赖，`go mod tidy` 会自动重新整理。
 // */
 module opsboard-backend
 
-go 1.25 // 建议使用较新的 Go 版本
+go 1.25 // 保持 Go 版本一致性
 
 require (
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/godror/godror v0.37.0
+	github.com/go-sql-driver/mysql v1.7.1 // [核心修改] 添加 MySQL 驱动
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.17.0
@@ -24,13 +24,10 @@ require (
 	github.com/chenzhuoyu/iasm v0.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-logfmt/logfmt v0.5.1 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.15.5 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/godror/knownpb v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/kr/text v0.2.0 // indirect
