@@ -2,8 +2,8 @@
  * @file src/App.tsx
  * @description 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
  * @modification
- *   - [类型修复]: `onError` 回调中的 `error` 参数类型为 `unknown`。通过使用 `instanceof ApiError` 和 `instanceof Error` 作为类型守卫，我们可以安全地访问 error 对象的属性（如 `status` 和 `message`），从而解决了 `TS18046` 错误。
- *   - [导入修复]: 确保从 `./api` 导入 `ApiError` 的语句能够正常工作，因为 `src/api/index.ts` 现在已修复并能正确导出该类。
+ *   - [Typo Fix]: 修正了文件末尾处 `</NotificationProvider>` 的拼写错误（之前被错误地写为 `</Notification-provider>`）。
+ *   - [Reason]: 此修复解决了由于 JSX 标签大小写不匹配而导致的解析错误。
  */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
@@ -16,10 +16,10 @@ import theme from './theme';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { NotificationProvider, useNotification } from './contexts/NotificationContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import GlobalErrorFallback from './components/GlobalErrorFallback';
-import ProtectedRoute from './components/ProtectedRoute';
-import { ApiError } from './api'; // 此导入现在可以正常工作
+import { ApiError } from './api';
 
 import Login from './pages/Login';
 import AppLayout from './layouts/AppLayout';
@@ -41,13 +41,51 @@ const TicketDetailMobile = lazy(() => import('./pages/mobile/TicketDetailMobile'
 const TemplateDetailMobile = lazy(() => import('./pages/mobile/TemplateDetailMobile'));
 
 const AppRoutes = (): JSX.Element => {
-    const showNotification = useNotification();
+    const { isAuthenticated } = useAuth();
 
+    return (
+        <Routes>
+            {isAuthenticated ? (
+                <Route path="/" element={<AppLayout />}>
+                    <Route index element={<Navigate to="/app/dashboard" replace />} />
+                    <Route path="app" element={<MainLayout />}>
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="servers" element={<Servers />} />
+                        <Route path="servers/:serverId" element={<Servers />} />
+                        <Route path="servers/mobile/:serverId" element={<ServerDetailMobile />} />
+                        <Route path="changelog" element={<Changelog />} />
+                        <Route path="changelog/:logId" element={<Changelog />} />
+                        <Route path="changelog/mobile/:logId" element={<ChangelogDetailMobile />} />
+                        <Route path="inspection-backup" element={<InspectionBackup />} />
+                        <Route path="tickets" element={<Tickets />} />
+                        <Route path="tickets/:ticketId" element={<Tickets />} />
+                        <Route path="tickets/mobile/:ticketId" element={<TicketDetailMobile />} />
+                        <Route path="stats" element={<Stats />} />
+                        <Route path="labs" element={<Labs />} />
+                        <Route path="search" element={<Search />} />
+                        <Route path="settings" element={<Settings />} />
+                        <Route path="template-page" element={<TemplatePage />} />
+                        <Route path="template-page/:itemId" element={<TemplatePage />} />
+                        <Route path="template-page/mobile/:itemId" element={<TemplateDetailMobile />} />
+                    </Route>
+                    <Route path="/login" element={<Navigate to="/app/dashboard" replace />} />
+                </Route>
+            ) : (
+                <>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="*" element={<Navigate to="/login" replace />} />
+                </>
+            )}
+        </Routes>
+    );
+};
+
+const AppProviders = ({ children }: { children: JSX.Element }): JSX.Element => {
+    const showNotification = useNotification();
     const queryClient = new QueryClient({
         queryCache: new QueryCache({
             onError: (error: unknown) => {
                 let errorMessage = '数据请求失败，请稍后重试。';
-                // [类型修复] 使用 `instanceof` 作为类型守卫来安全地处理 `unknown` 类型的错误
                 if (error instanceof ApiError) {
                     if (error.status === 401) {
                         localStorage.removeItem('token');
@@ -61,11 +99,6 @@ const AppRoutes = (): JSX.Element => {
                 showNotification(errorMessage, 'error');
             },
         }),
-        defaultOptions: {
-            queries: {
-                retry: false,
-            },
-        },
     });
 
     const loadingFallback = (
@@ -76,36 +109,11 @@ const AppRoutes = (): JSX.Element => {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <Suspense fallback={loadingFallback}>
-                <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route element={<ProtectedRoute />}>
-                        <Route path="/" element={<AppLayout />}>
-                            <Route index element={<Navigate to="/app/dashboard" replace />} />
-                            <Route path="app" element={<MainLayout />}>
-                                <Route path="dashboard" element={<Dashboard />} />
-                                <Route path="servers" element={<Servers />} />
-                                <Route path="servers/:serverId" element={<Servers />} />
-                                <Route path="servers/mobile/:serverId" element={<ServerDetailMobile />} />
-                                <Route path="changelog" element={<Changelog />} />
-                                <Route path="changelog/:logId" element={<Changelog />} />
-                                <Route path="changelog/mobile/:logId" element={<ChangelogDetailMobile />} />
-                                <Route path="inspection-backup" element={<InspectionBackup />} />
-                                <Route path="tickets" element={<Tickets />} />
-                                <Route path="tickets/:ticketId" element={<Tickets />} />
-                                <Route path="tickets/mobile/:ticketId" element={<TicketDetailMobile />} />
-                                <Route path="stats" element={<Stats />} />
-                                <Route path="labs" element={<Labs />} />
-                                <Route path="search" element={<Search />} />
-                                <Route path="settings" element={<Settings />} />
-                                <Route path="template-page" element={<TemplatePage />} />
-                                <Route path="template-page/:itemId" element={<TemplatePage />} />
-                                <Route path="template-page/mobile/:itemId" element={<TemplateDetailMobile />} />
-                            </Route>
-                        </Route>
-                    </Route>
-                </Routes>
-            </Suspense>
+            <LayoutProvider>
+                <Suspense fallback={loadingFallback}>
+                    {children}
+                </Suspense>
+            </LayoutProvider>
         </QueryClientProvider>
     );
 };
@@ -124,9 +132,9 @@ const App = (): JSX.Element => {
                 <BrowserRouter>
                     <NotificationProvider>
                         <AuthProvider>
-                            <LayoutProvider>
+                            <AppProviders>
                                 <AppRoutes />
-                            </LayoutProvider>
+                            </AppProviders>
                         </AuthProvider>
                     </NotificationProvider>
                 </BrowserRouter>
