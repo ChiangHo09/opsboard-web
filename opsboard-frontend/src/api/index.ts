@@ -1,9 +1,9 @@
 /**
  * @file src/api/index.ts
- * @description API 客户端配置和基础工具。这是所有 API 模块的统一入口点。
+ * @description API 客户端配置和基础工具。
  * @modification
- *   - [Code Quality]: 将 `ApiError` 类中的 `body` 属性及其构造函数参数的类型从 `any` 更改为 `unknown`，以遵循 `no-explicit-any` ESLint 规则，提高类型安全性。
- *   - [Code Quality]: 在 `api` 函数的 `catch` 块中，将未使用的错误变量 `e` 重命名为 `_e`，以遵循 `no-unused-vars` ESLint 规则。
+ *   - [Auth Fix]: 重构了核心 `api` 函数，使其可以接受一个可选的 `tokenOverride` 参数。
+ *   - [Reason]: 此更改解决了在登录流程中 `getMe` 请求无法立即获取到新 Token 的问题。现在，`AuthContext` 可以在 `login` 成功后，将新获取的 Token 直接注入到 `getMe` 的 API 调用中，确保了请求的原子性和正确性，而无需依赖 `sessionStorage` 的读取时机。
  */
 // 导入并重新导出所有模块化的 API
 export * from './changelogApi';
@@ -15,19 +15,13 @@ export * from './user';
 
 // ------------------- 核心 API 客户端实现 -------------------
 
-// 在真实应用中，此 URL 应通过环境变量（如 import.meta.env.VITE_API_URL）配置
 const API_BASE_URL = '/api';
 
-/**
- * API 响应的自定义错误类。
- * 这使我们能够在 React Query 或其他应用部分中处理错误时，
- * 轻松访问 HTTP 状态码和响应体。
- */
 export class ApiError extends Error {
     status: number;
-    body: unknown; // [核心修复] 使用 `unknown` 替代 `any` 以提高类型安全
+    body: unknown;
 
-    constructor(message: string, status: number, body: unknown) { // [核心修复] 使用 `unknown` 替代 `any`
+    constructor(message: string, status: number, body: unknown) {
         super(message);
         this.name = 'ApiError';
         this.status = status;
@@ -35,15 +29,14 @@ export class ApiError extends Error {
     }
 }
 
-/**
- * 核心 API 客户端函数。
- * @param endpoint - API 端点路径 (例如, '/users')。
- * @param options - `fetch` API 的配置选项 (如 method, body)。
- * @returns 返回一个解析为 JSON 响应的 Promise。
- * @throws {ApiError} 如果网络响应状态码不是 'ok' (即非 2xx)。
- */
-async function api<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = localStorage.getItem('token');
+// 定义 api 函数的选项
+interface ApiOptions extends RequestInit {
+    tokenOverride?: string; // 可选的 token 覆盖参数
+}
+
+async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+    // [核心修改] 优先使用 tokenOverride，否则从 sessionStorage 读取
+    const token = options.tokenOverride ?? sessionStorage.getItem('token');
     const headers = new Headers(options.headers || {});
 
     if (!(options.body instanceof FormData)) {
@@ -66,7 +59,7 @@ async function api<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         let errorBody: { message?: string };
         try {
             errorBody = await response.json();
-        } catch (_e) { // [核心修复] 将未使用的 'e' 重命名为 '_e'
+        } catch (_e) {
             errorBody = { message: response.statusText };
         }
         throw new ApiError(

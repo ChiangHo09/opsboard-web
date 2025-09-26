@@ -1,8 +1,9 @@
 /**
- * @file auth_handler.go
+ * @file opsboard-backend/handlers/auth_handler.go
  * @description 处理认证相关的 HTTP 请求，例如登录。
  * @modification
- *   - [UUID Migration]: 在生成 JWT 时，将用户的 UUID (`user.UserID`) 转换为字符串 `user.UserID.String()` 后再传递给 `GenerateToken` 函数。
+ *   - [Auditing]: 在用户成功登录后，调用 `services.CreateLog` 来异步记录登录成功事件。
+ *   - [Auditing]: 日志详情中记录了用户的 IP 地址和 User-Agent，为安全审计提供了重要的上下文信息。
  */
 package handlers
 
@@ -42,12 +43,20 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// [核心修改] 将 UUID 对象转换为字符串再生成 token
 	token, err := utils.GenerateToken(user.UserID.String())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "生成 token 失败"})
 		return
 	}
+
+	// --- [核心修改] 集成日志记录 ---
+	// 在成功响应之前，异步记录登录成功事件
+	logDetails := services.LogDetails{
+		"ip_address": c.ClientIP(),
+		"user_agent": c.Request.UserAgent(),
+	}
+	services.CreateLog(user.UserID.String(), string(services.UserLoginSuccess), logDetails)
+	// ---------------------------
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }

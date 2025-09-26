@@ -1,9 +1,10 @@
 /**
  * @file src/layouts/MainLayout.tsx
- * @description 此文件定义了应用的主UI布局。
+ * @description 应用的主 UI 布局，包含侧边栏和内容区域。
  * @modification
- *   - [认证集成]: 移除了旧的 `onFakeLogout` 属性。现在使用 `useAuth` 钩子来获取真实的 `logout` 函数，并将其传递给 `SideNav` 组件。
- *   - [代码清理]: 简化了组件的 props 接口，使其不再依赖于从顶层 `App` 组件传递下来的模拟函数。
+ *   - [Context Fix]: 移除了组件内部多余的 `<LayoutProvider>` 包裹。
+ *   - [Reason]: 全局的 `LayoutProvider` 已经在 `App.tsx` 中提供了。在布局组件内部重复提供会创建一个新的、隔离的上下文，导致子组件（如 `MainContentWrapper`）无法访问由 `App.tsx` 提供的其他全局上下文（如 `AuthProvider`），从而引发 "useAuth must be used within an AuthProvider" 的错误。
+ *   - [Refactor]: 将 `MainContentWrapper` 的逻辑合并回 `MainLayout`，简化了组件结构。
  */
 import { useState, type JSX, Suspense, useEffect } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
@@ -17,24 +18,26 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 
 import SideNav from '@/components/SideNav';
-import { LayoutProvider, useLayout, useLayoutDispatch } from '@/contexts/LayoutContext.tsx';
+// [核心修改] 不再需要 LayoutProvider
+import { useLayout, useLayoutDispatch } from '@/contexts/LayoutContext.tsx';
 import RightSearchPanel from '@/components/RightSearchPanel';
 import Modal from '@/components/Modal';
 import { pageVariants, pageTransition, mobileOverlayVariants } from '@/utils/animations';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import LocalErrorFallback from '@/components/LocalErrorFallback';
-import { useAuth } from '@/hooks/useAuth'; // 引入 useAuth 钩子
-
+import { useAuth } from '@/hooks/useAuth';
 
 const MotionBox = motion(Box);
 const MOBILE_TOP_BAR_HEIGHT = 56;
 
-function MainContentWrapper(): JSX.Element {
-    const { logout } = useAuth(); // 从 AuthContext 获取真实的 logout 函数
+// [核心修改] 不再需要 MainContentWrapper，将其逻辑直接合并到 MainLayout 中
+const MainLayout = (): JSX.Element => {
+    const { logout } = useAuth(); // 现在可以在这里安全地调用 useAuth
     const location = useLocation();
     const currentOutlet = useOutlet();
     const basePath = location.pathname.split('/').slice(0, 3).join('/');
 
+    // useLayout 现在可以正常工作，因为它继承了 App.tsx 中的 LayoutProvider
     const {
         isPanelOpen, panelContent, closePanel,
         togglePanel, panelTitle, panelWidth,
@@ -61,6 +64,7 @@ function MainContentWrapper(): JSX.Element {
     );
 
     return (
+        // [核心修改] 移除了外层的 LayoutProvider
         <Box
             sx={{
                 display: 'flex',
@@ -72,7 +76,7 @@ function MainContentWrapper(): JSX.Element {
             <SideNav
                 open={sideNavOpen}
                 onToggle={() => setSideNavOpen(o => !o)}
-                onLogout={logout} // 传递真实的 logout 函数
+                onLogout={logout}
             />
             <Box
                 component="main"
@@ -232,15 +236,6 @@ function MainContentWrapper(): JSX.Element {
                 {!isMobile && modalJSX}
             </Box>
         </Box>
-    );
-}
-
-// MainLayout 不再需要接收任何 props
-const MainLayout = (): JSX.Element => {
-    return (
-        <LayoutProvider>
-            <MainContentWrapper />
-        </LayoutProvider>
     );
 };
 
