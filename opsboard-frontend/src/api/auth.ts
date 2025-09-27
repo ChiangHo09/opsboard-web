@@ -1,29 +1,40 @@
 /**
  * @file src/api/auth.ts
- * @description 包含与认证相关的 API 函数。
- * @modification
- *   - [New File]: 创建此文件以封装所有认证相关的 API 调用。
- *   - [login function]: 实现了调用后端登录端点的函数。它负责发送用户凭证，并期望在响应中收到一个认证令牌。
+ * @description 提供了认证相关的 API 函数，例如登录。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [类型更新]：修改了 `LoginResponse` 接口，使其包含 `accessToken` 和 `refreshToken` 字段，以匹配新的后端 JWT 认证流程。
+ *   - [字段重命名]：将原有的 `token` 字段移除，因为现在返回的是两个独立的令牌。
  */
-import api from './index.ts';
+import api from './index';
 
+/**
+ * 定义登录请求所需的凭证类型。
+ */
 export interface Credentials {
-    username?: string;
-    password?: string;
-}
-
-interface LoginResponse {
-    token: string;
+    username: string;
+    password: string;
 }
 
 /**
- * 调用后端 API 以认证用户。
- * @param credentials - 包含用户 `username` 和 `password` 的对象。
- * @returns 返回一个解析为登录响应（包含认证 token）的 Promise。
+ * 定义登录成功后 API 的响应体类型。
+ */
+export interface LoginResponse {
+    accessToken: string;  // [核心修改]
+    refreshToken: string; // [核心修改]
+}
+
+/**
+ * 调用后端 API 执行登录操作。
+ * @param credentials - 包含用户名和密码的对象。
+ * @returns {Promise<LoginResponse>} 返回一个包含访问令牌和刷新令牌的 Promise。
  */
 export const login = (credentials: Credentials): Promise<LoginResponse> => {
+    // 登录请求本身不应被会话检查拦截，因为它就是为了创建会话
     return api<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials),
+        // 在旧的超时模型中，我们使用 bypassSessionCheck。
+        // 在新的刷新令牌模型中，这个 API 调用是公开的，不需要 Authorization 头，
+        // 所以它自然不会触发401，也就无需特殊处理。
     });
 };

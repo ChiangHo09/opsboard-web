@@ -1,21 +1,16 @@
 /**
  * @file src/contexts/AuthContext.tsx
- * @description 提供了全局认证状态管理，并集成了闲置超时自动登出功能。
- * @modification
- *   - [Code Quality]: 修正了 `login` 函数中 `catch` 块的错误处理类型。将捕获的 `err` 变量视为 `unknown`，并通过类型守卫安全地访问其 `message` 属性，以解决 `no-explicit-any` ESLint 错误。
+ * @description 提供了全局认证状态管理。此版本已重构为配合行业标准的 JWT 刷新令牌模型工作。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [健壮性加固]：在 `login` 函数中，增加了对从后端接收到的 `accessToken` 和 `refreshToken` 的存在性验证。
+ *   - [原因]：此修改是为了防止因后端返回非预期响应体而导致前端认证流程出错。通过在设置令牌前进行检查，可以避免将 `undefined` 存入 `sessionStorage`，从而从根本上解决了 `Authorization: Bearer undefined` 的问题，并能提供更明确的错误提示。
  */
-import { createContext, useState, useEffect, useMemo, type ReactNode, type JSX } from 'react';
+import { createContext, useState, useEffect, useMemo, useRef, type ReactNode, type JSX } from 'react';
 import { login as apiLogin, type Credentials } from '@/api/auth';
 import { getMe } from '@/api/user';
 import type { User } from '@/types/user';
 import { Box, CircularProgress } from '@mui/material';
-import { useIdleTimeout } from '@/hooks/useIdleTimeout';
-import { SessionTimeoutModal } from '@/components/SessionTimeoutModal';
 import { ApiError } from '@/api';
-
-// --- 超时配置 ---
-const IDLE_TIMEOUT_MS = 5000//59 * 60 * 1000;   // 59 分钟
-const LOGOUT_TIMEOUT_MS = 1 * 60 * 1000;  // 60 秒 (1分钟) 宽限期
 
 interface AuthContextType {
     user: User | null;
@@ -36,64 +31,77 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isWarningModalOpen, setWarningModalOpen] = useState(false);
+    const [accessToken, setAccessToken] = useState<string | null>(() => sessionStorage.getItem('accessToken'));
+
+    const isLoggingIn = useRef(false);
 
     const logout = () => {
-        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('refreshToken');
+        setAccessToken(null);
         setUser(null);
         setError(null);
-        setWarningModalOpen(false);
+        isLoggingIn.current = false;
         window.location.assign('/login');
     };
 
-    const handleIdle = () => {
-        setWarningModalOpen(true);
-    };
-
-    const { stayActive } = useIdleTimeout({
-        onIdle: handleIdle,
-        onLogout: logout,
-        idleTimeoutMs: IDLE_TIMEOUT_MS,
-        logoutTimeoutMs: LOGOUT_TIMEOUT_MS,
-    });
-
-    const handleStayLoggedIn = () => {
-        setWarningModalOpen(false);
-        stayActive();
-    };
-
     useEffect(() => {
-        const initializeAuth = async () => {
-            const token = sessionStorage.getItem('token');
-            if (token) {
+        let isMounted = true;
+        const fetchUser = async () => {
+            if (accessToken) {
+                if (!user) setIsLoading(true);
                 try {
-                    const currentUser = await getMe({ tokenOverride: token });
-                    setUser(currentUser);
+                    const currentUser = await getMe();
+                    if (isMounted) {
+                        setUser(currentUser);
+                        setError(null);
+                    }
                 } catch (err) {
-                    sessionStorage.removeItem('token');
-                    setUser(null);
+                    if (isMounted) logout();
+                } finally {
+                    if (isMounted) setIsLoading(false);
                 }
+            } else {
+                setUser(null);
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
-        initializeAuth();
-    }, []);
+
+        fetchUser();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [accessToken]);
 
     const login = async (credentials: Credentials) => {
+        if (isLoggingIn.current) return;
+
+        isLoggingIn.current = true;
         setError(null);
+        setIsLoading(true);
+
         try {
-            const { token } = await apiLogin(credentials);
-            sessionStorage.setItem('token', token);
-            const currentUser = await getMe({ tokenOverride: token });
-            setUser(currentUser);
-        } catch (err: unknown) { // [核心修复] 将 err 类型声明为 unknown
-            let errorMessage = '登录失败，请检查您的凭证。';
-            // 使用类型守卫安全地访问 message 属性
+            const response = await apiLogin(credentials);
+
+            // [核心修复] 验证从后端收到的令牌
+            if (!response || !response.accessToken || !response.refreshToken) {
+                throw new Error("登录响应无效，未收到令牌。");
+            }
+
+            sessionStorage.setItem('accessToken', response.accessToken);
+            sessionStorage.setItem('refreshToken', response.refreshToken);
+            setAccessToken(response.accessToken);
+        } catch (err: unknown) {
+            let errorMessage = '登录失败，请检查您的凭据。';
             if (err instanceof ApiError || err instanceof Error) {
                 errorMessage = err.message;
             }
             setError(errorMessage);
+            setIsLoading(false);
             throw err;
+        } finally {
+            isLoggingIn.current = false;
         }
     };
 
@@ -106,7 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         error,
     }), [user, isLoading, error]);
 
-    if (isLoading) {
+    if (isLoading && !user) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <CircularProgress />
@@ -117,14 +125,6 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     return (
         <AuthContext.Provider value={value}>
             {children}
-            {value.isAuthenticated && (
-                <SessionTimeoutModal
-                    open={isWarningModalOpen}
-                    countdownSeconds={LOGOUT_TIMEOUT_MS / 1000}
-                    onStayLoggedIn={handleStayLoggedIn}
-                    onLogout={logout}
-                />
-            )}
         </AuthContext.Provider>
     );
 };
