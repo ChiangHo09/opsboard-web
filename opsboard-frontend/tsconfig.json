@@ -1,18 +1,38 @@
 /**
- * 文件名: tsconfig.json
- *
- * 文件功能描述:
- * 此文件是 TypeScript 项目的根配置文件。它不直接包含编译选项，
- * 而是通过 "references" 指向项目中的其他 tsconfig 文件（如应用代码和 Node.js 脚本的配置），
- * 实现了对项目不同部分的分离编译管理。
- *
- * 本次修改内容:
- * - 确认文件结构正确，作为项目引用的入口点。
+ * @file tsconfig.json
+ * @description TypeScript 项目的根配置文件。此文件现在是项目中唯一活跃的配置。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [配置激活]：此文件已更新为包含所有必要的应用编译选项，并移除了对 `tsconfig.app.json` 和 `tsconfig.node.json` 的项目引用（references）。
+ *   - [原因]：为解决 IDE 工具链的配置解析问题，项目已切换到此单一配置文件模式。`tsconfig.app.json` 和 `tsconfig.node.json` 已被注释并归档，以备将来使用。
  */
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Path Aliasing */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

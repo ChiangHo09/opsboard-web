@@ -1,17 +1,13 @@
 /**
- * 文件名: tsconfig.app.json
- *
- * 文件功能描述:
- * 此文件是专门为应用程序源代码（即 'src' 目录下的代码）提供的 TypeScript 编译配置。
- * 它定义了所有与 React 应用开发相关的编译选项、模块解析规则以及代码质量检查的严格等级。
- *
- * 本次修改内容:
- * - 【新增配置】在现有的严格配置基础上，添加了 "baseUrl" 和 "paths" 选项以实现绝对路径别名。
- * - "baseUrl": "."      -> 设置模块解析的基础目录为项目根目录。
- * - "paths": { "@/*": ["src/*"] } -> 定义了别名规则，将 `@/` 指向 `src/` 目录。
- *   这使得在代码中可以使用例如 `import Component from '@/components/Component'`
- *   的写法，代替了深层次的相对路径 `../../...`，从而优化了代码的可读性和可维护性。
+ * @file tsconfig.app.json
+ * @description 此文件当前**未被激活**，其内容已被完全注释。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [配置归档]：将此文件的全部内容注释掉，并在顶部添加了说明性注释。
+ *   - [原因]：为解决 IDE 工具链的配置解析问题，项目已切换为使用根目录的单一 `tsconfig.json` 文件。此文件被保留，以备未来项目进行模块化改造时，重新启用 TypeScript 的项目引用（Project References）功能。
+ *   - [如何恢复]：要重新激活此配置，请取消下面的注释，并同时在根 `tsconfig.json` 文件中恢复 `"references"` 配置（并移除合并后的 `compilerOptions` 和 `include`）。
  */
+
+/*
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
@@ -21,7 +17,6 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -29,7 +24,6 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -37,7 +31,6 @@
     "noUncheckedSideEffectImports": true,
     "allowSyntheticDefaultImports": true,
 
-    /* Path Aliasing - 新增的配置 */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
@@ -45,3 +38,4 @@
   },
   "include": ["src"]
 }
+*/
