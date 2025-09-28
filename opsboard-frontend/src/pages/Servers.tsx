@@ -1,8 +1,9 @@
 /**
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面。
- * @modification
- *   - [API导入修复]: 经过 API 目录重构，确认从此文件的角度看，`import { serversApi, type ServerRow } from '@/api'` 依然是正确的导入方式。无需修改此文件。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [类型对齐]：将 `handleRowClick` 函数的参数类型从 `number` 改回 `string`，以匹配 `ServerRow` 中 `id` 的 `string` 类型。
+ *   - [原因]：此修改是为了与 `api/serversApi.ts` 中的类型变更保持同步，确保了整个组件内对 `id` 的处理都是类型一致的，从而解决了 TypeScript 的编译错误。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -31,15 +32,19 @@ const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailC
 const desktopColumns: ColumnConfig<ServerRow>[] = [
     { id: 'serverName', label: '服务器名称', sx: {width: '150px'}, renderCell: (r: ServerRow) => <TooltipCell>{r.serverName}</TooltipCell> },
     { id: 'ip', label: 'IP 地址', sx: {width: '130px'}, renderCell: (r: ServerRow) => <TooltipCell>{r.ip}</TooltipCell> },
-    { id: 'role', label: '角色', sx: {width: '100px'}, renderCell: (r: ServerRow) => <TooltipCell>{r.role}</TooltipCell> },
-    { id: 'depCustNote', label: '部署类型 / 备注', sx: {width: '200px'}, renderCell: (r: ServerRow) => <TooltipCell>{r.dep ? `[${r.dep}] ` : ''}{r.custNote || '-'}</TooltipCell> },
-    { id: 'note', label: '使用备注', renderCell: (r: ServerRow) => <TooltipCell>{r.note || '-'}</TooltipCell> },
+    { id: 'role', label: '角色', sx: {width: '100px'}, renderCell: (r: ServerRow) => <TooltipCell>{r.role?.Valid ? r.role.String : '-'}</TooltipCell> },
+    { id: 'depCustNote', label: '部署类型 / 备注', sx: {width: '200px'}, renderCell: (r: ServerRow) => {
+            const depText = r.dep?.Valid ? `[${r.dep.String}] ` : '';
+            const custNoteText = r.custNote?.Valid ? r.custNote.String : '-';
+            return <TooltipCell>{depText}{custNoteText}</TooltipCell>;
+        }},
+    { id: 'note', label: '使用备注', renderCell: (r: ServerRow) => <TooltipCell>{r.note?.Valid ? r.note.String : '-'}</TooltipCell> },
 ];
 
 const mobileColumns: ColumnConfig<ServerRow>[] = [
     { id: 'customerName', label: '客户名称', sx: {width: '33.33%'}, renderCell: (r: ServerRow) => <TooltipCell>{r.customerName}</TooltipCell> },
     { id: 'serverName', label: '服务器名称', sx: {width: '33.33%'}, renderCell: (r: ServerRow) => <TooltipCell>{r.serverName}</TooltipCell> },
-    { id: 'role', label: '角色', sx: {width: '33.33%'}, renderCell: (r: ServerRow) => <TooltipCell>{r.role}</TooltipCell> },
+    { id: 'role', label: '角色', sx: {width: '33.33%'}, renderCell: (r: ServerRow) => <TooltipCell>{r.role?.Valid ? r.role.String : '-'}</TooltipCell> },
 ];
 
 const SERVERS_QUERY_KEY = ['servers'];
@@ -115,8 +120,9 @@ export default function Servers(): JSX.Element {
         };
     }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
-    const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
 
+    // [核心修复] 确保 handleRowClick 的参数是 string
     const handleRowClick = useCallback((id: string) => {
         setClickedRowId(id);
         delayedNavigate(`/app/servers/${id}`, {replace: true});
@@ -156,7 +162,7 @@ export default function Servers(): JSX.Element {
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {isLoading && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}><CircularProgress/></Box>}
-                {isError && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Typography color="error">加载失败: {error.message}</Typography></Box>}
+                {isError && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Typography color="error">加载失败: {error instanceof Error ? error.message : '未知错误'}</Typography></Box>}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
