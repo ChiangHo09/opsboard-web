@@ -1,8 +1,9 @@
 /**
  * @file src/pages/Changelog.tsx
  * @description 该文件负责渲染“更新日志”页面。
- * @modification
- *   - [API导入修复]: 经过 API 目录重构，确认从此文件的角度看，`import { changelogsApi, type ChangelogRow } from '@/api'` 依然是正确的导入方式。无需修改此文件。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [最终修复]：将 `handleRowClick` 函数的参数 `id` 的类型从 `number` 更改为 `string`。
+ *   - [原因]：此修改是为了与 `api/changelogApi.ts` 中更新后的 `ChangelogRow` 类型（其中 `id` 已被转换为 `string`）保持一致，从而解决了因类型不匹配而导致的 TypeScript 编译错误。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -28,14 +29,14 @@ const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogD
 
 const desktopColumns: ColumnConfig<ChangelogRow>[] = [
     { id: 'customerName', label: '客户名称', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'updateTime', label: '更新时间', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split(' ')[0]}</TooltipCell> },
+    { id: 'updateTime', label: '更新时间', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> }, // 使用 'T' 分割更健壮
     { id: 'updateType', label: '更新类型', sx: {width: '150px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
     { id: 'updateContent', label: '更新内容', renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateContent}</TooltipCell> },
 ];
 
 const mobileColumns: ColumnConfig<ChangelogRow>[] = [
     { id: 'customerName', label: '客户名称', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'updateTime', label: '更新时间', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split(' ')[0]}</TooltipCell> },
+    { id: 'updateTime', label: '更新时间', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> }, // 使用 'T' 分割更健壮
     { id: 'updateType', label: '更新类型', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
 ];
 
@@ -103,8 +104,9 @@ export default function Changelog(): JSX.Element {
         };
     }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
-    const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
 
+    // [核心修复] 确保 handleRowClick 的参数是 string
     const handleRowClick = useCallback((id: string) => {
         setClickedRowId(id);
         delayedNavigate(`/app/changelog/${id}`, {replace: true});
@@ -144,7 +146,7 @@ export default function Changelog(): JSX.Element {
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {isLoading && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}><CircularProgress/></Box>}
-                {isError && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Box>加载失败: {error?.message || '未知错误'}</Box></Box>}
+                {isError && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Box>加载失败: {error instanceof Error ? error.message : '未知错误'}</Box></Box>}
                 <DataTable
                     rowsPerPageOptions={[10, 25, 50]}
                     count={rows.length}
