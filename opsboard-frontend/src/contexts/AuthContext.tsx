@@ -2,8 +2,8 @@
  * @file src/contexts/AuthContext.tsx
  * @description 提供了全局认证状态管理。此版本已重构为配合行业标准的 JWT 刷新令牌模型工作。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [健壮性加固]：在 `login` 函数中，增加了对从后端接收到的 `accessToken` 和 `refreshToken` 的存在性验证。
- *   - [原因]：此修改是为了防止因后端返回非预期响应体而导致前端认证流程出错。通过在设置令牌前进行检查，可以避免将 `undefined` 存入 `sessionStorage`，从而从根本上解决了 `Authorization: Bearer undefined` 的问题，并能提供更明确的错误提示。
+ *   - [最终修复]：在 `useEffect` 中，当 `getMe` 请求失败时，立即将 `user` 设置为 `null` 并停止加载，然后再调用 `logout`。
+ *   - [原因]：此修改解决了在令牌过期、`getMe` 失败后，应用可能在完全登出前错误地渲染子组件并发出无效业务请求的问题。通过立即清除用户状态，我们确保了在重定向到登录页之前，不会有任何需要认证的组件被渲染。
  */
 import { createContext, useState, useEffect, useMemo, useRef, type ReactNode, type JSX } from 'react';
 import { login as apiLogin, type Credentials } from '@/api/auth';
@@ -57,7 +57,12 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
                         setError(null);
                     }
                 } catch (err) {
-                    if (isMounted) logout();
+                    if (isMounted) {
+                        // [核心修复] 在调用 logout 之前，立即清除用户状态并停止加载
+                        setUser(null);
+                        setIsLoading(false);
+                        logout();
+                    }
                 } finally {
                     if (isMounted) setIsLoading(false);
                 }
@@ -83,12 +88,9 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
 
         try {
             const response = await apiLogin(credentials);
-
-            // [核心修复] 验证从后端收到的令牌
             if (!response || !response.accessToken || !response.refreshToken) {
                 throw new Error("登录响应无效，未收到令牌。");
             }
-
             sessionStorage.setItem('accessToken', response.accessToken);
             sessionStorage.setItem('refreshToken', response.refreshToken);
             setAccessToken(response.accessToken);
