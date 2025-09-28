@@ -1,9 +1,9 @@
 /**
  * @file handlers/server_handler.go
- * @description 处理与服务器相关的 HTTP 请求。
+ * @description 处理与服务器相关的 HTTP 请求，包括获取列表和删除操作。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新文件]：创建此文件以暴露服务器相关的 API 端点。
- *   - [功能]：`GetServerList` 处理器调用 `ServerService` 来获取数据，并将其作为 JSON 响应返回给客户端，同时包含错误处理。
+ *   - [新增功能]：添加了 `DeleteServer` 处理器，用于处理 `DELETE /servers/:id` 请求。
+ *   - [实现]：该处理器从 URL 路径中获取 `id` 参数，调用服务层的 `DeleteServerByID` 函数执行删除操作，并根据操作结果返回相应的 HTTP 状态码。
  */
 
 package handlers
@@ -24,4 +24,23 @@ func GetServerList(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, servers)
+}
+
+// DeleteServer 处理删除服务器的请求
+func DeleteServer(c *gin.Context) {
+	// 从 URL 路径中获取服务器 ID
+	serverID := c.Param("id")
+	if serverID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "服务器 ID 不能为空"})
+		return
+	}
+
+	err := services.DeleteServerByID(serverID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "删除服务器失败"})
+		return
+	}
+
+	// 成功删除后，通常返回 204 No Content
+	c.Status(http.StatusNoContent)
 }

@@ -2,7 +2,8 @@
  * @file services/server_service.go
  * @description 提供与服务器相关的业务逻辑。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [健壮性修复]：在函数开头，将 `servers` 切片初始化为一个非 `nil` 的空切片 (`make([]models.Server, 0)`)，以确保在没有数据时返回 `[]` 而不是 `null`。
+ *   - [新增功能]：添加了 `DeleteServerByID` 函数，用于根据给定的 ID 从数据库中删除服务器记录。
+ *   - [实现]：该函数执行一个 `DELETE FROM servers ...` 的 SQL 语句，并返回操作是否成功。
  */
 
 package services
@@ -29,9 +30,7 @@ func GetAllServers() ([]models.Server, error) {
 	}
 	defer rows.Close()
 
-	// [核心修复] 初始化为一个非 nil 的空切片
 	servers := make([]models.Server, 0)
-
 	for rows.Next() {
 		var s models.Server
 		if err := rows.Scan(
@@ -45,4 +44,11 @@ func GetAllServers() ([]models.Server, error) {
 	}
 
 	return servers, nil
+}
+
+// DeleteServerByID 根据 ID 从数据库中删除一个服务器。
+func DeleteServerByID(id string) error {
+	db := database.DB
+	_, err := db.Exec("DELETE FROM servers WHERE server_id = ?", id)
+	return err
 }
