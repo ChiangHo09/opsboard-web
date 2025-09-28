@@ -5,6 +5,7 @@
  *   - [最终修复]：将 `ServerID` 和 `CustomerID` 的类型从 `uuid.UUID` 更改为 `uint`。
  *   - [原因]：此修改是为了解决因 Go 结构体类型与数据库列类型不匹配而导致的 `rows.Scan` 失败问题。通过确保模型与 `int unsigned` 的数据库主键/外键类型一致，我们修复了获取服务器列表失败的根本原因。
  */
+
 package models
 
 import (

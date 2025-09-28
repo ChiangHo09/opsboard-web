@@ -5,6 +5,7 @@
  *   - [UUID Migration]: 将 `UserID` 字段的类型从 `int64` 修改为 `uuid.UUID`，以匹配数据库 schema 的变更。
  *   - [UUID Migration]: 在 `json:"id"` 标签后添加了 `example:"..."`，以便在 API 文档中提供一个有效的 UUID 示例。
  */
+
 package models
 
 import (

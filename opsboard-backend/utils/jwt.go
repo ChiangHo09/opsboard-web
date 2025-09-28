@@ -6,6 +6,7 @@
  *   - [新增功能]：新增了 `GenerateRefreshToken` 函数，用于生成一个长生命周期的刷新令牌（例如7天）。
  *   - [职责明确]：现在此文件明确支持两种令牌的生成，为实现标准的刷新令牌（Refresh Token）认证流程提供了基础。
  */
+
 package utils
 
 import (

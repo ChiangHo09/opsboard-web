@@ -6,6 +6,7 @@
  *   - [Driver]: 导入并使用了 `github.com/go-sql-driver/mysql` 驱动。
  *   - [Logic]: `InitDB` 函数现在使用 `"mysql"` 作为驱动名称来打开数据库连接。
  */
+
 package database
 
 import (

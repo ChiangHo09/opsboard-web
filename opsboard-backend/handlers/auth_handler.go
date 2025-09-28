@@ -5,6 +5,7 @@
  *   - [最终修复]：将响应结构体 `LoginResponse` 和 `RefreshTokenResponse` 的字段名改为首字母大写（例如 `AccessToken`）。
  *   - [原因]：此修改是解决“登录响应无效”问题的决定性方案。在 Go 中，只有导出的（首字母大写）结构体字段才能被 `encoding/json` 包序列化。通过将字段导出，并保留 `json:"..."` 标签，我们确保了后端能够生成包含正确 `accessToken` 和 `refreshToken` 字段的 JSON 响应，从而彻底修复了整个认证流程。
  */
+
 package handlers
 
 import (
