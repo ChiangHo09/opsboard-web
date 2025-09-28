@@ -1,9 +1,8 @@
 /**
- * @file src/pages/Tasks.tsx
- * @description 此文件是“任务管理”功能的主页面，负责获取并展示任务列表。
+ * @file src/pages/Maintenance.tsx
+ * @description 此文件是“维护任务”功能的主页面，负责获取并展示任务列表。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [性能优化]：引入了 `useState` 和 `useEffect` 来延迟数据获取，解决了页面进入动画因数据加载而被阻塞导致的卡顿问题。
- *   - [实现]：现在，数据获取会等待一个短暂的延迟（300毫秒）后才开始，这为 `framer-motion` 的过渡动画提供了充足的时间，从而保证了流畅的 UI 体验。
+ *   - [代码重构]：将文件名和组件名从 `Tasks` 更改为 `Maintenance`，并更新了所有相关的 API 调用和类型引用，以提高命名的业务清晰度。
  */
 import {useEffect, useCallback, lazy, Suspense, type JSX, useState, useMemo, type ChangeEvent} from 'react';
 import {
@@ -20,7 +19,7 @@ import {
 import {useQuery} from '@tanstack/react-query';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type InspectionBackupSearchValues} from '@/components/forms/InspectionBackupSearchForm.tsx';
-import { tasksApi, type TaskRow } from '@/api/tasksApi';
+import { maintenanceApi, type MaintenanceTaskRow } from '@/api/maintenanceApi';
 import PageLayout from '@/layouts/PageLayout';
 import PageHeader from '@/layouts/PageHeader';
 import ActionButtons from '@/components/ui/ActionButtons';
@@ -31,12 +30,11 @@ import NoDataMessage from '@/components/ui/NoDataMessage';
 
 const InspectionBackupSearchForm = lazy(() => import('@/components/forms/InspectionBackupSearchForm.tsx'));
 
-// --- 列配置 ---
-const columns: ColumnConfig<TaskRow>[] = [
+const columns: ColumnConfig<MaintenanceTaskRow>[] = [
     { id: 'taskName', label: '任务名称', sx: { width: '25%' }, renderCell: (r) => <TooltipCell>{r.taskName}</TooltipCell> },
     { id: 'type', label: '类型', sx: { width: '10%' }, renderCell: (r) => <Chip label={r.type} size="small" /> },
     { id: 'status', label: '状态', sx: { width: '10%' }, renderCell: (r) => {
-            const colorMap: { [key in TaskRow['status']]: 'success' | 'warning' | 'error' } = {
+            const colorMap: { [key in MaintenanceTaskRow['status']]: 'success' | 'warning' | 'error' } = {
                 '完成': 'success',
                 '挂起': 'warning',
                 '未完成': 'error',
@@ -47,32 +45,29 @@ const columns: ColumnConfig<TaskRow>[] = [
     { id: 'target', label: '目标对象', renderCell: (r) => <TooltipCell>{r.target?.Valid ? r.target.String : '无'}</TooltipCell> },
 ];
 
-const TASKS_QUERY_KEY = ['tasks'];
-const ANIMATION_DELAY = 300; // 动画延迟时间 (ms)
+const MAINTENANCE_QUERY_KEY = ['maintenance'];
+const ANIMATION_DELAY = 300;
 
-const Tasks = (): JSX.Element => {
+const Maintenance = (): JSX.Element => {
     const {isPanelOpen} = useLayoutState();
     const {togglePanel, setPanelContent, setPanelTitle, setPanelWidth} = useLayoutDispatch();
 
-    // --- State ---
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isAdmin] = useState(true);
-
-    // [核心修复] 增加 state 和 effect 来延迟数据获取
     const [isQueryEnabled, setIsQueryEnabled] = useState(false);
+
     useEffect(() => {
         const timer = setTimeout(() => setIsQueryEnabled(true), ANIMATION_DELAY);
         return () => clearTimeout(timer);
     }, []);
 
-    const { data: rows = [], isLoading, isError, error } = useQuery<TaskRow[], Error>({
-        queryKey: TASKS_QUERY_KEY,
-        queryFn: tasksApi.fetchAll,
-        enabled: isQueryEnabled, // [核心修复] 绑定 enabled 选项
+    const { data: rows = [], isLoading, isError, error } = useQuery<MaintenanceTaskRow[], Error>({
+        queryKey: MAINTENANCE_QUERY_KEY,
+        queryFn: maintenanceApi.fetchAll,
+        enabled: isQueryEnabled,
     });
 
-    // --- Callbacks ---
     const handleSearch = useCallback((values: InspectionBackupSearchValues) => {
         alert(`搜索条件: ${JSON.stringify(values, null, 2)}`);
         togglePanel();
@@ -82,7 +77,6 @@ const Tasks = (): JSX.Element => {
         alert('搜索表单已重置');
     }, []);
 
-    // --- Effects ---
     useEffect(() => {
         if (!isPanelOpen) {
             setPanelContent(null);
@@ -94,7 +88,7 @@ const Tasks = (): JSX.Element => {
                 <InspectionBackupSearchForm onSearch={handleSearch} onReset={handleReset}/>
             </Suspense>
         );
-        setPanelTitle('任务搜索'); // 统一标题
+        setPanelTitle('维护任务搜索');
         setPanelWidth(360);
         return () => {
             setPanelContent(null);
@@ -102,11 +96,10 @@ const Tasks = (): JSX.Element => {
         };
     }, [isPanelOpen, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]);
 
-    // --- Render Logic ---
     const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
 
     const tableContent = useMemo(() => (
-        <Table stickyHeader aria-label="任务记录表" sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
+        <Table stickyHeader aria-label="维护任务记录表" sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
             <TableHead>
                 <TableRow>
                     {columns.map(col => (
@@ -121,7 +114,7 @@ const Tasks = (): JSX.Element => {
                         row={r}
                         columns={columns}
                         selected={false}
-                        onClick={() => { /* 暂时无点击交互 */ }}
+                        onClick={() => {}}
                     />
                 ))}
             </TableBody>
@@ -129,7 +122,6 @@ const Tasks = (): JSX.Element => {
     ), [pageRows]);
 
     const renderContent = () => {
-        // [核心修复] 修改加载逻辑
         if (isLoading || !isQueryEnabled) {
             return (
                 <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
@@ -145,7 +137,7 @@ const Tasks = (): JSX.Element => {
             );
         }
         if (rows.length === 0) {
-            return <NoDataMessage message="暂无任务数据" />;
+            return <NoDataMessage message="暂无维护任务数据" />;
         }
         return (
             <DataTable
@@ -169,7 +161,7 @@ const Tasks = (): JSX.Element => {
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <PageHeader
-                title="任务管理"
+                title="维护任务"
                 actions={
                     <ActionButtons
                         showEditButton={isAdmin}
@@ -186,4 +178,4 @@ const Tasks = (): JSX.Element => {
     );
 };
 
-export default Tasks;
+export default Maintenance;

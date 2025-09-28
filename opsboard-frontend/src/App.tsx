@@ -2,8 +2,7 @@
  * @file src/App.tsx
  * @description 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复]：修正了 `useAuth` 钩子的导入路径，从 `./contexts/AuthContext` 更改为 `@/hooks/useAuth`。
- *   - [原因]：此修改解决了因导入路径错误而导致的 TypeScript 编译失败问题 (TS2305)，确保了 `useAuth` 钩子从其正确的源文件 (`src/hooks/useAuth.ts`) 被导入。
+ *   - [代码重构]：将与任务相关的路由和懒加载组件从 `Tasks` 重命名为 `Maintenance`，并将路由路径更新为 `/app/maintenance`，以提高命名的业务清晰度。
  */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
@@ -15,7 +14,6 @@ import { Box, CircularProgress } from '@mui/material';
 import theme from './theme';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { NotificationProvider, useNotification } from './contexts/NotificationContext';
-// [核心修复] 将 useAuth 的导入分离
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from '@/hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -29,7 +27,7 @@ const MainLayout = lazy(() => import('./layouts/MainLayout'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Servers = lazy(() => import('./pages/Servers'));
 const Changelog = lazy(() => import('./pages/Changelog'));
-const Tasks = lazy(() => import('./pages/Tasks'));
+const Maintenance = lazy(() => import('./pages/Maintenance')); // [核心修改]
 const Tickets = lazy(() => import('./pages/Tickets'));
 const Stats = lazy(() => import('./pages/Stats'));
 const Labs = lazy(() => import('./pages/Labs'));
@@ -57,7 +55,7 @@ const AppRoutes = (): JSX.Element => {
                         <Route path="changelog" element={<Changelog />} />
                         <Route path="changelog/:logId" element={<Changelog />} />
                         <Route path="changelog/mobile/:logId" element={<ChangelogDetailMobile />} />
-                        <Route path="tasks" element={<Tasks />} />
+                        <Route path="maintenance" element={<Maintenance />} /> {/* [核心修改] */}
                         <Route path="tickets" element={<Tickets />} />
                         <Route path="tickets/:ticketId" element={<Tickets />} />
                         <Route path="tickets/mobile/:ticketId" element={<TicketDetailMobile />} />

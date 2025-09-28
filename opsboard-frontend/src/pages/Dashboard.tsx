@@ -3,7 +3,7 @@
  * @description 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
  * @modification 本次提交中所做的具体修改摘要。
  *   - [最终修复]：将“新建巡检备份任务”快捷操作的导航路径从 `/app/inspection-backup` 更新为 `/app/tasks`。
- *   - [原因]：此修改是为了与 `App.tsx` 中更新后的路由配置保持一致，确保了概览页面的快捷链接能够正确地指向新的 `Tasks` 页面。
+ *   - [原因]：此修改是为了与 `App.tsx` 中更新后的路由配置保持一致，确保了概览页面的快捷链接能够正确地指向新的 `Maintenance` 页面。
  */
 import React, { useEffect, type JSX, type ReactNode, useCallback } from 'react';
 import {

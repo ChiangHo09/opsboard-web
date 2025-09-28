@@ -2,8 +2,7 @@
  * @file src/components/SideNav.tsx
  * @description 定义了应用的侧边导航栏组件（SideNav）。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复]：将“巡检备份”导航项的 `path` 从 `/app/inspection-backup` 更新为 `/app/tasks`。
- *   - [原因]：此修改是为了与 `App.tsx` 中更新后的路由配置保持一致，确保了侧边栏的导航链接能够正确地指向新的 `Tasks` 页面。
+ *   - [代码重构]：将与任务相关的导航项的 `path` 更新为 `/app/maintenance`，并将 `label` 更新为“维护任务”，以提高命名的业务清晰度。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -59,8 +58,7 @@ const mainNavItems: NavItem[] = [
     { label: '概览', path: '/app/dashboard', icon: <DashboardIcon /> },
     { label: '服务器', path: '/app/servers', icon: <DnsIcon /> },
     { label: '更新日志', path: '/app/changelog', icon: <RestorePageIcon /> },
-    // [核心修复] 更新路径和标签
-    { label: '任务管理', path: '/app/tasks', icon: <PlaylistAddCheckCircleIcon /> },
+    { label: '维护任务', path: '/app/maintenance', icon: <PlaylistAddCheckCircleIcon /> }, // [核心修改]
     { label: '工单', path: '/app/tickets', icon: <AssignmentIcon /> },
     { label: '统计信息', path: '/app/stats', icon: <PollRoundedIcon /> },
     { label: '实验性功能', path: '/app/labs', icon: <ScienceRoundedIcon /> },
