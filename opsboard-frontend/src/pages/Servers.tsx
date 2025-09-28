@@ -1,16 +1,21 @@
 /**
  * @file src/pages/Servers.tsx
- * @description 该文件负责渲染“服务器信息”页面。
+ * @description 该文件负责渲染“服务器信息”页面，并实现了删除服务器的功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [性能优化]：引入了 `useState` 和 `useEffect` 来延迟数据获取，解决了页面进入动画因数据加载而被阻塞导致的卡顿问题。
- *   - [实现]：现在，数据获取 (`useResponsiveDetailView`) 会在组件挂载并完成初始动画（约300毫秒后）才开始执行，从而保证了流畅的 UI 过渡效果。
+ *   - [新增功能]：实现了删除服务器的完整流程，包括API调用、状态更新和用户确认。
+ *   - [UI 交互]：为表格的每一行增加了悬浮时出现的操作按钮（打印和删除），并通过 `ClickableTableRow` 的 `actions` prop 进行渲染。
+ *   - [状态管理]：使用 `useState` 管理删除确认对话框的开关状态和待删除项的ID。
+ *   - [数据流]：使用 `@tanstack/react-query` 的 `useMutation` 和 `queryClient` 来执行删除操作，并在成功后自动刷新服务器列表，确保了UI与后端数据的同步。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
 import {
     Box, Typography, Table, TableBody, TableCell,
-    TableHead, TableRow, CircularProgress
+    TableHead, TableRow, CircularProgress, IconButton, Tooltip
 } from '@mui/material';
+import { useQueryClient, useMutation } from '@tanstack/react-query'; // [核心修改]
+import PrintIcon from '@mui/icons-material/Print'; // [核心修改]
+import DeleteIcon from '@mui/icons-material/Delete'; // [核心修改]
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
@@ -26,6 +31,7 @@ import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
 import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
 import NoDataMessage from '@/components/ui/NoDataMessage';
+import ConfirmDialog from '@/components/ui/ConfirmDialog'; // [核心修改]
 
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
@@ -49,7 +55,7 @@ const mobileColumns: ColumnConfig<ServerRow>[] = [
 ];
 
 const SERVERS_QUERY_KEY = ['servers'];
-const ANIMATION_DELAY = 300; // 动画延迟时间 (ms)，应略长于 framer-motion 的过渡时间
+const ANIMATION_DELAY = 300;
 
 export default function Servers(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -61,11 +67,13 @@ export default function Servers(): JSX.Element {
     const [isAdmin] = useState(true);
     const delayedNavigate = useDelayedNavigate();
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
-
-    // [核心修复] 增加一个 state 来控制数据获取是否开始
     const [isQueryEnabled, setIsQueryEnabled] = useState(false);
 
-    // [核心修复] 在组件挂载后，延迟一段时间再开启数据获取
+    // [核心修改] 删除逻辑的状态管理
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<ServerRow | null>(null);
+    const queryClient = useQueryClient();
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setIsQueryEnabled(true);
@@ -79,12 +87,35 @@ export default function Servers(): JSX.Element {
         queryKey: SERVERS_QUERY_KEY,
         queryFn: serversApi.fetchAll,
         DetailContentComponent: ServerDetailContent,
-        // [核心修复] 将 enabled 选项与我们的 state 绑定
-        // 只有当 isQueryEnabled 为 true 时，useQuery 才会执行
         enabled: isQueryEnabled,
     });
 
-    // ... 其他 useEffect 和回调函数保持不变 ...
+    // [核心修改] 使用 useMutation 执行删除操作
+    const deleteMutation = useMutation({
+        mutationFn: serversApi.deleteById,
+        onSuccess: () => {
+            showNotification('服务器删除成功', 'success');
+            // 使服务器列表的缓存失效，触发自动重新获取
+            queryClient.invalidateQueries({ queryKey: SERVERS_QUERY_KEY });
+        },
+        onError: (err) => {
+            handleAsyncError(err, showNotification);
+        }
+    });
+
+    const handleDeleteClick = (row: ServerRow) => {
+        setItemToDelete(row);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteMutation.mutate(itemToDelete.id);
+        }
+        setDeleteConfirmOpen(false);
+        setItemToDelete(null);
+    };
+
     useEffect(() => {
         if (serverId && rows.length > 0) {
             const itemIndex = rows.findIndex(row => row.id === serverId);
@@ -163,6 +194,21 @@ export default function Servers(): JSX.Element {
                         columns={columns}
                         selected={r.id === serverId || r.id === clickedRowId}
                         onClick={() => handleRowClick(r.id)}
+                        // [核心修改] 传递操作按钮
+                        actions={
+                            <>
+                                <Tooltip title="打印">
+                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); alert(`打印 ${r.serverName}`); }}>
+                                        <PrintIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="删除">
+                                    <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleDeleteClick(r); }}>
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
+                        }
                     />
                 ))}
             </TableBody>
@@ -170,7 +216,6 @@ export default function Servers(): JSX.Element {
     ), [pageRows, columns, serverId, clickedRowId, handleRowClick]);
 
     const renderContent = () => {
-        // [核心修复] 修改加载逻辑：在 query 尚未启用时，也显示加载状态
         if (isLoading || !isQueryEnabled) {
             return (
                 <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
@@ -217,6 +262,15 @@ export default function Servers(): JSX.Element {
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {renderContent()}
             </Box>
+
+            {/* [核心修改] 渲染确认对话框 */}
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                title="确认删除"
+                content={`您确定要删除服务器 "${itemToDelete?.serverName}" 吗？此操作不可撤销。`}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setDeleteConfirmOpen(false)}
+            />
         </PageLayout>
     );
 }

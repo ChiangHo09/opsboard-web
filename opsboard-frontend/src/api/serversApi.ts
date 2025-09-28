@@ -2,8 +2,8 @@
  * @file src/api/serversApi.ts
  * @description 提供了与服务器相关的 API 函数和类型定义。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复]：重构了 `ServerApiResponse` 的类型定义，使用 `Omit` 和交叉类型 `&` 来精确描述其结构。
- *   - [原因]：此修改是解决 TypeScript 类型推断失败 (TS2322) 的决定性方案。通过为 `ServerApiResponse` 提供一个精确的、而非模糊的（带有索引签名）类型定义，我们使得 TypeScript 能够正确推断出扩展运算符（`...server`）的结果，从而确保了数据转换后对象的类型与 `ServerRow` 完全匹配。
+ *   - [新增功能]：添加了 `deleteById` 函数，用于调用后端的删除服务器接口。
+ *   - [实现]：该函数接收一个服务器 ID，并向 `/servers/:id` 端点发送一个 `DELETE` 方法的 HTTP 请求。
  */
 import api from './index';
 
@@ -26,9 +26,6 @@ export interface ServerRow {
     customerName: string;
 }
 
-// [核心修复] 使用 Omit 和交叉类型来创建精确的 API 响应类型
-// 这个类型的意思是：“它拥有 ServerRow 的所有属性，除了 'id' 和 'customerId'，
-// 然后再加上自己的 'id' 和 'customerId'，这两个是 number 类型。”
 type ServerApiResponse = Omit<ServerRow, 'id' | 'customerId'> & {
     id: number;
     customerId: number;
@@ -42,11 +39,22 @@ export const serversApi = {
     fetchAll: async (): Promise<ServerRow[]> => {
         const response = await api<ServerApiResponse[]>('/servers/list');
 
-        // 现在 TypeScript 知道 response 中的每个 server 对象都包含了所有必需的属性
         return response.map(server => ({
             ...server,
             id: String(server.id),
             customerId: String(server.customerId),
         }));
+    },
+
+    /**
+     * 根据 ID 删除一个服务器。
+     * @param {string} id - 要删除的服务器的 ID。
+     * @returns {Promise<void>} 操作成功时不返回任何内容。
+     */
+    deleteById: (id: string): Promise<void> => {
+        // 假设后端的删除接口是 DELETE /api/servers/:id
+        return api(`/servers/${id}`, {
+            method: 'DELETE',
+        });
     },
 };

@@ -1,18 +1,9 @@
 /**
- * 文件名: src/hooks/useResponsiveDetailView.ts
- *
- * 文件功能描述:
- * 此文件定义了一个名为 `useResponsiveDetailView` 的自定义 Hook，
- * 封装了处理响应式详情视图（桌面端弹窗 vs. 移动端整页）的通用逻辑。
- *
- * 本次修改内容:
- * - 【类型定义现代化】更新了 `UseResponsiveDetailViewOptions` 接口中
- *   `DetailContentComponent` 的类型定义。
- * - **解决方案**:
- *   将 `LazyExoticComponent<FC<TProps>>` 修改为 `LazyExoticComponent<(props: TProps) => ReactElement>`。
- * - **最终效果**:
- *   此 Hook 现在接受使用现代写法（不含 `React.FC`）定义的组件作为参数，
- *   与整个项目的组件现代化方向保持了一致，提升了类型系统的连贯性。
+ * @file src/hooks/useResponsiveDetailView.tsx
+ * @description 一个自定义钩子，用于统一处理桌面端（模态框）和移动端（独立页面）的数据详情展示逻辑。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [功能增强]：为 `UseResponsiveDetailViewOptions` 接口增加了可选的 `enabled` 属性，并将其传递给内部的 `useQuery`。
+ *   - [原因]：此修改是为了解决在页面组件中传递 `enabled` 选项时出现的 TypeScript 类型错误 (TS2353)。通过扩展此钩子的能力，我们允许父组件控制 `useQuery` 的执行时机，从而实现了延迟数据加载以优化页面动画性能的功能。
  */
 import {useEffect, Suspense, type LazyExoticComponent, type ReactElement} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
@@ -20,13 +11,14 @@ import {useQuery, type QueryKey, type QueryFunction} from '@tanstack/react-query
 import {Box, CircularProgress} from '@mui/material';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext';
 
-// 【核心修改】更新 DetailContentComponent 的类型，不再依赖 React.FC
 interface UseResponsiveDetailViewOptions<TData extends { id: string }, TProps> {
     paramName: keyof TProps & string;
     baseRoute: string;
     queryKey: QueryKey;
     queryFn: QueryFunction<TData[]>;
     DetailContentComponent: LazyExoticComponent<(props: TProps) => ReactElement>;
+    // [核心修改] 增加 enabled 属性
+    enabled?: boolean;
 }
 
 export const useResponsiveDetailView = <TData extends { id: string }, TProps extends object>({
@@ -35,6 +27,8 @@ export const useResponsiveDetailView = <TData extends { id: string }, TProps ext
                                                                                                  queryKey,
                                                                                                  queryFn,
                                                                                                  DetailContentComponent,
+                                                                                                 // [核心修改] 接收 enabled 选项，并设置默认值
+                                                                                                 enabled = true,
                                                                                              }: UseResponsiveDetailViewOptions<TData, TProps>) => {
     const {isMobile} = useLayoutState();
     const {setIsModalOpen, setModalConfig} = useLayoutDispatch();
@@ -46,6 +40,8 @@ export const useResponsiveDetailView = <TData extends { id: string }, TProps ext
     const queryResult = useQuery<TData[], Error>({
         queryKey: queryKey,
         queryFn: queryFn,
+        // [核心修改] 将 enabled 选项传递给 useQuery
+        enabled: enabled,
     });
     const {data = []} = queryResult;
 
