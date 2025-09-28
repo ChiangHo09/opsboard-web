@@ -2,8 +2,8 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [类型对齐]：将 `handleRowClick` 函数的参数类型从 `number` 改回 `string`，以匹配 `ServerRow` 中 `id` 的 `string` 类型。
- *   - [原因]：此修改是为了与 `api/serversApi.ts` 中的类型变更保持同步，确保了整个组件内对 `id` 的处理都是类型一致的，从而解决了 TypeScript 的编译错误。
+ *   - [性能优化]：引入了 `useState` 和 `useEffect` 来延迟数据获取，解决了页面进入动画因数据加载而被阻塞导致的卡顿问题。
+ *   - [实现]：现在，数据获取 (`useResponsiveDetailView`) 会在组件挂载并完成初始动画（约300毫秒后）才开始执行，从而保证了流畅的 UI 过渡效果。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -25,6 +25,7 @@ import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableT
 import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
 import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
+import NoDataMessage from '@/components/ui/NoDataMessage';
 
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
@@ -48,6 +49,7 @@ const mobileColumns: ColumnConfig<ServerRow>[] = [
 ];
 
 const SERVERS_QUERY_KEY = ['servers'];
+const ANIMATION_DELAY = 300; // 动画延迟时间 (ms)，应略长于 framer-motion 的过渡时间
 
 export default function Servers(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -60,14 +62,29 @@ export default function Servers(): JSX.Element {
     const delayedNavigate = useDelayedNavigate();
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
 
+    // [核心修复] 增加一个 state 来控制数据获取是否开始
+    const [isQueryEnabled, setIsQueryEnabled] = useState(false);
+
+    // [核心修复] 在组件挂载后，延迟一段时间再开启数据获取
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsQueryEnabled(true);
+        }, ANIMATION_DELAY);
+        return () => clearTimeout(timer);
+    }, []);
+
     const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
         paramName: 'serverId',
         baseRoute: '/app/servers',
         queryKey: SERVERS_QUERY_KEY,
         queryFn: serversApi.fetchAll,
         DetailContentComponent: ServerDetailContent,
+        // [核心修复] 将 enabled 选项与我们的 state 绑定
+        // 只有当 isQueryEnabled 为 true 时，useQuery 才会执行
+        enabled: isQueryEnabled,
     });
 
+    // ... 其他 useEffect 和回调函数保持不变 ...
     useEffect(() => {
         if (serverId && rows.length > 0) {
             const itemIndex = rows.findIndex(row => row.id === serverId);
@@ -122,7 +139,6 @@ export default function Servers(): JSX.Element {
 
     const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
 
-    // [核心修复] 确保 handleRowClick 的参数是 string
     const handleRowClick = useCallback((id: string) => {
         setClickedRowId(id);
         delayedNavigate(`/app/servers/${id}`, {replace: true});
@@ -153,6 +169,44 @@ export default function Servers(): JSX.Element {
         </Table>
     ), [pageRows, columns, serverId, clickedRowId, handleRowClick]);
 
+    const renderContent = () => {
+        // [核心修复] 修改加载逻辑：在 query 尚未启用时，也显示加载状态
+        if (isLoading || !isQueryEnabled) {
+            return (
+                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
+                    <CircularProgress/>
+                </Box>
+            );
+        }
+        if (isError) {
+            return (
+                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Typography color="error">加载失败: {error instanceof Error ? error.message : '未知错误'}</Typography>
+                </Box>
+            );
+        }
+        if (rows.length === 0) {
+            return <NoDataMessage message="暂无服务器数据" />;
+        }
+        return (
+            <DataTable
+                rowsPerPageOptions={[10, 25, 50]}
+                count={rows.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(_, p: number) => setPage(p)}
+                onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                    setRowsPerPage(+e.target.value);
+                    setPage(0);
+                }}
+                labelRowsPerPage="每页行数:"
+                labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+            >
+                {tableContent}
+            </DataTable>
+        );
+    };
+
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <PageHeader
@@ -161,23 +215,7 @@ export default function Servers(): JSX.Element {
             />
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
-                {isLoading && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}><CircularProgress/></Box>}
-                {isError && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Typography color="error">加载失败: {error instanceof Error ? error.message : '未知错误'}</Typography></Box>}
-                <DataTable
-                    rowsPerPageOptions={[10, 25, 50]}
-                    count={rows.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={(_, p: number) => setPage(p)}
-                    onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-                        setRowsPerPage(+e.target.value);
-                        setPage(0);
-                    }}
-                    labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
-                >
-                    {tableContent}
-                </DataTable>
+                {renderContent()}
             </Box>
         </PageLayout>
     );

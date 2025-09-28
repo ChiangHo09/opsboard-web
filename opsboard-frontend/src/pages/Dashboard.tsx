@@ -1,9 +1,9 @@
 /**
  * @file src/pages/Dashboard.tsx
  * @description 这是一个仪表盘页面，用于展示欢迎信息、快捷操作、快速统计和最近的操作记录。
- * @modification
- *   - [认证集成]: 移除了硬编码的 `nickname`。现在使用 `useAuth` 钩子从全局 `AuthContext` 中获取当前登录的用户信息，并动态显示其昵称。
- *   - [健壮性]: 如果用户信息仍在加载或获取失败，会显示一个通用的欢迎语，从而避免了UI渲染错误。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [最终修复]：将“新建巡检备份任务”快捷操作的导航路径从 `/app/inspection-backup` 更新为 `/app/tasks`。
+ *   - [原因]：此修改是为了与 `App.tsx` 中更新后的路由配置保持一致，确保了概览页面的快捷链接能够正确地指向新的 `Tasks` 页面。
  */
 import React, { useEffect, type JSX, type ReactNode, useCallback } from 'react';
 import {
@@ -34,7 +34,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLayoutDispatch } from '@/contexts/LayoutContext.tsx';
 import PageLayout from '@/layouts/PageLayout';
 import { useDateProcessor } from '@/hooks/useDateProcessor';
-import { useAuth } from '@/hooks/useAuth'; // 引入 useAuth 钩子
+import { useAuth } from '@/hooks/useAuth';
 
 interface StatCardProps {
     icon: ReactNode;
@@ -82,7 +82,7 @@ const recentActivities = [
 
 
 const Dashboard = (): JSX.Element => {
-    const { user } = useAuth(); // 从 AuthContext 获取用户信息
+    const { user } = useAuth();
     const navigate = useNavigate();
     const { closePanel } = useLayoutDispatch();
 
@@ -194,7 +194,8 @@ const Dashboard = (): JSX.Element => {
                                     {[
                                         { key: 'new-changelog', text: '新建更新记录', icon: <RestorePageIcon />, to: '/app/changelog' },
                                         { key: 'new-ticket', text: '生成工单', icon: <AssignmentIcon />, to: '/app/tickets' },
-                                        { key: 'new-inspection-backup', text: '新建巡检备份任务', icon: <PlaylistAddCheckCircleIcon />, to: '/app/inspection-backup' },
+                                        // [核心修复] 更新路径和文本
+                                        { key: 'new-task', text: '新建任务', icon: <PlaylistAddCheckCircleIcon />, to: '/app/tasks' },
                                         { key: 'view-stats', text: '查看统计信息', icon: <PollRoundedIcon />, to: '/app/stats' },
                                         { key: 'view-servers', text: '查看服务器信息', icon: <DnsIcon />, to: '/app/servers' }
                                     ].map(({ key, text, icon, to }) => (

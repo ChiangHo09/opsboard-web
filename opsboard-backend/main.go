@@ -2,9 +2,10 @@
  * @file main.go
  * @description 应用主入口文件，负责初始化、路由注册和服务器启动。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [业务接口]：新增并注册了 `GET /changelogs/list` 业务接口，并将其明确地放置在受 `AuthMiddleware` 保护的路由组之下。
- *   - [原因]：此修改扩展了应用的业务功能，并确保了新的更新日志接口同样受到严格的认证保护。
+ *   - [业务接口]：新增并注册了 `GET /tasks/list` 业务接口，并将其明确地放置在受 `AuthMiddleware` 保护的路由组之下。
+ *   - [原因]：此修改扩展了应用的业务功能，为新的巡检备份模块提供了后端数据支持，并确保了其接口受到严格的认证保护。
  */
+
 package main
 
 import (
@@ -60,11 +61,17 @@ func main() {
 			servers.GET("/list", handlers.GetServerList)
 		}
 
-		// [核心修改] 在受保护的组下注册我们新的更新日志接口
 		changelogs := api.Group("/changelogs")
 		changelogs.Use(middleware.AuthMiddleware())
 		{
 			changelogs.GET("/list", handlers.GetChangelogList)
+		}
+
+		// [核心修改] 在受保护的组下注册我们新的巡检备份任务接口
+		tasks := api.Group("/tasks")
+		tasks.Use(middleware.AuthMiddleware())
+		{
+			tasks.GET("/list", handlers.GetTaskList)
 		}
 	}
 

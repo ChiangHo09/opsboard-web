@@ -1,15 +1,16 @@
 /**
  * @file src/hooks/useSessionTimeout.ts
  * @description 一个自定义 Hook，通过定期检查上次活动时间来实现高效的闲置超时检测。
- * @modification
- *   - [New File]: 创建此文件以实现新的“惰性检查”超时逻辑。
- *   - [Restart Logic]: 将 `key` 添加到 `useEffect` 的依赖项数组中。当外部传入的 `key` 发生变化时，`useEffect` 会自动清理旧的 interval 并创建一个新的，从而以一种符合 React 模式的方式“重启”计时器。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [代码规范]：将 `UseSessionTimeoutProps` 接口中 `key` 属性的类型从 `any` 更改为 `unknown`。
+ *   - [原因]：此修改是为了解决 `@typescript-eslint/no-explicit-any` 的 lint 错误。`unknown` 是比 `any` 更类型安全的替代方案，它允许我们接收任何类型的值，同时强制在使用前进行类型检查，从而提高了代码的健壮性。
  */
 import { useEffect, useRef } from 'react';
 import { getLastActivityTime } from '@/utils/session';
 
 interface UseSessionTimeoutProps {
-    key?: any; // 接收一个可选的 key prop，用于重启
+    // [核心修复] 使用 unknown 代替 any，这是一种更类型安全的做法
+    key?: unknown;
     onIdle: () => void;
     idleTimeoutMs: number;
     checkIntervalMs?: number;
@@ -39,5 +40,5 @@ export const useSessionTimeout = ({ key, onIdle, idleTimeoutMs, checkIntervalMs 
                 clearInterval(intervalRef.current);
             }
         };
-    }, [onIdle, idleTimeoutMs, checkIntervalMs, key]); // 将 key 添加到依赖数组
+    }, [onIdle, idleTimeoutMs, checkIntervalMs, key]);
 };

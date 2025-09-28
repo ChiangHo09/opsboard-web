@@ -2,14 +2,14 @@
  * @file src/pages/Changelog.tsx
  * @description 该文件负责渲染“更新日志”页面。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复]：将 `handleRowClick` 函数的参数 `id` 的类型从 `number` 更改为 `string`。
- *   - [原因]：此修改是为了与 `api/changelogApi.ts` 中更新后的 `ChangelogRow` 类型（其中 `id` 已被转换为 `string`）保持一致，从而解决了因类型不匹配而导致的 TypeScript 编译错误。
+ *   - [性能优化]：引入了 `useState` 和 `useEffect` 来延迟数据获取，以优先保证页面进入动画的流畅性。
+ *   - [实现]：现在，数据获取会等待一个短暂的延迟（300毫秒）后才开始，避免了因数据加载阻塞主线程而导致的动画卡顿或跳帧问题。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
 import {
     Box, Table, TableBody, TableCell,
-    TableHead, TableRow, CircularProgress
+    TableHead, TableRow, CircularProgress, Typography
 } from '@mui/material';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
@@ -23,24 +23,26 @@ import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableT
 import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
 import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
+import NoDataMessage from '@/components/ui/NoDataMessage';
 
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
 const desktopColumns: ColumnConfig<ChangelogRow>[] = [
     { id: 'customerName', label: '客户名称', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'updateTime', label: '更新时间', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> }, // 使用 'T' 分割更健壮
+    { id: 'updateTime', label: '更新时间', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> },
     { id: 'updateType', label: '更新类型', sx: {width: '150px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
     { id: 'updateContent', label: '更新内容', renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateContent}</TooltipCell> },
 ];
 
 const mobileColumns: ColumnConfig<ChangelogRow>[] = [
     { id: 'customerName', label: '客户名称', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'updateTime', label: '更新时间', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> }, // 使用 'T' 分割更健壮
+    { id: 'updateTime', label: '更新时间', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> },
     { id: 'updateType', label: '更新类型', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
 ];
 
 const CHANGELOGS_QUERY_KEY = ['changelogs'];
+const ANIMATION_DELAY = 300; // 动画延迟时间 (ms)
 
 export default function Changelog(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -52,14 +54,23 @@ export default function Changelog(): JSX.Element {
     const delayedNavigate = useDelayedNavigate();
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
 
+    // [核心修复] 增加 state 和 effect 来延迟数据获取
+    const [isQueryEnabled, setIsQueryEnabled] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => setIsQueryEnabled(true), ANIMATION_DELAY);
+        return () => clearTimeout(timer);
+    }, []);
+
     const { data: rows = [], isLoading, isError, error } = useResponsiveDetailView<ChangelogRow, ChangelogDetailContentProps>({
         paramName: 'logId',
         baseRoute: '/app/changelog',
         queryKey: CHANGELOGS_QUERY_KEY,
         queryFn: changelogsApi.fetchAll,
         DetailContentComponent: ChangelogDetailContent,
+        enabled: isQueryEnabled, // [核心修复] 绑定 enabled 选项
     });
 
+    // ... 其他 useEffect 和回调函数保持不变 ...
     useEffect(() => {
         if (logId && rows.length > 0) {
             const itemIndex = rows.findIndex(row => row.id === logId);
@@ -106,7 +117,6 @@ export default function Changelog(): JSX.Element {
 
     const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
 
-    // [核心修复] 确保 handleRowClick 的参数是 string
     const handleRowClick = useCallback((id: string) => {
         setClickedRowId(id);
         delayedNavigate(`/app/changelog/${id}`, {replace: true});
@@ -137,6 +147,44 @@ export default function Changelog(): JSX.Element {
         </Table>
     ), [pageRows, columns, logId, clickedRowId, handleRowClick]);
 
+    const renderContent = () => {
+        // [核心修复] 修改加载逻辑
+        if (isLoading || !isQueryEnabled) {
+            return (
+                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
+                    <CircularProgress/>
+                </Box>
+            );
+        }
+        if (isError) {
+            return (
+                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Typography color="error">加载失败: {error instanceof Error ? error.message : '未知错误'}</Typography>
+                </Box>
+            );
+        }
+        if (rows.length === 0) {
+            return <NoDataMessage message="暂无更新日志" />;
+        }
+        return (
+            <DataTable
+                rowsPerPageOptions={[10, 25, 50]}
+                count={rows.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(_, p: number) => setPage(p)}
+                onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                    setRowsPerPage(+e.target.value);
+                    setPage(0);
+                }}
+                labelRowsPerPage="每页行数:"
+                labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+            >
+                {tableContent}
+            </DataTable>
+        );
+    };
+
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <PageHeader
@@ -145,23 +193,7 @@ export default function Changelog(): JSX.Element {
             />
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
-                {isLoading && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}><CircularProgress/></Box>}
-                {isError && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Box>加载失败: {error instanceof Error ? error.message : '未知错误'}</Box></Box>}
-                <DataTable
-                    rowsPerPageOptions={[10, 25, 50]}
-                    count={rows.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={(_, p: number) => setPage(p)}
-                    onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-                        setRowsPerPage(+e.target.value);
-                        setPage(0);
-                    }}
-                    labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
-                >
-                    {tableContent}
-                </DataTable>
+                {renderContent()}
             </Box>
         </PageLayout>
     );

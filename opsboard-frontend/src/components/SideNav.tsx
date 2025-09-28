@@ -1,11 +1,9 @@
 /**
  * @file src/components/SideNav.tsx
  * @description 定义了应用的侧边导航栏组件（SideNav）。
- * @modification
- *   - [认证集成]: 引入 `useAuth` 钩子以从全局 `AuthContext` 获取当前登录的用户信息。
- *   - [动态渲染]: 移除了所有硬编码的用户名和邮箱，现在动态显示来自 `user` 对象的数据（如 `nickname`）。
- *   - [类型修复]: 将 `SideNavProps` 接口中的 `onFakeLogout` 重命名为 `onLogout`，以匹配 `MainLayout` 传递的属性，解决 TypeScript 类型不匹配的错误。
- *   - [功能集成]: “退出登录”按钮现在调用从 props 传入的真实 `onLogout` 函数。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [最终修复]：将“巡检备份”导航项的 `path` 从 `/app/inspection-backup` 更新为 `/app/tasks`。
+ *   - [原因]：此修改是为了与 `App.tsx` 中更新后的路由配置保持一致，确保了侧边栏的导航链接能够正确地指向新的 `Tasks` 页面。
  */
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -34,7 +32,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ReactElement, MouseEvent, JSX } from 'react';
 import { useLayout } from '@/contexts/LayoutContext';
-import { useAuth } from '@/hooks/useAuth'; // 引入 useAuth 钩子
+import { useAuth } from '@/hooks/useAuth';
 import logoSrc from '../assets/logo.svg';
 
 const W_COLLAPSED = 64;
@@ -61,7 +59,8 @@ const mainNavItems: NavItem[] = [
     { label: '概览', path: '/app/dashboard', icon: <DashboardIcon /> },
     { label: '服务器', path: '/app/servers', icon: <DnsIcon /> },
     { label: '更新日志', path: '/app/changelog', icon: <RestorePageIcon /> },
-    { label: '巡检备份', path: '/app/inspection-backup', icon: <PlaylistAddCheckCircleIcon /> },
+    // [核心修复] 更新路径和标签
+    { label: '任务管理', path: '/app/tasks', icon: <PlaylistAddCheckCircleIcon /> },
     { label: '工单', path: '/app/tickets', icon: <AssignmentIcon /> },
     { label: '统计信息', path: '/app/stats', icon: <PollRoundedIcon /> },
     { label: '实验性功能', path: '/app/labs', icon: <ScienceRoundedIcon /> },
@@ -71,11 +70,10 @@ const bottomNavItems: NavItem[] = [
     { label: '设置', path: '/app/settings', icon: <SettingsIcon />, isMobileTopBarItem: true },
 ];
 
-// 【核心修改】修复 Props 类型定义
 interface SideNavProps {
     open: boolean;
     onToggle: () => void;
-    onLogout: () => void; // 将 onFakeLogout 重命名为 onLogout
+    onLogout: () => void;
 }
 
 const SideNav = ({ open, onToggle, onLogout }: SideNavProps): JSX.Element => {
@@ -83,7 +81,7 @@ const SideNav = ({ open, onToggle, onLogout }: SideNavProps): JSX.Element => {
     const nav = useNavigate();
     const theme = useTheme();
     const { isMobile } = useLayout();
-    const { user } = useAuth(); // 从 AuthContext 获取用户信息
+    const { user } = useAuth();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
     const navItemIconSx = { fontSize: ICON_SIZE, color: 'neutral.main', position: 'relative', top: '3px' };
@@ -156,7 +154,6 @@ const SideNav = ({ open, onToggle, onLogout }: SideNavProps): JSX.Element => {
                 }}
             >
                 <Box>
-                    {/* 【核心修改】动态显示用户信息 */}
                     <Typography fontWeight="bold">{user?.nickname || '未知用户'}</Typography>
                     <Typography variant="caption" color="text.secondary">{user?.username}</Typography>
                 </Box>
@@ -164,7 +161,7 @@ const SideNav = ({ open, onToggle, onLogout }: SideNavProps): JSX.Element => {
             <MenuItem
                 onClick={() => {
                     setAnchorEl(null);
-                    onLogout(); // 【核心修改】调用真实的登出函数
+                    onLogout();
                 }}
                 sx={{ color: 'error.main', borderRadius: 1.5, mx: 1, mt: 1 }}
             >

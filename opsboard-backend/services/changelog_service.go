@@ -2,9 +2,9 @@
  * @file services/changelog_service.go
  * @description 提供与更新日志相关的业务逻辑。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新文件]：创建此文件以封装获取更新日志数据的业务逻辑。
- *   - [功能]：`GetAllChangelogs` 函数执行真实的数据库查询，通过 `LEFT JOIN` 从 `customers` 表获取客户名称，并按更新时间倒序返回所有日志。
+ *   - [健壮性修复]：在函数开头，将 `changelogs` 切片初始化为一个非 `nil` 的空切片 (`make([]models.Changelog, 0)`)，以确保在没有数据时返回 `[]` 而不是 `null`。
  */
+
 package services
 
 import (
@@ -29,7 +29,9 @@ func GetAllChangelogs() ([]models.Changelog, error) {
 	}
 	defer rows.Close()
 
-	var changelogs []models.Changelog
+	// [核心修复] 初始化为一个非 nil 的空切片
+	changelogs := make([]models.Changelog, 0)
+
 	for rows.Next() {
 		var cl models.Changelog
 		if err := rows.Scan(

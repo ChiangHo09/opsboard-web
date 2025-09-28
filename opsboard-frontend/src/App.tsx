@@ -1,9 +1,9 @@
 /**
  * @file src/App.tsx
  * @description 此文件是应用的根组件，也是所有全局 Provider 和配置的集成中心。
- * @modification
- *   - [Typo Fix]: 修正了文件末尾处 `</NotificationProvider>` 的拼写错误（之前被错误地写为 `</Notification-provider>`）。
- *   - [Reason]: 此修复解决了由于 JSX 标签大小写不匹配而导致的解析错误。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [最终修复]：修正了 `useAuth` 钩子的导入路径，从 `./contexts/AuthContext` 更改为 `@/hooks/useAuth`。
+ *   - [原因]：此修改解决了因导入路径错误而导致的 TypeScript 编译失败问题 (TS2305)，确保了 `useAuth` 钩子从其正确的源文件 (`src/hooks/useAuth.ts`) 被导入。
  */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ import { Box, CircularProgress } from '@mui/material';
 import theme from './theme';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { NotificationProvider, useNotification } from './contexts/NotificationContext';
+// [核心修复] 将 useAuth 的导入分离
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from '@/hooks/useAuth';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -28,7 +29,7 @@ const MainLayout = lazy(() => import('./layouts/MainLayout'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Servers = lazy(() => import('./pages/Servers'));
 const Changelog = lazy(() => import('./pages/Changelog'));
-const InspectionBackup = lazy(() => import('./pages/InspectionBackup'));
+const Tasks = lazy(() => import('./pages/Tasks'));
 const Tickets = lazy(() => import('./pages/Tickets'));
 const Stats = lazy(() => import('./pages/Stats'));
 const Labs = lazy(() => import('./pages/Labs'));
@@ -56,7 +57,7 @@ const AppRoutes = (): JSX.Element => {
                         <Route path="changelog" element={<Changelog />} />
                         <Route path="changelog/:logId" element={<Changelog />} />
                         <Route path="changelog/mobile/:logId" element={<ChangelogDetailMobile />} />
-                        <Route path="inspection-backup" element={<InspectionBackup />} />
+                        <Route path="tasks" element={<Tasks />} />
                         <Route path="tickets" element={<Tickets />} />
                         <Route path="tickets/:ticketId" element={<Tickets />} />
                         <Route path="tickets/mobile/:ticketId" element={<TicketDetailMobile />} />
@@ -87,8 +88,7 @@ const AppProviders = ({ children }: { children: JSX.Element }): JSX.Element => {
             onError: (error: unknown) => {
                 let errorMessage = '数据请求失败，请稍后重试。';
                 if (error instanceof ApiError) {
-                    if (error.status === 401) {
-                        localStorage.removeItem('token');
+                    if (error.message.includes('Session expired')) {
                         window.location.assign('/login');
                         return;
                     }
