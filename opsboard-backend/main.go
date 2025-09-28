@@ -2,10 +2,8 @@
  * @file main.go
  * @description 应用主入口文件，负责初始化、路由注册和服务器启动。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [业务接口]：新增并注册了 `GET /tasks/list` 业务接口，并将其明确地放置在受 `AuthMiddleware` 保护的路由组之下。
- *   - [原因]：此修改扩展了应用的业务功能，为新的巡检备份模块提供了后端数据支持，并确保了其接口受到严格的认证保护。
+ *   - [代码重构]：将与任务相关的路由从 `/api/tasks` 更新为 `/api/maintenance`，并调用新的 `GetMaintenanceTaskList` 处理器，以提高命名的业务清晰度。
  */
-
 package main
 
 import (
@@ -48,7 +46,6 @@ func main() {
 		}
 
 		// --- 受保护的路由组 (Protected Routes) ---
-
 		users := api.Group("/users")
 		users.Use(middleware.AuthMiddleware())
 		{
@@ -67,11 +64,11 @@ func main() {
 			changelogs.GET("/list", handlers.GetChangelogList)
 		}
 
-		// [核心修改] 在受保护的组下注册我们新的巡检备份任务接口
-		tasks := api.Group("/tasks")
-		tasks.Use(middleware.AuthMiddleware())
+		// [核心修改] 更新路由和处理器调用
+		maintenance := api.Group("/maintenance")
+		maintenance.Use(middleware.AuthMiddleware())
 		{
-			tasks.GET("/list", handlers.GetTaskList)
+			maintenance.GET("/list", handlers.GetMaintenanceTaskList)
 		}
 	}
 
