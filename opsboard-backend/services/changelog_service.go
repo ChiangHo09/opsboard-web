@@ -1,8 +1,9 @@
 /**
  * @file services/changelog_service.go
- * @description 提供与更新日志相关的业务逻辑。
+ * @description 提供与更新日志相关的业务逻辑，使用 GORM 实现分页查询。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [健壮性修复]：在函数开头，将 `changelogs` 切片初始化为一个非 `nil` 的空切片 (`make([]models.Changelog, 0)`)，以确保在没有数据时返回 `[]` 而不是 `null`。
+ *   - [架构重构]：使用 GORM ORM 框架彻底重构了数据查询逻辑，取代了手写的 SQL 和 `rows.Scan`。
+ *   - [后端分页]：实现了完整的后端分页功能。`GetPaginatedChangelogs` 函数现在接收 `page` 和 `pageSize` 参数，并返回包含数据列表和总记录数的结果。
  */
 
 package services
@@ -12,37 +13,51 @@ import (
 	"opsboard-backend/models"
 )
 
-// GetAllChangelogs 从数据库中查询并返回所有更新日志的列表。
-func GetAllChangelogs() ([]models.Changelog, error) {
-	db := database.DB
-	rows, err := db.Query(`
-		SELECT 
-			cl.log_id, cl.customer_id, cl.user_id, cl.update_time, 
-			cl.update_type, cl.update_content, cl.created_at,
-			c.customer_name
-		FROM changelogs cl
-		LEFT JOIN customers c ON cl.customer_id = c.customer_id
-		ORDER BY cl.update_time DESC
-	`)
+// PaginatedChangelogsResult 定义了更新日志分页查询的返回结构
+type PaginatedChangelogsResult struct {
+	Total int64              `json:"total"`
+	Data  []models.Changelog `json:"data"`
+}
+
+// GetPaginatedChangelogs 使用 GORM 从数据库中分页查询更新日志列表。
+func GetPaginatedChangelogs(page, pageSize int) (*PaginatedChangelogsResult, error) {
+	db := database.GormDB
+	var changelogs []models.Changelog
+	var total int64
+
+	// 1. 构建基础查询链，用于计算总数
+	query := db.Model(&models.Changelog{})
+
+	// 2. 执行 COUNT 查询获取总记录数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// 3. 计算分页所需的 offset
+	offset := (page - 1) * pageSize
+
+	// 4. 在基础查询链上继续添加分页、排序和关联查询，然后执行
+	err := query.
+		Joins("LEFT JOIN customers c ON changelogs.customer_id = c.customer_id").
+		Select("changelogs.*, c.customer_name").
+		Offset(offset).
+		Limit(pageSize).
+		Order("changelogs.update_time DESC").
+		Find(&changelogs).Error
+
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	// [核心修复] 初始化为一个非 nil 的空切片
-	changelogs := make([]models.Changelog, 0)
-
-	for rows.Next() {
-		var cl models.Changelog
-		if err := rows.Scan(
-			&cl.LogID, &cl.CustomerID, &cl.UserID, &cl.UpdateTime,
-			&cl.UpdateType, &cl.UpdateContent, &cl.CreatedAt,
-			&cl.CustomerName,
-		); err != nil {
-			return nil, err
-		}
-		changelogs = append(changelogs, cl)
+	if changelogs == nil {
+		changelogs = make([]models.Changelog, 0)
 	}
 
-	return changelogs, nil
+	// 5. 组装并返回结果
+	result := &PaginatedChangelogsResult{
+		Total: total,
+		Data:  changelogs,
+	}
+
+	return result, nil
 }
