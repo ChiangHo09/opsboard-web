@@ -1,9 +1,9 @@
 /**
  * @file handlers/server_handler.go
- * @description 处理与服务器相关的 HTTP 请求，包括获取列表和删除操作。
+ * @description 处理与服务器相关的 HTTP 请求，支持分页查询和删除操作。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新增功能]：添加了 `DeleteServer` 处理器，用于处理 `DELETE /servers/:id` 请求。
- *   - [实现]：该处理器从 URL 路径中获取 `id` 参数，调用服务层的 `DeleteServerByID` 函数执行删除操作，并根据操作结果返回相应的 HTTP 状态码。
+ *   - [功能增强]：`GetServerList` 处理器现在支持分页。它从 URL 查询参数中解析 `page` 和 `pageSize`，并调用新的分页服务函数。
+ *   - [健壮性]：增加了对查询参数的默认值处理和类型转换，确保了即使前端不提供分页参数，接口也能正常工作。
  */
 
 package handlers
@@ -11,24 +11,28 @@ package handlers
 import (
 	"net/http"
 	"opsboard-backend/services"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GetServerList 处理获取服务器列表的请求
+// GetServerList 处理获取服务器列表的请求（支持分页）
 func GetServerList(c *gin.Context) {
-	servers, err := services.GetAllServers()
+	// 从 URL query string 中获取分页参数，并设置默认值
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+
+	result, err := services.GetPaginatedServers(page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "获取服务器列表失败"})
 		return
 	}
 
-	c.JSON(http.StatusOK, servers)
+	c.JSON(http.StatusOK, result)
 }
 
 // DeleteServer 处理删除服务器的请求
 func DeleteServer(c *gin.Context) {
-	// 从 URL 路径中获取服务器 ID
 	serverID := c.Param("id")
 	if serverID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "服务器 ID 不能为空"})
@@ -41,6 +45,5 @@ func DeleteServer(c *gin.Context) {
 		return
 	}
 
-	// 成功删除后，通常返回 204 No Content
 	c.Status(http.StatusNoContent)
 }
