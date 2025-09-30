@@ -2,12 +2,12 @@
  * @file src/api/changelogApi.ts
  * @description 提供了与更新日志相关的 API 函数和类型定义。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复]：将 `ChangelogRow` 接口中的 `id` 和 `customerId` 字段的类型从 `number` 更改为 `string`，以满足通用组件的 `{ id: string; }` 类型约束。
- *   - [数据转换]：在 `fetchAll` 函数中增加了 `.map()` 操作，以在数据返回给应用层之前，将从后端接收到的 `number` 类型的 ID 显式转换为 `string`。
+ *   - [后端分页]：`fetchAll` 函数现在接收 `page` 和 `pageSize` 参数，并将其作为 URL 查询参数发送给后端。
+ *   - [类型更新]：`fetchAll` 的返回类型更新为 `PaginatedResponse<ChangelogRow>`，以匹配后端分页接口返回的 `{ total: number, data: T[] }` 结构。
  */
-import api from './index';
+import api, { type PaginatedResponse } from './index'; // 导入通用的 PaginatedResponse 类型
 
-// [核心修复] 将 id 和 customerId 的类型改为 string
+// 将 id 和 customerId 的类型改为 string
 export interface ChangelogRow {
     id: string;
     customerId: string;
@@ -19,7 +19,6 @@ export interface ChangelogRow {
     customerName: string;
 }
 
-// 这是一个临时的内部类型，用于匹配 API 的原始响应
 type ChangelogApiResponse = Omit<ChangelogRow, 'id' | 'customerId'> & {
     id: number;
     customerId: number;
@@ -27,17 +26,23 @@ type ChangelogApiResponse = Omit<ChangelogRow, 'id' | 'customerId'> & {
 
 export const changelogsApi = {
     /**
-     * 从后端获取所有更新日志的列表，并进行类型转换。
-     * @returns {Promise<ChangelogRow[]>} 返回一个解析为更新日志数组的 Promise。
+     * 从后端分页获取更新日志列表。
+     * @param {number} page - 当前页码 (从1开始)。
+     * @param {number} pageSize - 每页记录数。
+     * @returns {Promise<PaginatedResponse<ChangelogRow>>} 返回一个包含总数和当前页数据的 Promise。
      */
-    fetchAll: async (): Promise<ChangelogRow[]> => {
-        const response = await api<ChangelogApiResponse[]>('/changelogs/list');
+    fetchAll: async (page: number, pageSize: number): Promise<PaginatedResponse<ChangelogRow>> => {
+        const response = await api<PaginatedResponse<ChangelogApiResponse>>(`/changelogs/list?page=${page}&pageSize=${pageSize}`);
 
-        // [核心修复] 使用 map 转换 id 和 customerId 的类型
-        return response.map(log => ({
+        const transformedData = response.data.map(log => ({
             ...log,
             id: String(log.id),
             customerId: String(log.customerId),
         }));
+
+        return {
+            total: response.total,
+            data: transformedData,
+        };
     },
 };

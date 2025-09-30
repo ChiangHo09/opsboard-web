@@ -1,9 +1,9 @@
 /**
  * @file src/pages/Changelog.tsx
- * @description 该文件负责渲染“更新日志”页面。
+ * @description 该文件负责渲染“更新日志”页面，已集成后端分页功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [性能优化]：引入了 `useState` 和 `useEffect` 来延迟数据获取，以优先保证页面进入动画的流畅性。
- *   - [实现]：现在，数据获取会等待一个短暂的延迟（300毫秒）后才开始，避免了因数据加载阻塞主线程而导致的动画卡顿或跳帧问题。
+ *   - [后端分页]：重构了数据获取逻辑，`useResponsiveDetailView` 现在接收并使用分页状态 (`page`, `rowsPerPage`) 来进行 API 调用。
+ *   - [状态同步]：`DataTable` 的分页器现在由 `react-query` 返回的总记录数和本地分页状态驱动，实现了前后端分页的完美同步。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -41,8 +41,8 @@ const mobileColumns: ColumnConfig<ChangelogRow>[] = [
     { id: 'updateType', label: '更新类型', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
 ];
 
-const CHANGELOGS_QUERY_KEY = ['changelogs'];
-const ANIMATION_DELAY = 300; // 动画延迟时间 (ms)
+const CHANGELOGS_QUERY_KEY_BASE = ['changelogs'];
+const ANIMATION_DELAY = 300;
 
 export default function Changelog(): JSX.Element {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -53,35 +53,24 @@ export default function Changelog(): JSX.Element {
     const [isAdmin] = useState(true);
     const delayedNavigate = useDelayedNavigate();
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
-
-    // [核心修复] 增加 state 和 effect 来延迟数据获取
     const [isQueryEnabled, setIsQueryEnabled] = useState(false);
+
     useEffect(() => {
         const timer = setTimeout(() => setIsQueryEnabled(true), ANIMATION_DELAY);
         return () => clearTimeout(timer);
     }, []);
 
-    const { data: rows = [], isLoading, isError, error } = useResponsiveDetailView<ChangelogRow, ChangelogDetailContentProps>({
+    // [核心修改] 将分页状态传递给 useResponsiveDetailView
+    const { rows, totalRows, isLoading, isError, error } = useResponsiveDetailView<ChangelogRow, ChangelogDetailContentProps>({
         paramName: 'logId',
         baseRoute: '/app/changelog',
-        queryKey: CHANGELOGS_QUERY_KEY,
+        queryKey: [CHANGELOGS_QUERY_KEY_BASE],
         queryFn: changelogsApi.fetchAll,
         DetailContentComponent: ChangelogDetailContent,
-        enabled: isQueryEnabled, // [核心修复] 绑定 enabled 选项
+        enabled: isQueryEnabled,
+        page: page,
+        rowsPerPage: rowsPerPage,
     });
-
-    // ... 其他 useEffect 和回调函数保持不变 ...
-    useEffect(() => {
-        if (logId && rows.length > 0) {
-            const itemIndex = rows.findIndex(row => row.id === logId);
-            if (itemIndex !== -1) {
-                const targetPage = Math.floor(itemIndex / rowsPerPage);
-                if (page !== targetPage) {
-                    setPage(targetPage);
-                }
-            }
-        }
-    }, [logId, rows, rowsPerPage, page]);
 
     useEffect(() => {
         if (!logId) {
@@ -115,8 +104,6 @@ export default function Changelog(): JSX.Element {
         };
     }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
-    const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
-
     const handleRowClick = useCallback((id: string) => {
         setClickedRowId(id);
         delayedNavigate(`/app/changelog/${id}`, {replace: true});
@@ -134,7 +121,7 @@ export default function Changelog(): JSX.Element {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {pageRows.map(r => (
+                {rows.map(r => ( // [核心修改] 不再需要前端分页，直接使用 rows
                     <ClickableTableRow
                         key={r.id}
                         row={r}
@@ -145,11 +132,10 @@ export default function Changelog(): JSX.Element {
                 ))}
             </TableBody>
         </Table>
-    ), [pageRows, columns, logId, clickedRowId, handleRowClick]);
+    ), [rows, columns, logId, clickedRowId, handleRowClick]);
 
     const renderContent = () => {
-        // [核心修复] 修改加载逻辑
-        if (isLoading || !isQueryEnabled) {
+        if ((isLoading || !isQueryEnabled) && totalRows === 0) {
             return (
                 <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
                     <CircularProgress/>
@@ -163,13 +149,14 @@ export default function Changelog(): JSX.Element {
                 </Box>
             );
         }
-        if (rows.length === 0) {
+        if (totalRows === 0) {
             return <NoDataMessage message="暂无更新日志" />;
         }
         return (
+            // [核心修改] DataTable 现在由后端数据驱动
             <DataTable
                 rowsPerPageOptions={[10, 25, 50]}
-                count={rows.length}
+                count={totalRows}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={(_, p: number) => setPage(p)}
