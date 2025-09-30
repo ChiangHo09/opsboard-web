@@ -1,11 +1,9 @@
 /**
  * @file src/pages/Servers.tsx
- * @description 该文件负责渲染“服务器信息”页面，并实现了删除服务器的功能。
+ * @description 该文件负责渲染“服务器信息”页面，已集成后端分页和删除功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新增功能]：实现了删除服务器的完整流程，包括API调用、状态更新和用户确认。
- *   - [UI 交互]：为表格的每一行增加了悬浮时出现的操作按钮（打印和删除），并通过 `ClickableTableRow` 的 `actions` prop 进行渲染。
- *   - [状态管理]：使用 `useState` 管理删除确认对话框的开关状态和待删除项的ID。
- *   - [数据流]：使用 `@tanstack/react-query` 的 `useMutation` 和 `queryClient` 来执行删除操作，并在成功后自动刷新服务器列表，确保了UI与后端数据的同步。
+ *   - [架构恢复]：恢复使用 `useResponsiveDetailView` 自定义钩子，并将分页状态 (`page`, `rowsPerPage`) 传递给它。
+ *   - [原因]：此修改解决了因移除 `useResponsiveDetailView` 而导致的响应式详情视图功能丢失的问题。通过将分页逻辑整合进该钩子，我们重新获得了代码的简洁性和强大的响应式布局能力。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -13,9 +11,9 @@ import {
     Box, Typography, Table, TableBody, TableCell,
     TableHead, TableRow, CircularProgress, IconButton, Tooltip
 } from '@mui/material';
-import { useQueryClient, useMutation } from '@tanstack/react-query'; // [核心修改]
-import PrintIcon from '@mui/icons-material/Print'; // [核心修改]
-import DeleteIcon from '@mui/icons-material/Delete'; // [核心修改]
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import PrintIcon from '@mui/icons-material/Print';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type ServerSearchValues} from '@/components/forms/ServerSearchForm';
@@ -31,7 +29,7 @@ import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
 import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
 import NoDataMessage from '@/components/ui/NoDataMessage';
-import ConfirmDialog from '@/components/ui/ConfirmDialog'; // [核心修改]
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 const ServerSearchForm = lazy(() => import('@/components/forms/ServerSearchForm'));
 const ServerDetailContent = lazy(() => import('@/components/modals/ServerDetailContent'));
@@ -54,7 +52,7 @@ const mobileColumns: ColumnConfig<ServerRow>[] = [
     { id: 'role', label: '角色', sx: {width: '33.33%'}, renderCell: (r: ServerRow) => <TooltipCell>{r.role?.Valid ? r.role.String : '-'}</TooltipCell> },
 ];
 
-const SERVERS_QUERY_KEY = ['servers'];
+const SERVERS_QUERY_KEY_BASE = ['servers'];
 const ANIMATION_DELAY = 300;
 
 export default function Servers(): JSX.Element {
@@ -68,8 +66,6 @@ export default function Servers(): JSX.Element {
     const delayedNavigate = useDelayedNavigate();
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
     const [isQueryEnabled, setIsQueryEnabled] = useState(false);
-
-    // [核心修改] 删除逻辑的状态管理
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<ServerRow | null>(null);
     const queryClient = useQueryClient();
@@ -81,22 +77,23 @@ export default function Servers(): JSX.Element {
         return () => clearTimeout(timer);
     }, []);
 
-    const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
+    // [核心修复] 恢复使用 useResponsiveDetailView，并传入分页状态
+    const {rows, totalRows, isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
         paramName: 'serverId',
         baseRoute: '/app/servers',
-        queryKey: SERVERS_QUERY_KEY,
+        queryKey: [SERVERS_QUERY_KEY_BASE],
         queryFn: serversApi.fetchAll,
         DetailContentComponent: ServerDetailContent,
         enabled: isQueryEnabled,
+        page: page,
+        rowsPerPage: rowsPerPage,
     });
 
-    // [核心修改] 使用 useMutation 执行删除操作
     const deleteMutation = useMutation({
         mutationFn: serversApi.deleteById,
         onSuccess: () => {
             showNotification('服务器删除成功', 'success');
-            // 使服务器列表的缓存失效，触发自动重新获取
-            queryClient.invalidateQueries({ queryKey: SERVERS_QUERY_KEY });
+            queryClient.invalidateQueries({ queryKey: [SERVERS_QUERY_KEY_BASE] });
         },
         onError: (err) => {
             handleAsyncError(err, showNotification);
@@ -115,18 +112,6 @@ export default function Servers(): JSX.Element {
         setDeleteConfirmOpen(false);
         setItemToDelete(null);
     };
-
-    useEffect(() => {
-        if (serverId && rows.length > 0) {
-            const itemIndex = rows.findIndex(row => row.id === serverId);
-            if (itemIndex !== -1) {
-                const targetPage = Math.floor(itemIndex / rowsPerPage);
-                if (page !== targetPage) {
-                    setPage(targetPage);
-                }
-            }
-        }
-    }, [serverId, rows, rowsPerPage, page]);
 
     useEffect(() => {
         if (!serverId) {
@@ -168,8 +153,6 @@ export default function Servers(): JSX.Element {
         };
     }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
-    const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
-
     const handleRowClick = useCallback((id: string) => {
         setClickedRowId(id);
         delayedNavigate(`/app/servers/${id}`, {replace: true});
@@ -187,14 +170,13 @@ export default function Servers(): JSX.Element {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {pageRows.map(r => (
+                {rows.map(r => (
                     <ClickableTableRow
                         key={r.id}
                         row={r}
                         columns={columns}
                         selected={r.id === serverId || r.id === clickedRowId}
                         onClick={() => handleRowClick(r.id)}
-                        // [核心修改] 传递操作按钮
                         actions={
                             <>
                                 <Tooltip title="打印">
@@ -213,10 +195,10 @@ export default function Servers(): JSX.Element {
                 ))}
             </TableBody>
         </Table>
-    ), [pageRows, columns, serverId, clickedRowId, handleRowClick]);
+    ), [rows, columns, serverId, clickedRowId, handleRowClick, handleDeleteClick]);
 
     const renderContent = () => {
-        if (isLoading || !isQueryEnabled) {
+        if ((isLoading || !isQueryEnabled) && totalRows === 0) {
             return (
                 <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
                     <CircularProgress/>
@@ -230,13 +212,13 @@ export default function Servers(): JSX.Element {
                 </Box>
             );
         }
-        if (rows.length === 0) {
+        if (totalRows === 0) {
             return <NoDataMessage message="暂无服务器数据" />;
         }
         return (
             <DataTable
                 rowsPerPageOptions={[10, 25, 50]}
-                count={rows.length}
+                count={totalRows}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={(_, p: number) => setPage(p)}
@@ -263,7 +245,6 @@ export default function Servers(): JSX.Element {
                 {renderContent()}
             </Box>
 
-            {/* [核心修改] 渲染确认对话框 */}
             <ConfirmDialog
                 open={deleteConfirmOpen}
                 title="确认删除"

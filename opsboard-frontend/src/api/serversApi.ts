@@ -2,8 +2,8 @@
  * @file src/api/serversApi.ts
  * @description 提供了与服务器相关的 API 函数和类型定义。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新增功能]：添加了 `deleteById` 函数，用于调用后端的删除服务器接口。
- *   - [实现]：该函数接收一个服务器 ID，并向 `/servers/:id` 端点发送一个 `DELETE` 方法的 HTTP 请求。
+ *   - [后端分页]：`fetchAll` 函数现在接收 `page` 和 `pageSize` 参数，并将其作为 URL 查询参数发送给后端。
+ *   - [类型更新]：新增了 `PaginatedResponse` 类型，以匹配后端分页接口返回的 `{ total: number, data: T[] }` 结构。
  */
 import api from './index';
 
@@ -26,6 +26,12 @@ export interface ServerRow {
     customerName: string;
 }
 
+// 定义通用的分页响应结构
+export interface PaginatedResponse<T> {
+    total: number;
+    data: T[];
+}
+
 type ServerApiResponse = Omit<ServerRow, 'id' | 'customerId'> & {
     id: number;
     customerId: number;
@@ -33,17 +39,26 @@ type ServerApiResponse = Omit<ServerRow, 'id' | 'customerId'> & {
 
 export const serversApi = {
     /**
-     * 从后端获取所有服务器的列表，并进行类型转换。
-     * @returns {Promise<ServerRow[]>} 返回一个解析为服务器数组的 Promise。
+     * 从后端分页获取服务器列表。
+     * @param {number} page - 当前页码 (从1开始)。
+     * @param {number} pageSize - 每页记录数。
+     * @returns {Promise<PaginatedResponse<ServerRow>>} 返回一个包含总数和当前页数据的 Promise。
      */
-    fetchAll: async (): Promise<ServerRow[]> => {
-        const response = await api<ServerApiResponse[]>('/servers/list');
+    fetchAll: async (page: number, pageSize: number): Promise<PaginatedResponse<ServerRow>> => {
+        // 将分页参数附加到 URL query string
+        const response = await api<PaginatedResponse<ServerApiResponse>>(`/servers/list?page=${page}&pageSize=${pageSize}`);
 
-        return response.map(server => ({
+        // 转换 data 数组中的 id 类型
+        const transformedData = response.data.map(server => ({
             ...server,
             id: String(server.id),
             customerId: String(server.customerId),
         }));
+
+        return {
+            total: response.total,
+            data: transformedData,
+        };
     },
 
     /**
@@ -52,7 +67,6 @@ export const serversApi = {
      * @returns {Promise<void>} 操作成功时不返回任何内容。
      */
     deleteById: (id: string): Promise<void> => {
-        // 假设后端的删除接口是 DELETE /api/servers/:id
         return api(`/servers/${id}`, {
             method: 'DELETE',
         });
