@@ -2,12 +2,11 @@
  * @file src/api/changelogApi.ts
  * @description 提供了与更新日志相关的 API 函数和类型定义。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [后端分页]：`fetchAll` 函数现在接收 `page` 和 `pageSize` 参数，并将其作为 URL 查询参数发送给后端。
- *   - [类型更新]：`fetchAll` 的返回类型更新为 `PaginatedResponse<ChangelogRow>`，以匹配后端分页接口返回的 `{ total: number, data: T[] }` 结构。
+ *   - [新增功能]：添加了 `deleteById` 函数，用于调用后端的删除更新日志接口。
+ *   - [实现]：该函数接收一个日志 ID，并向 `/changelogs/:id` 端点发送一个 `DELETE` 方法的 HTTP 请求。
  */
-import api, { type PaginatedResponse } from './index'; // 导入通用的 PaginatedResponse 类型
+import api, { type PaginatedResponse } from './index';
 
-// 将 id 和 customerId 的类型改为 string
 export interface ChangelogRow {
     id: string;
     customerId: string;
@@ -44,5 +43,16 @@ export const changelogsApi = {
             total: response.total,
             data: transformedData,
         };
+    },
+
+    /**
+     * 根据 ID 删除一个更新日志。
+     * @param {string} id - 要删除的日志的 ID。
+     * @returns {Promise<void>} 操作成功时不返回任何内容。
+     */
+    deleteById: (id: string): Promise<void> => {
+        return api(`/changelogs/${id}`, {
+            method: 'DELETE',
+        });
     },
 };

@@ -1,21 +1,26 @@
 /**
  * @file src/pages/Changelog.tsx
- * @description 该文件负责渲染“更新日志”页面，已集成后端分页功能。
+ * @description 该文件负责渲染“更新日志”页面，并实现了删除日志的功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [后端分页]：重构了数据获取逻辑，`useResponsiveDetailView` 现在接收并使用分页状态 (`page`, `rowsPerPage`) 来进行 API 调用。
- *   - [状态同步]：`DataTable` 的分页器现在由 `react-query` 返回的总记录数和本地分页状态驱动，实现了前后端分页的完美同步。
+ *   - [新增功能]：实现了删除更新日志的完整流程，包括API调用、状态更新和用户确认。
+ *   - [UI 交互]：为表格的每一行增加了与服务器页面一致的、悬浮时出现的操作按钮（打印和删除）。
+ *   - [数据流]：使用 `@tanstack/react-query` 的 `useMutation` 和 `queryClient` 来执行删除操作，并在成功后自动刷新日志列表。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
 import {
     Box, Table, TableBody, TableCell,
-    TableHead, TableRow, CircularProgress, Typography
+    TableHead, TableRow, CircularProgress, Typography, IconButton, Tooltip
 } from '@mui/material';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import PrintIcon from '@mui/icons-material/Print';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
 import {changelogsApi, type ChangelogRow} from '@/api';
 import {useResponsiveDetailView} from '@/hooks/useResponsiveDetailView';
 import {type ChangelogDetailContentProps} from '@/components/modals/ChangelogDetailContent';
+import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
@@ -24,6 +29,8 @@ import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
 import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
 import NoDataMessage from '@/components/ui/NoDataMessage';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import {useNotification} from "@/contexts/NotificationContext.tsx";
 
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
@@ -54,13 +61,18 @@ export default function Changelog(): JSX.Element {
     const delayedNavigate = useDelayedNavigate();
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
     const [isQueryEnabled, setIsQueryEnabled] = useState(false);
+    const showNotification = useNotification();
+    const queryClient = useQueryClient();
+
+    // [核心修改] 删除逻辑的状态管理
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<ChangelogRow | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsQueryEnabled(true), ANIMATION_DELAY);
         return () => clearTimeout(timer);
     }, []);
 
-    // [核心修改] 将分页状态传递给 useResponsiveDetailView
     const { rows, totalRows, isLoading, isError, error } = useResponsiveDetailView<ChangelogRow, ChangelogDetailContentProps>({
         paramName: 'logId',
         baseRoute: '/app/changelog',
@@ -71,6 +83,31 @@ export default function Changelog(): JSX.Element {
         page: page,
         rowsPerPage: rowsPerPage,
     });
+
+    // [核心修改] 使用 useMutation 执行删除操作
+    const deleteMutation = useMutation({
+        mutationFn: changelogsApi.deleteById,
+        onSuccess: () => {
+            showNotification('更新日志删除成功', 'success');
+            queryClient.invalidateQueries({ queryKey: [CHANGELOGS_QUERY_KEY_BASE] });
+        },
+        onError: (err) => {
+            handleAsyncError(err, showNotification);
+        }
+    });
+
+    const handleDeleteClick = (row: ChangelogRow) => {
+        setItemToDelete(row);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteMutation.mutate(itemToDelete.id);
+        }
+        setDeleteConfirmOpen(false);
+        setItemToDelete(null);
+    };
 
     useEffect(() => {
         if (!logId) {
@@ -121,18 +158,33 @@ export default function Changelog(): JSX.Element {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {rows.map(r => ( // [核心修改] 不再需要前端分页，直接使用 rows
+                {rows.map(r => (
                     <ClickableTableRow
                         key={r.id}
                         row={r}
                         columns={columns}
                         selected={r.id === logId || r.id === clickedRowId}
                         onClick={() => handleRowClick(r.id)}
+                        // [核心修改] 传递操作按钮
+                        actions={
+                            <>
+                                <Tooltip title="打印">
+                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); alert(`打印日志 #${r.id}`); }}>
+                                        <PrintIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="删除">
+                                    <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleDeleteClick(r); }}>
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
+                        }
                     />
                 ))}
             </TableBody>
         </Table>
-    ), [rows, columns, logId, clickedRowId, handleRowClick]);
+    ), [rows, columns, logId, clickedRowId, handleRowClick, handleDeleteClick]);
 
     const renderContent = () => {
         if ((isLoading || !isQueryEnabled) && totalRows === 0) {
@@ -153,7 +205,6 @@ export default function Changelog(): JSX.Element {
             return <NoDataMessage message="暂无更新日志" />;
         }
         return (
-            // [核心修改] DataTable 现在由后端数据驱动
             <DataTable
                 rowsPerPageOptions={[10, 25, 50]}
                 count={totalRows}
@@ -182,6 +233,15 @@ export default function Changelog(): JSX.Element {
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {renderContent()}
             </Box>
+
+            {/* [核心修改] 渲染确认对话框 */}
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                title="确认删除"
+                content={`您确定要删除这条更新日志吗？此操作不可撤销。`}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setDeleteConfirmOpen(false)}
+            />
         </PageLayout>
     );
 }
