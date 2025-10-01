@@ -1,8 +1,8 @@
 /**
  * @file src/pages/Maintenance.tsx
- * @description 此文件是“维护任务”功能的主页面，负责获取并展示任务列表。
+ * @description 此文件是“维护任务”功能的主页面，已集成后端分页功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [代码重构]：将文件名和组件名从 `Tasks` 更改为 `Maintenance`，并更新了所有相关的 API 调用和类型引用，以提高命名的业务清晰度。
+ *   - [类型修复]：更新了 `useQuery` 的泛型参数，以正确接收从 `@/api` 导出的全局 `PaginatedResponse` 类型。
  */
 import {useEffect, useCallback, lazy, Suspense, type JSX, useState, useMemo, type ChangeEvent} from 'react';
 import {
@@ -20,6 +20,7 @@ import {useQuery} from '@tanstack/react-query';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type InspectionBackupSearchValues} from '@/components/forms/InspectionBackupSearchForm.tsx';
 import { maintenanceApi, type MaintenanceTaskRow } from '@/api/maintenanceApi';
+import { type PaginatedResponse } from '@/api'; // [核心修复]
 import PageLayout from '@/layouts/PageLayout';
 import PageHeader from '@/layouts/PageHeader';
 import ActionButtons from '@/components/ui/ActionButtons';
@@ -31,9 +32,9 @@ import NoDataMessage from '@/components/ui/NoDataMessage';
 const InspectionBackupSearchForm = lazy(() => import('@/components/forms/InspectionBackupSearchForm.tsx'));
 
 const columns: ColumnConfig<MaintenanceTaskRow>[] = [
-    { id: 'taskName', label: '任务名称', sx: { width: '25%' }, renderCell: (r) => <TooltipCell>{r.taskName}</TooltipCell> },
-    { id: 'type', label: '类型', sx: { width: '10%' }, renderCell: (r) => <Chip label={r.type} size="small" /> },
-    { id: 'status', label: '状态', sx: { width: '10%' }, renderCell: (r) => {
+    { id: 'taskName', label: '任务名称', sx: { width: '25%' }, renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.taskName}</TooltipCell> },
+    { id: 'type', label: '类型', sx: { width: '10%' }, renderCell: (r: MaintenanceTaskRow) => <Chip label={r.type} size="small" /> },
+    { id: 'status', label: '状态', sx: { width: '10%' }, renderCell: (r: MaintenanceTaskRow) => {
             const colorMap: { [key in MaintenanceTaskRow['status']]: 'success' | 'warning' | 'error' } = {
                 '完成': 'success',
                 '挂起': 'warning',
@@ -41,11 +42,11 @@ const columns: ColumnConfig<MaintenanceTaskRow>[] = [
             };
             return <Chip label={r.status} size="small" color={colorMap[r.status]} />;
         }},
-    { id: 'executionTime', label: '执行时间', sx: { width: '25%' }, renderCell: (r) => <TooltipCell>{r.executionTime?.Valid ? new Date(r.executionTime.Time).toLocaleString() : '-'}</TooltipCell> },
-    { id: 'target', label: '目标对象', renderCell: (r) => <TooltipCell>{r.target?.Valid ? r.target.String : '无'}</TooltipCell> },
+    { id: 'executionTime', label: '执行时间', sx: { width: '25%' }, renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.executionTime?.Valid ? new Date(r.executionTime.Time).toLocaleString() : '-'}</TooltipCell> },
+    { id: 'target', label: '目标对象', renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.target?.Valid ? r.target.String : '无'}</TooltipCell> },
 ];
 
-const MAINTENANCE_QUERY_KEY = ['maintenance'];
+const MAINTENANCE_QUERY_KEY_BASE = ['maintenance'];
 const ANIMATION_DELAY = 300;
 
 const Maintenance = (): JSX.Element => {
@@ -62,11 +63,14 @@ const Maintenance = (): JSX.Element => {
         return () => clearTimeout(timer);
     }, []);
 
-    const { data: rows = [], isLoading, isError, error } = useQuery<MaintenanceTaskRow[], Error>({
-        queryKey: MAINTENANCE_QUERY_KEY,
-        queryFn: maintenanceApi.fetchAll,
+    const { data, isLoading, isError, error } = useQuery<PaginatedResponse<MaintenanceTaskRow>, Error>({
+        queryKey: [MAINTENANCE_QUERY_KEY_BASE, page, rowsPerPage],
+        queryFn: () => maintenanceApi.fetchAll(page + 1, rowsPerPage),
         enabled: isQueryEnabled,
     });
+
+    const rows = data?.data || [];
+    const totalRows = data?.total || 0;
 
     const handleSearch = useCallback((values: InspectionBackupSearchValues) => {
         alert(`搜索条件: ${JSON.stringify(values, null, 2)}`);
@@ -96,8 +100,6 @@ const Maintenance = (): JSX.Element => {
         };
     }, [isPanelOpen, setPanelContent, setPanelTitle, setPanelWidth, handleSearch, handleReset]);
 
-    const pageRows = useMemo(() => rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage), [rows, page, rowsPerPage]);
-
     const tableContent = useMemo(() => (
         <Table stickyHeader aria-label="维护任务记录表" sx={{width: '100%', borderCollapse: 'separate', tableLayout: 'fixed'}}>
             <TableHead>
@@ -108,7 +110,7 @@ const Maintenance = (): JSX.Element => {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {pageRows.map(r => (
+                {rows.map((r: MaintenanceTaskRow) => ( // [核心修复] 明确 r 的类型
                     <ClickableTableRow
                         key={r.id}
                         row={r}
@@ -119,10 +121,10 @@ const Maintenance = (): JSX.Element => {
                 ))}
             </TableBody>
         </Table>
-    ), [pageRows]);
+    ), [rows]);
 
     const renderContent = () => {
-        if (isLoading || !isQueryEnabled) {
+        if ((isLoading || !isQueryEnabled) && !data) {
             return (
                 <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
                     <CircularProgress/>
@@ -136,13 +138,13 @@ const Maintenance = (): JSX.Element => {
                 </Box>
             );
         }
-        if (rows.length === 0) {
+        if (totalRows === 0) {
             return <NoDataMessage message="暂无维护任务数据" />;
         }
         return (
             <DataTable
                 rowsPerPageOptions={[10, 25, 50]}
-                count={rows.length}
+                count={totalRows}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={(_, p: number) => setPage(p)}

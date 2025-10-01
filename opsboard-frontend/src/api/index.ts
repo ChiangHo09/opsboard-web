@@ -2,11 +2,8 @@
  * @file src/api/index.ts
  * @description API 客户端配置和基础工具。此版本已重构为实现行业标准的 JWT 刷新令牌机制。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [代码规范]：根据 ESLint 的建议进行了代码清理。
- *   - [具体修复]：
- *     - 将未被重新赋值的 `let token` 更改为 `const token` (`prefer-const`)。
- *     - 为 `handleRefreshToken` 中未使用的 `catch` 块错误变量添加了下划线前缀 (`_error`)，以符合 `@typescript-eslint/no-unused-vars` 规则。
- *     - 移除了 `api` 函数中多余的、只用于重新抛出错误的 `try/catch` 包装器 (`no-useless-catch`)。
+ *   - [类型统一]：将 `GoNullString` 和 `GoNullTime` 等通用辅助类型移至此文件并导出，以解决因重复导出导致的模块解析歧义 (TS2308)。
+ *   - [类型导出]：新增并导出了 `PaginatedResponse` 接口，用于为所有分页 API 的响应提供一个统一的、可复用的类型定义。
  */
 export * from './changelogApi';
 export * from './serversApi';
@@ -14,9 +11,27 @@ export * from './ticketsApi';
 export * from './templateApi';
 export * from './auth';
 export * from './user';
+export * from './maintenanceApi';
+
+// [核心修改] 定义并导出所有通用的辅助类型
+export type GoNullString = {
+    String: string;
+    Valid: boolean;
+} | null;
+
+export type GoNullTime = {
+    Time: string;
+    Valid: boolean;
+} | null;
+
+export interface PaginatedResponse<T> {
+    total: number;
+    data: T[];
+}
 
 const API_BASE_URL = '/api';
 
+// ... 文件其余部分保持不变 ...
 let refreshTokenPromise: Promise<string> | null = null;
 
 export class ApiError extends Error {
@@ -70,7 +85,7 @@ const handleRefreshToken = async (): Promise<string> => {
         const newAccessToken = response.accessToken;
         sessionStorage.setItem('accessToken', newAccessToken);
         return newAccessToken;
-    } catch (_error) { // [核心修复] 使用下划线前缀标记未使用的变量
+    } catch (_error) {
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('refreshToken');
         window.location.assign('/login');
@@ -79,7 +94,6 @@ const handleRefreshToken = async (): Promise<string> => {
 };
 
 async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
-    // [核心修复] 使用 const 代替 let
     const token = sessionStorage.getItem('accessToken');
 
     const headers = new Headers(options.headers || {});
@@ -97,7 +111,6 @@ async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
         return await rawFetch(endpoint, config);
     } catch (error) {
         if (error instanceof ApiError && error.status === 401 && !options.skipTokenRefresh) {
-            // [核心修复] 移除了多余的 try/catch 包装器
             if (!refreshTokenPromise) {
                 refreshTokenPromise = handleRefreshToken();
             }

@@ -1,8 +1,9 @@
 /**
  * @file src/pages/Tickets.tsx
- * @description 此文件负责渲染“工单信息”页面。
- * @modification
- *   - [API导入修复]: 经过 API 目录重构，确认从此文件的角度看，`import { ticketsApi, type TicketRow } from '@/api'` 依然是正确的导入方式。无需修改此文件。
+ * @description 此文件负责渲染“工单信息”页面，已集成后端分页功能。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [代码清理]：移除了未使用的 `red` 颜色导入，以解决 `TS6133` 编译警告。
+ *   - [后端分页]：全面重构了数据获取逻辑，以支持后端分页。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -20,35 +21,38 @@ import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
-import {red} from '@mui/material/colors';
+// [核心修复] 移除了未使用的导入
+// import {red} from '@mui/material/colors';
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
 import { useDelayedNavigate } from '@/hooks/useDelayedNavigate';
+import NoDataMessage from "@/components/ui/NoDataMessage";
 
 const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm'));
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
 
 const statusConfig: Record<string, { label: string; sx: (theme: Theme) => object }> = {
-    '就绪': { label: '完成', sx: (theme: Theme) => ({ fontWeight: 700, backgroundColor: theme.palette.neutral.main, color: theme.palette.common.white, '& .MuiChip-label': { transform: 'translateY(1px)' } }) },
-    '挂起': { label: '挂起', sx: (theme: Theme) => ({ fontWeight: 700, backgroundColor: red[200], color: theme.palette.common.white, '& .MuiChip-label': { transform: 'translateY(1px)' } }) },
+    '就绪': { label: '完成', sx: (theme: Theme) => ({ fontWeight: 700, backgroundColor: theme.palette.success.main, color: theme.palette.common.white, '& .MuiChip-label': { transform: 'translateY(1px)' } }) },
+    '挂起': { label: '挂起', sx: (theme: Theme) => ({ fontWeight: 700, backgroundColor: theme.palette.warning.main, color: theme.palette.common.white, '& .MuiChip-label': { transform: 'translateY(1px)' } }) },
     'default': { label: '未知', sx: () => ({ fontWeight: 700 }) },
 };
 
 const desktopColumns: ColumnConfig<TicketRow>[] = [
-    { id: 'customerName', label: '客户名称', sx: {width: '120px'}, renderCell: (r: TicketRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'status', label: '状态', sx: {width: '90px'}, renderCell: (r: TicketRow) => { const currentStatus = statusConfig[r.status] || statusConfig.default; return <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>; } },
-    { id: 'operationType', label: '操作类别', sx: {width: '120px'}, renderCell: (r: TicketRow) => <TooltipCell>{r.operationType}</TooltipCell> },
-    { id: 'operationContent', label: '操作内容', renderCell: (r: TicketRow) => <TooltipCell>{r.operationContent}</TooltipCell> },
+    { id: 'customerName', label: '客户名称', sx: {width: '120px'}, renderCell: (row: TicketRow) => <TooltipCell>{row.customerName}</TooltipCell> },
+    { id: 'status', label: '状态', sx: {width: '90px'}, renderCell: (row: TicketRow) => { const currentStatus = statusConfig[row.status] || statusConfig.default; return <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>; } },
+    { id: 'operationType', label: '操作类别', sx: {width: '120px'}, renderCell: (row: TicketRow) => <TooltipCell>{row.operationType}</TooltipCell> },
+    { id: 'operationContent', label: '操作内容', renderCell: (row: TicketRow) => <TooltipCell>{row.operationContent}</TooltipCell> },
 ];
 
 const mobileColumns: ColumnConfig<TicketRow>[] = [
-    { id: 'customerName', label: '客户名称', sx: {width: '33.33%'}, renderCell: (r: TicketRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'status', label: '状态', sx: {width: '33.33%'}, renderCell: (r: TicketRow) => { const currentStatus = statusConfig[r.status] || statusConfig.default; return <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>; } },
-    { id: 'operationType', label: '操作类别', sx: {width: '33.33%'}, renderCell: (r: TicketRow) => <TooltipCell>{r.operationType}</TooltipCell> },
+    { id: 'customerName', label: '客户名称', sx: {width: '33.33%'}, renderCell: (row: TicketRow) => <TooltipCell>{row.customerName}</TooltipCell> },
+    { id: 'status', label: '状态', sx: {width: '33.33%'}, renderCell: (row: TicketRow) => { const currentStatus = statusConfig[row.status] || statusConfig.default; return <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>; } },
+    { id: 'operationType', label: '操作类别', sx: {width: '33.33%'}, renderCell: (row: TicketRow) => <TooltipCell>{row.operationType}</TooltipCell> },
 ];
 
-const TICKETS_QUERY_KEY = ['tickets'];
+const TICKETS_QUERY_KEY_BASE = ['tickets'];
+const ANIMATION_DELAY = 300;
 
 const Tickets = (): JSX.Element => {
     const {isMobile, isPanelOpen} = useLayoutState();
@@ -60,26 +64,23 @@ const Tickets = (): JSX.Element => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const delayedNavigate = useDelayedNavigate();
     const [clickedRowId, setClickedRowId] = useState<string | null>(null);
-
-    const {data: rows = [], isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
-        paramName: 'ticketId',
-        baseRoute: '/app/tickets',
-        queryKey: TICKETS_QUERY_KEY,
-        queryFn: ticketsApi.fetchAll,
-        DetailContentComponent: TicketDetailContent,
-    });
+    const [isQueryEnabled, setIsQueryEnabled] = useState(false);
 
     useEffect(() => {
-        if (ticketId && rows.length > 0) {
-            const itemIndex = rows.findIndex(row => row.id === ticketId);
-            if (itemIndex !== -1) {
-                const targetPage = Math.floor(itemIndex / rowsPerPage);
-                if (page !== targetPage) {
-                    setPage(targetPage);
-                }
-            }
-        }
-    }, [ticketId, rows, rowsPerPage, page]);
+        const timer = setTimeout(() => setIsQueryEnabled(true), ANIMATION_DELAY);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const {rows, totalRows, isLoading, isError, error} = useResponsiveDetailView<TicketRow, TicketDetailContentProps>({
+        paramName: 'ticketId',
+        baseRoute: '/app/tickets',
+        queryKey: [TICKETS_QUERY_KEY_BASE],
+        queryFn: ticketsApi.fetchAll,
+        DetailContentComponent: TicketDetailContent,
+        enabled: isQueryEnabled,
+        page: page,
+        rowsPerPage: rowsPerPage,
+    });
 
     useEffect(() => {
         if (!ticketId) {
@@ -119,8 +120,6 @@ const Tickets = (): JSX.Element => {
         };
     }, [isPanelOpen, onSearch, onReset, setPanelContent, setPanelTitle, setPanelWidth]);
 
-    const pageRows = rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
     const handleRowClick = useCallback((id: string) => {
         setClickedRowId(id);
         delayedNavigate(`/app/tickets/${id}`, {replace: true});
@@ -138,7 +137,7 @@ const Tickets = (): JSX.Element => {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {pageRows.map(r => (
+                {rows.map((r: TicketRow) => (
                     <ClickableTableRow
                         key={r.id}
                         row={r}
@@ -149,7 +148,44 @@ const Tickets = (): JSX.Element => {
                 ))}
             </TableBody>
         </Table>
-    ), [pageRows, columns, ticketId, clickedRowId, handleRowClick]);
+    ), [rows, columns, ticketId, clickedRowId, handleRowClick]);
+
+    const renderContent = () => {
+        if ((isLoading || !isQueryEnabled) && totalRows === 0) {
+            return (
+                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}>
+                    <CircularProgress />
+                </Box>
+            );
+        }
+        if (isError) {
+            return (
+                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Typography color="error">加载失败: {error ? error.message : '未知错误'}</Typography>
+                </Box>
+            );
+        }
+        if (totalRows === 0) {
+            return <NoDataMessage message="暂无工单数据" />;
+        }
+        return (
+            <DataTable
+                rowsPerPageOptions={[10, 25, 50]}
+                count={totalRows}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(_, p: number) => setPage(p)}
+                onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                    setRowsPerPage(+e.target.value);
+                    setPage(0);
+                }}
+                labelRowsPerPage="每页行数:"
+                labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
+            >
+                {tableContent}
+            </DataTable>
+        );
+    };
 
     return (
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -159,24 +195,7 @@ const Tickets = (): JSX.Element => {
             />
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
-                {isLoading && ( <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.7)', zIndex: 10 }}> <CircularProgress/> </Box> )}
-                {isError && ( <Box sx={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}> <Typography color="error">加载失败: {error.message}</Typography> </Box> )}
-
-                <DataTable
-                    rowsPerPageOptions={[10, 25, 50]}
-                    count={rows.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={(_, p: number) => setPage(p)}
-                    onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-                        setRowsPerPage(+e.target.value);
-                        setPage(0);
-                    }}
-                    labelRowsPerPage="每页行数:"
-                    labelDisplayedRows={({from, to, count}) => `显示 ${from}-${to} 条, 共 ${count} 条`}
-                >
-                    {tableContent}
-                </DataTable>
+                {renderContent()}
             </Box>
         </PageLayout>
     );
