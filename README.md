@@ -6,7 +6,7 @@
 
 # 运维信息表 (OpsBoard) - Design Prototype
 这个项目的本意是为了能帮我在工作中偷懒`(jie sheng shi jian)`。   
-当前前端核心框架已搭建完成，后端开发正在推进中。后续将优先上线一个可用版本，待基础功能跑通后，再进一步完善前端交互与视觉表现。  
+前端核心框架已搭建完成，后端开发正在推进中。后续将优先上线一个可用版本，待基础功能跑通后，再进一步完善前端交互与视觉表现。  
 后端最终选定 Go 语言开发，Go 的语法简洁、结构清晰，非常适合通过 AI 高效生成代码。  
 感谢 [`Google AI Studio`](https://aistudio.google.com/) 和 [`Gemini 2.5 Pro 模型`](https://deepmind.google/models/gemini/) 模型帮助我完成这个项目。
 
