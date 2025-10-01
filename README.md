@@ -10,7 +10,6 @@
 后端最终选定 Go 语言开发，Go 的语法简洁、结构清晰，非常适合通过 AI 高效生成代码。  
 感谢 [`Google AI Studio`](https://aistudio.google.com/) 和 [`Gemini 2.5 Pro 模型`](https://deepmind.google/models/gemini/) 模型帮助我完成这个项目。
 
-<br>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square" alt="React 18">
@@ -19,7 +18,6 @@
   <img src="https://img.shields.io/badge/Backend-Go-green?style=flat-square" alt="Go">
   <img src="https://img.shields.io/badge/Database-MySQL-orange?style=flat-square" alt="MySQL">
 </p>
-
 
 
 ## 项目概述
