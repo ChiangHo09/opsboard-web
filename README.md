@@ -1,42 +1,73 @@
 > **请结合代码实际**
->
+
+<div align="center">
+  <h3>你知道的，懒才是第一生产力</h3>
+</div>
 
 # 运维信息表 (OpsBoard) - Design Prototype
 这个项目的本意是为了能帮我在工作中偷懒`(jie sheng shi jian)`。   
-拖了很长时间终于开始着手准备了，先做前端就是因为还没想好怎么设计数据库和后端。  
-即使到现在，这个项目仍然没有确定数据库字段啥的要怎么设计，甚至我现在都还没想好后端用Rust还是Java。  
-感谢Google AI Studio以及谷歌的Gemini 2.5 Pro模型帮助我完成这个项目。
+当前前端核心框架已搭建完成，后端开发正在推进中。后续将优先上线一个可用版本，待基础功能跑通后，再进一步完善前端交互与视觉表现。  
+后端最终选定 Go 语言开发，Go 的语法简洁、结构清晰，非常适合通过 AI 高效生成代码。  
+感谢 [`Google AI Studio`](https://aistudio.google.com/) 和 [`Gemini 2.5 Pro 模型`](https://deepmind.google/models/gemini/) 模型帮助我完成这个项目。
+
+<br>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square" alt="React 18">
+  <img src="https://img.shields.io/badge/Language-TypeScript-blue?style=flat-square" alt="TypeScript">
+  <img src="https://img.shields.io/badge/UI-Material%20Design-blue?style=flat-square" alt="Material Design">
+  <img src="https://img.shields.io/badge/Backend-Go-green?style=flat-square" alt="Go">
+  <img src="https://img.shields.io/badge/Database-MySQL-orange?style=flat-square" alt="MySQL">
+</p>
+
+
 
 ## 项目概述
 
-运维信息表 (OpsBoard) 是一个基于 **React 18** 和 **Material-UI (MUI)** 构建的、功能完备的现代化单页应用 (SPA) 模板。  
-它不仅仅是一个运维管理平台，更是一个展示如何在真实项目中集成**响应式布局、模块化 API、全局状态管理、统一错误处理和自动化测试**等最佳实践的“活文档”。
+**OpsBoard** 是一个功能完备的运维信息表管理系统，采用前后端分离架构。  
+前端基于 **React 18 + TypeScript + Material-UI** 构建，后端采用 **Go + Gin + GORM** 框架。  
+项目旨在为运维团队提供一个直观、高效的工具来管理和监控服务器信息、任务状态和系统变更。
 
-### 核心特性
+## 核心特性
 
--   **极致的响应式设计**: 从桌面端的多面板布局到移动端的全屏视图，UI 完美适配所有设备。
--   **URL 驱动的状态管理**: 详情弹窗、页面参数等核心状态由 URL 驱动，支持链接分享和浏览器历史记录。
--   **组件化与模块化**: 遵循严格的关注点分离原则，拥有清晰的组件、布局、页面和工具函数分层。
--   **强大的错误处理机制**: 集成了**全局错误边界**和**统一的 API 错误处理**，确保应用永不白屏，并提供清晰的用户反馈。
--   **自动化测试基石**: 已集成 **Jest** 和 **React Testing Library**，为核心功能和组件的质量保驾護航。
--   **现代化 TypeScript 实践**: 全项目采用最新的组件写法 (移除 `React.FC`)，提供更精确、更安全的类型定义。
--   **流畅的动画体验**: 基于 **Framer Motion** 构建的、符合物理直觉的页面过渡和组件动画。
+### 前端特性
+- **现代化UI设计**: 基于 Material Design 3，提供优雅的视觉体验
+- **极致响应式**: 完美适配桌面端、平板和移动端设备
+- **TypeScript支持**: 完整的类型定义，提升开发效率和代码质量
+- **URL驱动状态管理**: 支持浏览器历史记录和链接分享
+- **流畅动画体验**: 基于 Framer Motion 的页面过渡和组件动画
+- **全局错误处理**: 集成错误边界，确保应用稳定性
+- **自动化测试**: 集成 Jest 和 React Testing Library
+
+### 后端特性
+- **高性能API**: 基于 Gin 框架的 RESTful API
+- **数据库ORM**: 使用 GORM 简化数据库操作
+- **认证授权**: JWT-based 身份验证系统
+- **跨域支持**: 内置 CORS 中间件
+- **分页查询**: 支持大数据集的分页和筛选
+- **UUID主键**: 采用 UUID 作为实体标识符
+
+### 架构设计
+- **前后端分离**: 独立的开发和部署流程
+- **模块化结构**: 清晰的代码分层和职责分离
+- **配置管理**: 环境变量驱动的配置系统
+- **错误日志**: 统一的错误处理和日志记录
 
 ## Material Design 哲学与用户感知细节
 
-本项目深度集成了 Material Design 3 (MD3) 的设计原则，并利用 MUI 强大的定制能力，旨在创造一个不仅功能强大，而且在视觉和交互上都直观、愉悦的用户体验。
+本项目深度融合 Material Design 3（MD3）设计原则，并借助 MUI 强大的定制能力，不仅打造了功能完备的产品，更在视觉与交互层面为用户带来直观、愉悦的使用感受。
 
 ### 1. **光影、层次与空间 (Light, Surface & Elevation)**
 - **Z轴感知**: 我们通过微妙的阴影变化来区分 UI 元素的层级。例如，展开的 `SideNav` 和浮动的 `RightSearchPanel` 拥有轻微的 `box-shadow`，使其在视觉上“浮”在主内容区之上，清晰地界定了功能区域。
 - **动态高程**: 交互元素在不同状态下会改变其“高程”。例如，按钮在悬停 (`:hover`) 时，背景色会变深（如 `app.button.hover`），模拟了手指靠近时，光线被遮挡的效果，为用户提供了即时的物理反馈。
 
 ### 2. **动画与动态效果 (Motion & Animation)**
-- **有意义的过渡**: 所有的动画都不是为了炫技，而是为了引导用户的注意力并解释 UI 的变化。
-    - **页面切换**: `pageVariants` 动画采用“淡入并上移”的效果，模拟了内容从屏幕外平滑载入的感觉，让用户能自然地感知到上下文的切换。
-    - **面板展开**: `RightSearchPanel` 的展开动画是一个平滑的宽度变化，而不是瞬时出现，这帮助用户理解面板是从哪里来的，以及它与主内容区的关系。
+- **有意义的过渡**: 所有动画均以 “引导用户注意力、解释 UI 变化” 为目标，而非单纯视觉装饰。
+    - **页面切换**: `pageVariants` 动画采用 “淡入上移” 效果，模拟内容从屏幕外平滑载入的过程，帮助用户自然感知上下文切换。
+    - **面板展开**: `RightSearchPanel` 以平滑宽度变化实现展开，而非瞬时出现，让用户清晰理解面板的来源及其与主内容区的关联。
 - **微交互**:
-    - **按钮点击**: 所有 MUI 按钮都内置了 Material Design 标志性的“涟漪效果” (Ripple Effect)，为用户的每一次点击提供了即时的、以点击点为中心的视觉确认。
-    - **图标旋转**: `SideNav` 的折叠/展开按钮图标有一个 90 度的旋转动画，直观地表达了状态的改变。
+    - **按钮点击**: 所有 MUI 按钮内置 MD 标志性 “涟漪效果（Ripple Effect）”，为用户每一次点击提供以点击点为中心的即时视觉反馈。
+    - **图标旋转**: `SideNav` 折叠 / 展开按钮的图标会完成 90 度旋转，直观传递状态变化。
 
 ### 3. **色彩与主题 (Color & Theming)**
 - **语义化色彩**: 项目在 `theme.ts` 中定义了一套语义化的调色板 (`palette`)。`primary`, `secondary`, `error` 等颜色被统一应用在链接、主操作按钮和错误提示上，形成了一致的视觉语言，降低了用户的学习成本。
@@ -53,7 +84,7 @@
 1.  **仪表盘 (Dashboard)**: 应用的欢迎页，提供快捷操作入口和关键数据概览。
 2.  **服务器信息 (Servers)**: 展示服务器列表，支持**分页**、**搜索**和点击查看详情。
 3.  **更新日志 (Changelog)**: 管理所有更新记录，支持按时间等多维度筛选。
-4.  **巡检备份 (Inspection Backup)**: 巡检和备份任务的管理模块。
+4.  **任务管理 (Maintenance)**: 巡检和备份任务的管理模块。
 5.  **工单管理 (Tickets)**: 创建、跟踪和管理运维工单。
 6.  **统计信息 (Stats)**: (规划中) 用于展示服务器资源和性能数据的分析图表。
 7.  **实验功能 (Labs)**: (规划中) 用于测试和展示不稳定的新功能。
@@ -61,85 +92,147 @@
 9.  **系统设置 (Settings)**: (规划中) 用于管理应用级别的配置。
 
 ## 技术栈
+### 前端技术栈
+```
+├── React 18.3.1          # UI框架
+├── TypeScript 5.8.3      # 类型系统
+├── Material-UI 7.2.0     # UI组件库
+├── React Router 6.30.1   # 路由管理
+├── Framer Motion 12.23.3 # 动画库
+├── React Query 5.83.0    # 数据获取
+├── Jest 30.0.5           # 测试框架
+└── Vite 6.3.6            # 构建工具
+```
 
--   **核心框架**: React 18 + TypeScript 5
--   **UI 框架**: Material-UI (MUI) v5
--   **状态管理**:
-    -   **UI 状态**: React Context API (`LayoutContext`, `NotificationContext`)
-    -   **服务器状态**: TanStack Query (React Query) v5
--   **路由管理**: React Router v6
--   **动画库**: Framer Motion
--   **日期处理**: Day.js
--   **测试框架**: Jest + React Testing Library
--   **构建工具**: Vite
--   **样式方案**: MUI (Emotion) `sx` prop & `styled` API
+### 后端技术栈
+```
+├── Go 1.25              # 编程语言
+├── Gin 1.9.1            # Web框架
+├── GORM 1.31.0          # ORM框架
+├── MySQL Driver 1.9.3   # 数据库驱动
+├── JWT 5.2.2            # 认证库
+├── UUID 1.6.0           # UUID生成
+└── CORS 1.5.0           # 跨域中间件
+```
 
 ## 项目结构
 
-```bash
-src/
-├── api/                # 模拟 API 层，封装数据获取逻辑
-├── components/         # 可复用组件
-│   ├── forms/          # 表单组件
-│   ├── modals/         # 模态框内容组件
-│   ├── ui/             # 基础 UI 组件 (如 DataTable, TooltipCell)
-│   └── __tests__/      # 组件的测试文件
-├── contexts/           # React Context (全局状态)
-├── hooks/              # 自定义 Hooks (如 useResponsiveDetailView)
-├── layouts/            # 布局容器 (如 MainLayout, AppLayout)
-├── pages/              # 页面级组件
-│   └── mobile/         # 移动端专用的详情页面
-├── utils/              # 通用工具函数 (动画、错误处理等)
-│   └── __tests__/      # 工具函数的测试文件
-├── theme.ts            # MUI 主题配置文件
-├── App.tsx             # 应用根组件
-└── main.tsx            # 应用入口文件
+```
+opsboard-web/
+├── opsboard-frontend/         # 前端项目
+│   ├── src/
+│   │   ├── api/               # API接口定义
+│   │   ├── assets/            # 静态资源
+│   │   ├── components/        # 可复用组件
+│   │   ├── contexts/          # React上下文
+│   │   ├── hooks/             # 自定义Hook
+│   │   ├── layouts/           # 布局组件
+│   │   ├── pages/             # 页面组件
+│   │   ├── types/             # TypeScript类型定义
+│   │   ├── utils/             # 工具函数
+│   │   └── workers/           # Web Workers
+│   ├── package.json           # 前端依赖配置
+│   ├── vite.config.ts         # Vite构建配置
+│   └── tsconfig.json          # TypeScript配置
+│
+├── opsboard-backend/          # 后端项目
+│   ├── handlers/              # HTTP处理器
+│   ├── middleware/            # 中间件
+│   ├── models/                # 数据模型
+│   ├── services/              # 业务逻辑
+│   ├── utils/                 # 工具函数
+│   ├── config/                # 配置文件
+│   ├── database/              # 数据库相关
+│   ├── main.go                # 入口文件
+│   └── go.mod                 # Go模块定义
+│
+├── .gitea/                    # Gitea工作流配置
+├── .idea/                     # IDE配置
+└── README.md                  # 项目文档
 ```
 
-## 安装与运行
+## 快速开始
 
 ### 环境要求
-Node.js >= 18.0.0  
-npm 或 yarn / pnpm
+- **Node.js**: 18.0.0 或更高版本
+- **Go**: 1.25 或更高版本
+- **MySQL**: 8.0 或更高版本
+- **Git**: 用于版本控制
 
-### 安装步骤
-
+### 前端安装
 ```bash
-# 1. 克隆项目
-git clone <项目地址>
-
-# 2. 进入项目目录
+# 克隆项目
+git clone http://chiangho.top:3389/chiangho/opsboard-web.git
 cd opsboard-web
 
-# 3. 安装依赖
+# 安装前端依赖
+cd opsboard-frontend
 npm install
 
-#4. 启动开发服务器
+# 启动开发服务器
 npm run dev
 ```
-### 测试
-```bash
-# 运行所有测试用例
-# 此命令会一次性运行所有测试，并生成报告。
-npm test
 
-# 启动交互式观察模式 (推荐)
-# 此命令会进入观察模式，在您修改文件后自动重新运行相关测试。
-npm test -- --watch
-# 在终端中输入以下命令：
-# 按 a：运行所有测试。
-# 按 f：只运行上次失败的测试。
-# 按 p：根据文件名筛选要运行的测试。
-# 按 q：退出观察模式。
+### 后端安装
+```bash
+# 进入后端目录
+cd opsboard-backend
+
+# 安装Go依赖
+go mod download
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，配置数据库连接等信息
+
+# 运行数据库迁移
+# 待补充迁移脚本
+
+# 启动后端服务
+go run main.go
 ```
 
+### 生产部署
+```bash
+# 构建前端生产版本
+cd opsboard-frontend
+npm run build
+
+# 构建后端可执行文件
+cd opsboard-backend
+go build -o opsboard-backend main.go
+```
+
+## 设计特色
+
+### Material Design 3 设计原则
+- **光影层次**: 通过阴影变化区分UI元素层级
+- **动态高程**: 交互元素的状态反馈
+- **有意义动画**: 引导用户注意力的过渡效果
+- **语义化色彩**: 一致的视觉语言系统
+
+### 用户体验优化
+- **响应式布局**: 适配各种设备屏幕
+- **加载状态**: 优雅的加载动画和骨架屏
+- **错误处理**: 友好的错误提示和恢复机制
+- **无障碍访问**: 支持键盘导航和屏幕阅读器
 
 ## 开发规范
-### 代码风格
-- TypeScript: 全项目强制使用，遵循严格的类型检查规则 `(strict: true)`。
-- ESLint & Prettier: 自动化的代码格式化和风格检查，确保代码一致性。
-- 组件写法: 统一采用现代函数式组件写法 (`const Component = (props: Props): JSX.Element => {}`)，禁止使用 `React.FC`。
-- Hooks: 所有组件的副作用和状态管理逻辑，优先使用 `React Hooks` 实现。
+
+### 代码规范
+- **TypeScript**: 严格类型检查，禁止使用 `any`
+- **组件设计**: 遵循单一职责原则
+- **命名约定**: 使用语义化的变量和函数名
+- **代码格式**: 使用 ESLint 和 Prettier 统一代码风格
+
+### Git提交规范
+- **feat**: 新功能
+- **fix**: 修复Bug
+- **docs**: 文档更新
+- **style**: 代码格式调整
+- **refactor**: 代码重构
+- **test**: 测试相关
+- **chore**: 构建过程或辅助工具的变动
 
 ### 特色功能
 **1. URL 驱动的响应式详情视图**  
