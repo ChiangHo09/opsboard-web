@@ -2,8 +2,8 @@
  * @file main.go
  * @description 应用主入口文件，负责初始化、路由注册和服务器启动。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复]：在受保护的 `/servers` 路由组下，新增了 `DELETE /:id` 路由，并将其指向新的 `DeleteServer` 处理器。
- *   - [原因]：此修改是解决前端删除操作返回 `404 Not Found` 错误的决定性方案。通过为后端添加一个真实存在的删除端点，我们完成了删除功能的完整实现。
+ *   - [业务接口]：在受保护的 `/changelogs` 路由组下，新增了 `DELETE /:id` 路由，并将其指向新的 `DeleteChangelog` 处理器。
+ *   - [原因]：此修改为“更新日志”模块添加了删除功能，并确保了该接口受到严格的认证保护。
  */
 
 package main
@@ -59,7 +59,6 @@ func main() {
 		servers.Use(middleware.AuthMiddleware())
 		{
 			servers.GET("/list", handlers.GetServerList)
-			// [核心修复] 添加删除服务器的路由
 			servers.DELETE("/:id", handlers.DeleteServer)
 		}
 
@@ -67,6 +66,8 @@ func main() {
 		changelogs.Use(middleware.AuthMiddleware())
 		{
 			changelogs.GET("/list", handlers.GetChangelogList)
+			// [核心修改] 添加删除更新日志的路由
+			changelogs.DELETE("/:id", handlers.DeleteChangelog)
 		}
 
 		maintenance := api.Group("/maintenance")

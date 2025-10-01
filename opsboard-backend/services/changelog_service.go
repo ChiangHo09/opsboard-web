@@ -1,9 +1,9 @@
 /**
  * @file services/changelog_service.go
- * @description 提供与更新日志相关的业务逻辑，使用 GORM 实现分页查询。
+ * @description 提供与更新日志相关的业务逻辑，使用 GORM 实现分页查询和删除操作。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [架构重构]：使用 GORM ORM 框架彻底重构了数据查询逻辑，取代了手写的 SQL 和 `rows.Scan`。
- *   - [后端分页]：实现了完整的后端分页功能。`GetPaginatedChangelogs` 函数现在接收 `page` 和 `pageSize` 参数，并返回包含数据列表和总记录数的结果。
+ *   - [新增功能]：添加了 `DeleteChangelogByID` 函数，用于根据给定的 ID 从数据库中删除更新日志记录。
+ *   - [ORM 实现]：该函数使用 GORM 来执行删除操作，以保持技术栈的一致性。
  */
 
 package services
@@ -25,18 +25,14 @@ func GetPaginatedChangelogs(page, pageSize int) (*PaginatedChangelogsResult, err
 	var changelogs []models.Changelog
 	var total int64
 
-	// 1. 构建基础查询链，用于计算总数
 	query := db.Model(&models.Changelog{})
 
-	// 2. 执行 COUNT 查询获取总记录数
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// 3. 计算分页所需的 offset
 	offset := (page - 1) * pageSize
 
-	// 4. 在基础查询链上继续添加分页、排序和关联查询，然后执行
 	err := query.
 		Joins("LEFT JOIN customers c ON changelogs.customer_id = c.customer_id").
 		Select("changelogs.*, c.customer_name").
@@ -53,11 +49,18 @@ func GetPaginatedChangelogs(page, pageSize int) (*PaginatedChangelogsResult, err
 		changelogs = make([]models.Changelog, 0)
 	}
 
-	// 5. 组装并返回结果
 	result := &PaginatedChangelogsResult{
 		Total: total,
 		Data:  changelogs,
 	}
 
 	return result, nil
+}
+
+// DeleteChangelogByID 使用 GORM 根据 ID 从数据库中删除一个更新日志。
+func DeleteChangelogByID(id string) error {
+	db := database.GormDB
+	// GORM 的 Delete 方法会根据主键删除记录
+	result := db.Delete(&models.Changelog{}, id)
+	return result.Error
 }
