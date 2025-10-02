@@ -1,9 +1,9 @@
 /**
  * @file handlers/maintenance_handler.go
- * @description 处理与维护任务相关的 HTTP 请求，支持分页查询。
+ * @description 处理与维护任务相关的 HTTP 请求，支持分页查询和删除操作。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [功能增强]：`GetMaintenanceTaskList` 处理器现在支持分页。它从 URL 查询参数中解析 `page` 和 `pageSize`，并调用新的分页服务函数。
- *   - [健壮性]：增加了对查询参数的默认值处理和类型转换。
+ *   - [新增功能]：添加了 `DeleteMaintenanceTask` 处理器，用于处理 `DELETE /maintenance/:id` 请求。
+ *   - [实现]：该处理器从 URL 路径中获取 `id` 参数，调用服务层的 `DeleteMaintenanceTaskByID` 函数执行删除操作，并返回相应的 HTTP 状态码。
  */
 
 package handlers
@@ -28,4 +28,21 @@ func GetMaintenanceTaskList(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+// DeleteMaintenanceTask 处理删除维护任务的请求
+func DeleteMaintenanceTask(c *gin.Context) {
+	taskID := c.Param("id")
+	if taskID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "任务 ID 不能为空"})
+		return
+	}
+
+	err := services.DeleteMaintenanceTaskByID(taskID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "删除任务失败"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
