@@ -1,9 +1,9 @@
 /**
  * @file services/maintenance_service.go
- * @description 提供与维护任务相关的业务逻辑，使用 GORM 实现分页查询和删除操作。
+ * @description 提供与维护任务相关的业务逻辑，使用 GORM 实现分页查询、删除和状态变更操作。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新增功能]：添加了 `DeleteMaintenanceTaskByID` 函数，用于根据给定的 ID 从数据库中删除维护任务记录。
- *   - [ORM 实现]：该函数使用 GORM 来执行删除操作，以保持技术栈的一致性。
+ *   - [新增功能]：添加了 `MarkTaskAsCompleted` 和 `MarkTaskAsPending` 两个函数，用于更新任务的状态和完成时间。
+ *   - [SQL 更新]：`GetPaginatedMaintenanceTasks` 的查询语句现在也包含了新的 `publication_time` 和 `completion_time` 字段。
  */
 
 package services
@@ -11,6 +11,7 @@ package services
 import (
 	"opsboard-backend/database"
 	"opsboard-backend/models"
+	"time"
 )
 
 // PaginatedMaintenanceTasksResult 定义了维护任务分页查询的返回结构
@@ -61,5 +62,25 @@ func GetPaginatedMaintenanceTasks(page, pageSize int) (*PaginatedMaintenanceTask
 func DeleteMaintenanceTaskByID(id string) error {
 	db := database.GormDB
 	result := db.Delete(&models.MaintenanceTask{}, id)
+	return result.Error
+}
+
+// MarkTaskAsCompleted 将指定ID的任务标记为“完成”。
+func MarkTaskAsCompleted(id string) error {
+	db := database.GormDB
+	result := db.Model(&models.MaintenanceTask{}).Where("task_id = ?", id).Updates(map[string]interface{}{
+		"status":          "完成",
+		"completion_time": time.Now(),
+	})
+	return result.Error
+}
+
+// MarkTaskAsPending 将指定ID的任务标记为“挂起”。
+func MarkTaskAsPending(id string) error {
+	db := database.GormDB
+	result := db.Model(&models.MaintenanceTask{}).Where("task_id = ?", id).Updates(map[string]interface{}{
+		"status":          "挂起",
+		"completion_time": nil,
+	})
 	return result.Error
 }

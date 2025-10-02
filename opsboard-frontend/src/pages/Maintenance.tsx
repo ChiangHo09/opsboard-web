@@ -20,8 +20,9 @@ import {
     Tooltip
 } from '@mui/material';
 import {useQuery, useQueryClient, useMutation} from '@tanstack/react-query';
-import PrintIcon from '@mui/icons-material/Print';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type InspectionBackupSearchValues} from '@/components/forms/InspectionBackupSearchForm.tsx';
 import { maintenanceApi, type MaintenanceTaskRow } from '@/api/maintenanceApi';
@@ -40,18 +41,18 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog.tsx";
 const InspectionBackupSearchForm = lazy(() => import('@/components/forms/InspectionBackupSearchForm.tsx'));
 
 const columns: ColumnConfig<MaintenanceTaskRow>[] = [
-    { id: 'taskName', label: '任务名称', sx: { width: '25%' }, renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.taskName}</TooltipCell> },
+    { id: 'target', label: '目标对象', sx: { width: '20%' }, renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.target?.Valid ? r.target.String : '无'}</TooltipCell> },
     { id: 'type', label: '类型', sx: { width: '10%' }, renderCell: (r: MaintenanceTaskRow) => <Chip label={r.type} size="small" /> },
     { id: 'status', label: '状态', sx: { width: '10%' }, renderCell: (r: MaintenanceTaskRow) => {
-            const colorMap: { [key in MaintenanceTaskRow['status']]: 'success' | 'warning' | 'error' } = {
+            const colorMap: { [key in MaintenanceTaskRow['status']]: 'success' | 'warning' } = {
                 '完成': 'success',
                 '挂起': 'warning',
-                '未完成': 'error',
             };
             return <Chip label={r.status} size="small" color={colorMap[r.status]} />;
         }},
-    { id: 'executionTime', label: '执行时间', sx: { width: '25%' }, renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.executionTime?.Valid ? new Date(r.executionTime.Time).toLocaleString() : '-'}</TooltipCell> },
-    { id: 'target', label: '目标对象', renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.target?.Valid ? r.target.String : '无'}</TooltipCell> },
+    { id: 'publicationTime', label: '发布时间', sx: { width: '15%' }, renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{new Date(r.publicationTime).toLocaleDateString()}</TooltipCell> },
+    { id: 'completionTime', label: '完成时间', sx: { width: '15%' }, renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.completionTime?.Valid ? new Date(r.completionTime.Time).toLocaleDateString() : '-'}</TooltipCell> },
+    { id: 'taskName', label: '详情', renderCell: (r: MaintenanceTaskRow) => <TooltipCell>{r.taskName}</TooltipCell> },
 ];
 
 const MAINTENANCE_QUERY_KEY_BASE = ['maintenance'];
@@ -83,6 +84,23 @@ const Maintenance = (): JSX.Element => {
 
     const rows = data?.data || [];
     const totalRows = data?.total || 0;
+
+    const updateStatusMutation = useMutation({
+        mutationFn: async ({ id, status }: { id: string, status: '完成' | '挂起' }) => {
+            if (status === '完成') {
+                return maintenanceApi.markAsPending(id);
+            }
+            return maintenanceApi.markAsCompleted(id);
+        },
+        onSuccess: (_, variables) => {
+            const actionText = variables.status === '完成' ? '取消完成' : '标记为完成';
+            showNotification(`操作成功: ${actionText}`, 'success');
+            queryClient.invalidateQueries({ queryKey: [MAINTENANCE_QUERY_KEY_BASE] });
+        },
+        onError: (err) => {
+            handleAsyncError(err, showNotification);
+        }
+    });
 
     const deleteMutation = useMutation({
         mutationFn: maintenanceApi.deleteById,
@@ -155,11 +173,19 @@ const Maintenance = (): JSX.Element => {
                         onClick={() => { /* 暂时无点击交互 */ }}
                         actions={
                             <>
-                                <Tooltip title="打印">
-                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); alert(`打印 ${r.taskName}`); }}>
-                                        <PrintIcon fontSize="small" />
-                                    </IconButton>
-                                </Tooltip>
+                                {r.status === '完成' ? (
+                                    <Tooltip title="取消完成">
+                                        <IconButton size="small" color="warning" onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: r.id, status: r.status }); }}>
+                                            <CancelIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                ) : (
+                                    <Tooltip title="完成">
+                                        <IconButton size="small" color="success" onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: r.id, status: r.status }); }}>
+                                            <CheckCircleIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
                                 <Tooltip title="删除">
                                     <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleDeleteClick(r); }}>
                                         <DeleteIcon fontSize="small" />
@@ -171,7 +197,7 @@ const Maintenance = (): JSX.Element => {
                 ))}
             </TableBody>
         </Table>
-    ), [rows, handleDeleteClick]);
+    ), [rows, handleDeleteClick, updateStatusMutation]);
 
     const renderContent = () => {
         if ((isLoading || !isQueryEnabled) && !data) {

@@ -2,7 +2,7 @@
  * @file main.go
  * @description 应用主入口文件，负责初始化、路由注册和服务器启动。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [业务接口]：为 `/changelogs` 路由组新增了两个 `PUT` 方法的路由 (`/:id/complete` 和 `/:id/uncomplete`)，用于处理更新日志的状态变更。
+ *   - [业务接口]：为 `/maintenance` 路由组新增了两个 `PUT` 方法的路由 (`/:id/complete` 和 `/:id/uncomplete`)，用于处理维护任务的状态变更。
  */
 
 package main
@@ -66,7 +66,6 @@ func main() {
 		{
 			changelogs.GET("/list", handlers.GetChangelogList)
 			changelogs.DELETE("/:id", handlers.DeleteChangelog)
-			// [核心修改] 添加状态变更的路由
 			changelogs.PUT("/:id/complete", handlers.CompleteChangelog)
 			changelogs.PUT("/:id/uncomplete", handlers.UncompleteChangelog)
 		}
@@ -76,6 +75,9 @@ func main() {
 		{
 			maintenance.GET("/list", handlers.GetMaintenanceTaskList)
 			maintenance.DELETE("/:id", handlers.DeleteMaintenanceTask)
+			// [核心修改] 添加状态变更的路由
+			maintenance.PUT("/:id/complete", handlers.CompleteMaintenanceTask)
+			maintenance.PUT("/:id/uncomplete", handlers.UncompleteMaintenanceTask)
 		}
 	}
 
