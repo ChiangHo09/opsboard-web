@@ -1,16 +1,16 @@
 /**
  * @file src/pages/Tickets.tsx
- * @description 此文件负责渲染“工单信息”页面，已集成后端分页功能。
+ * @description 此文件负责渲染“工单信息”页面，数据来源于后端聚合视图。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [代码清理]：移除了未使用的 `red` 颜色导入，以解决 `TS6133` 编译警告。
- *   - [后端分页]：全面重构了数据获取逻辑，以支持后端分页。
+ *   - [UI 增强]：更新了表格的列定义，现在会同时显示“发布时间”和“完成时间”，并按发布时间进行倒序排列，提供了更完整和有序的时间线信息。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
 import {
     Box, Typography, Table, TableBody, TableCell,
-    TableHead, TableRow, CircularProgress, Chip, type Theme
+    TableHead, TableRow, CircularProgress, Chip, type Theme, IconButton, Tooltip
 } from '@mui/material';
+import PrintIcon from '@mui/icons-material/Print';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {useNotification} from '@/contexts/NotificationContext.tsx';
 import {type TicketSearchValues} from '@/components/forms/TicketSearchForm';
@@ -21,8 +21,6 @@ import {handleAsyncError} from '@/utils/errorHandler';
 import TooltipCell from '@/components/ui/TooltipCell';
 import PageLayout from '@/layouts/PageLayout';
 import DataTable from '@/components/ui/DataTable';
-// [核心修复] 移除了未使用的导入
-// import {red} from '@mui/material/colors';
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow';
 import ActionButtons from '@/components/ui/ActionButtons';
 import PageHeader from '@/layouts/PageHeader';
@@ -33,16 +31,19 @@ const TicketSearchForm = lazy(() => import('../components/forms/TicketSearchForm
 const TicketDetailContent = lazy(() => import('../components/modals/TicketDetailContent'));
 
 const statusConfig: Record<string, { label: string; sx: (theme: Theme) => object }> = {
-    '就绪': { label: '完成', sx: (theme: Theme) => ({ fontWeight: 700, backgroundColor: theme.palette.success.main, color: theme.palette.common.white, '& .MuiChip-label': { transform: 'translateY(1px)' } }) },
+    '完成': { label: '完成', sx: (theme: Theme) => ({ fontWeight: 700, backgroundColor: theme.palette.success.main, color: theme.palette.common.white, '& .MuiChip-label': { transform: 'translateY(1px)' } }) },
     '挂起': { label: '挂起', sx: (theme: Theme) => ({ fontWeight: 700, backgroundColor: theme.palette.warning.main, color: theme.palette.common.white, '& .MuiChip-label': { transform: 'translateY(1px)' } }) },
     'default': { label: '未知', sx: () => ({ fontWeight: 700 }) },
 };
 
+// [核心修改] 更新列定义
 const desktopColumns: ColumnConfig<TicketRow>[] = [
     { id: 'customerName', label: '客户名称', sx: {width: '120px'}, renderCell: (row: TicketRow) => <TooltipCell>{row.customerName}</TooltipCell> },
     { id: 'status', label: '状态', sx: {width: '90px'}, renderCell: (row: TicketRow) => { const currentStatus = statusConfig[row.status] || statusConfig.default; return <Chip label={currentStatus.label} size="small" sx={currentStatus.sx}/>; } },
     { id: 'operationType', label: '操作类别', sx: {width: '120px'}, renderCell: (row: TicketRow) => <TooltipCell>{row.operationType}</TooltipCell> },
     { id: 'operationContent', label: '操作内容', renderCell: (row: TicketRow) => <TooltipCell>{row.operationContent}</TooltipCell> },
+    { id: 'publicationTime', label: '发布时间', sx: {width: '150px'}, renderCell: (row: TicketRow) => <TooltipCell>{new Date(row.publicationTime).toLocaleDateString()}</TooltipCell> },
+    { id: 'completionTime', label: '完成时间', sx: {width: '150px'}, renderCell: (row: TicketRow) => <TooltipCell>{row.completionTime?.Valid ? new Date(row.completionTime.Time).toLocaleDateString() : '-'}</TooltipCell> },
 ];
 
 const mobileColumns: ColumnConfig<TicketRow>[] = [
@@ -144,6 +145,13 @@ const Tickets = (): JSX.Element => {
                         columns={columns}
                         selected={r.id === ticketId || r.id === clickedRowId}
                         onClick={() => handleRowClick(r.id)}
+                        actions={
+                            <Tooltip title="打印工单">
+                                <IconButton size="small" onClick={(e) => { e.stopPropagation(); alert(`打印工单 ${r.id}`); }}>
+                                    <PrintIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        }
                     />
                 ))}
             </TableBody>
@@ -191,7 +199,7 @@ const Tickets = (): JSX.Element => {
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <PageHeader
                 title="工单信息"
-                actions={ <ActionButtons showEditButton={isAdmin} onSearchClick={togglePanel} onEditClick={() => alert('编辑按钮被点击')} onExportClick={() => alert('导出按钮被点击')} /> }
+                actions={ <ActionButtons showEditButton={isAdmin} onSearchClick={togglePanel} onEditClick={() => alert('新建工单按钮被点击')} onExportClick={() => alert('导出按钮被点击')} /> }
             />
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>

@@ -2,7 +2,7 @@
  * @file main.go
  * @description 应用主入口文件，负责初始化、路由注册和服务器启动。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [业务接口]：为 `/maintenance` 路由组新增了两个 `PUT` 方法的路由 (`/:id/complete` 和 `/:id/uncomplete`)，用于处理维护任务的状态变更。
+ *   - [业务接口]：新增并注册了 `GET /tickets/list` 业务接口，并将其明确地放置在受 `AuthMiddleware` 保护的路由组之下，用于提供聚合后的工单数据。
  */
 
 package main
@@ -75,9 +75,15 @@ func main() {
 		{
 			maintenance.GET("/list", handlers.GetMaintenanceTaskList)
 			maintenance.DELETE("/:id", handlers.DeleteMaintenanceTask)
-			// [核心修改] 添加状态变更的路由
 			maintenance.PUT("/:id/complete", handlers.CompleteMaintenanceTask)
 			maintenance.PUT("/:id/uncomplete", handlers.UncompleteMaintenanceTask)
+		}
+
+		// [核心修改] 添加工单路由
+		tickets := api.Group("/tickets")
+		tickets.Use(middleware.AuthMiddleware())
+		{
+			tickets.GET("/list", handlers.GetTicketList)
 		}
 	}
 
