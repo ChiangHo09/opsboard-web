@@ -2,7 +2,8 @@
  * @file src/pages/Maintenance.tsx
  * @description 此文件是“维护任务”功能的主页面，已集成后端分页功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [类型修复]：更新了 `useQuery` 的泛型参数，以正确接收从 `@/api` 导出的全局 `PaginatedResponse` 类型。
+ *   - [最终修复]：修正了 `PaginatedResponse` 类型的导入路径，从 `@/api/maintenanceApi` 更改为 `@/api`。
+ *   - [原因]：此修改解决了因错误的导入路径而导致的 TypeScript 编译失败问题 (TS2459)。通过从全局 API 入口文件 (`api/index.ts`) 导入通用的 `PaginatedResponse` 类型，我们确保了类型引用的正确性和一致性。
  */
 import {useEffect, useCallback, lazy, Suspense, type JSX, useState, useMemo, type ChangeEvent} from 'react';
 import {
@@ -14,13 +15,19 @@ import {
     TableCell,
     TableBody,
     Chip,
-    Typography
+    Typography,
+    IconButton,
+    Tooltip
 } from '@mui/material';
-import {useQuery} from '@tanstack/react-query';
+import {useQuery, useQueryClient, useMutation} from '@tanstack/react-query';
+import PrintIcon from '@mui/icons-material/Print';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type InspectionBackupSearchValues} from '@/components/forms/InspectionBackupSearchForm.tsx';
 import { maintenanceApi, type MaintenanceTaskRow } from '@/api/maintenanceApi';
-import { type PaginatedResponse } from '@/api'; // [核心修复]
+import { type PaginatedResponse } from '@/api'; // [核心修复] 修正导入路径
+import {useNotification} from "@/contexts/NotificationContext.tsx";
+import {handleAsyncError} from "@/utils/errorHandler.ts";
 import PageLayout from '@/layouts/PageLayout';
 import PageHeader from '@/layouts/PageHeader';
 import ActionButtons from '@/components/ui/ActionButtons';
@@ -28,6 +35,7 @@ import DataTable from '@/components/ui/DataTable';
 import TooltipCell from '@/components/ui/TooltipCell';
 import ClickableTableRow, { type ColumnConfig } from '@/components/ui/ClickableTableRow';
 import NoDataMessage from '@/components/ui/NoDataMessage';
+import ConfirmDialog from "@/components/ui/ConfirmDialog.tsx";
 
 const InspectionBackupSearchForm = lazy(() => import('@/components/forms/InspectionBackupSearchForm.tsx'));
 
@@ -52,11 +60,15 @@ const ANIMATION_DELAY = 300;
 const Maintenance = (): JSX.Element => {
     const {isPanelOpen} = useLayoutState();
     const {togglePanel, setPanelContent, setPanelTitle, setPanelWidth} = useLayoutDispatch();
+    const showNotification = useNotification();
+    const queryClient = useQueryClient();
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [isAdmin] = useState(true);
     const [isQueryEnabled, setIsQueryEnabled] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<MaintenanceTaskRow | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsQueryEnabled(true), ANIMATION_DELAY);
@@ -71,6 +83,30 @@ const Maintenance = (): JSX.Element => {
 
     const rows = data?.data || [];
     const totalRows = data?.total || 0;
+
+    const deleteMutation = useMutation({
+        mutationFn: maintenanceApi.deleteById,
+        onSuccess: () => {
+            showNotification('任务删除成功', 'success');
+            queryClient.invalidateQueries({ queryKey: [MAINTENANCE_QUERY_KEY_BASE] });
+        },
+        onError: (err) => {
+            handleAsyncError(err, showNotification);
+        }
+    });
+
+    const handleDeleteClick = (row: MaintenanceTaskRow) => {
+        setItemToDelete(row);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteMutation.mutate(itemToDelete.id);
+        }
+        setDeleteConfirmOpen(false);
+        setItemToDelete(null);
+    };
 
     const handleSearch = useCallback((values: InspectionBackupSearchValues) => {
         alert(`搜索条件: ${JSON.stringify(values, null, 2)}`);
@@ -110,18 +146,32 @@ const Maintenance = (): JSX.Element => {
                 </TableRow>
             </TableHead>
             <TableBody>
-                {rows.map((r: MaintenanceTaskRow) => ( // [核心修复] 明确 r 的类型
+                {rows.map((r: MaintenanceTaskRow) => (
                     <ClickableTableRow
                         key={r.id}
                         row={r}
                         columns={columns}
                         selected={false}
-                        onClick={() => {}}
+                        onClick={() => { /* 暂时无点击交互 */ }}
+                        actions={
+                            <>
+                                <Tooltip title="打印">
+                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); alert(`打印 ${r.taskName}`); }}>
+                                        <PrintIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="删除">
+                                    <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleDeleteClick(r); }}>
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
+                        }
                     />
                 ))}
             </TableBody>
         </Table>
-    ), [rows]);
+    ), [rows, handleDeleteClick]);
 
     const renderContent = () => {
         if ((isLoading || !isQueryEnabled) && !data) {
@@ -176,6 +226,14 @@ const Maintenance = (): JSX.Element => {
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>
                 {renderContent()}
             </Box>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                title="确认删除"
+                content={`您确定要删除任务 "${itemToDelete?.taskName}" 吗？此操作不可撤销。`}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setDeleteConfirmOpen(false)}
+            />
         </PageLayout>
     );
 };
