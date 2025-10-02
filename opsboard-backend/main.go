@@ -2,8 +2,7 @@
  * @file main.go
  * @description 应用主入口文件，负责初始化、路由注册和服务器启动。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [业务接口]：在受保护的 `/maintenance` 路由组下，新增了 `DELETE /:id` 路由，并将其指向新的 `DeleteMaintenanceTask` 处理器。
- *   - [原因]：此修改为“维护任务”模块添加了删除功能，并确保了该接口受到严格的认证保护。
+ *   - [业务接口]：为 `/changelogs` 路由组新增了两个 `PUT` 方法的路由 (`/:id/complete` 和 `/:id/uncomplete`)，用于处理更新日志的状态变更。
  */
 
 package main
@@ -67,13 +66,15 @@ func main() {
 		{
 			changelogs.GET("/list", handlers.GetChangelogList)
 			changelogs.DELETE("/:id", handlers.DeleteChangelog)
+			// [核心修改] 添加状态变更的路由
+			changelogs.PUT("/:id/complete", handlers.CompleteChangelog)
+			changelogs.PUT("/:id/uncomplete", handlers.UncompleteChangelog)
 		}
 
 		maintenance := api.Group("/maintenance")
 		maintenance.Use(middleware.AuthMiddleware())
 		{
 			maintenance.GET("/list", handlers.GetMaintenanceTaskList)
-			// [核心修改] 添加删除维护任务的路由
 			maintenance.DELETE("/:id", handlers.DeleteMaintenanceTask)
 		}
 	}

@@ -1,19 +1,18 @@
 /**
  * @file src/pages/Changelog.tsx
- * @description 该文件负责渲染“更新日志”页面，并实现了删除日志的功能。
+ * @description 该文件负责渲染“更新日志”页面，并实现了完整的状态管理和删除功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新增功能]：实现了删除更新日志的完整流程，包括API调用、状态更新和用户确认。
- *   - [UI 交互]：为表格的每一行增加了与服务器页面一致的、悬浮时出现的操作按钮（打印和删除）。
- *   - [数据流]：使用 `@tanstack/react-query` 的 `useMutation` 和 `queryClient` 来执行删除操作，并在成功后自动刷新日志列表。
+ *   - [UI 调整]：调整了桌面端表格的列顺序，将信息密度较低、长度不定的“更新内容”列移动到了表格的最后一列，以优化整体布局和可读性。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
 import {
     Box, Table, TableBody, TableCell,
-    TableHead, TableRow, CircularProgress, Typography, IconButton, Tooltip
+    TableHead, TableRow, CircularProgress, Typography, IconButton, Tooltip, Chip
 } from '@mui/material';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import PrintIcon from '@mui/icons-material/Print';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteIcon from '@mui/icons-material/Delete';
 import {useLayoutState, useLayoutDispatch} from '@/contexts/LayoutContext.tsx';
 import {type ChangelogSearchValues} from '@/components/forms/ChangelogSearchForm.tsx';
@@ -35,17 +34,20 @@ import {useNotification} from "@/contexts/NotificationContext.tsx";
 const ChangelogSearchForm = lazy(() => import('@/components/forms/ChangelogSearchForm.tsx'));
 const ChangelogDetailContent = lazy(() => import('@/components/modals/ChangelogDetailContent.tsx'));
 
+// [核心修改] 调整列的顺序
 const desktopColumns: ColumnConfig<ChangelogRow>[] = [
-    { id: 'customerName', label: '客户名称', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'updateTime', label: '更新时间', sx: {width: '180px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> },
-    { id: 'updateType', label: '更新类型', sx: {width: '150px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
+    { id: 'customerName', label: '客户名称', sx: {width: '150px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell> },
+    { id: 'updateType', label: '更新类型', sx: {width: '120px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
+    { id: 'status', label: '状态', sx: {width: '90px'}, renderCell: (r: ChangelogRow) => <Chip label={r.status} size="small" color={r.status === '完成' ? 'success' : 'warning'} /> },
+    { id: 'updateTime', label: '发布时间', sx: {width: '150px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{new Date(r.updateTime).toLocaleDateString()}</TooltipCell> },
+    { id: 'completionTime', label: '完成时间', sx: {width: '150px'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.completionTime?.Valid ? new Date(r.completionTime.Time).toLocaleDateString() : '-'}</TooltipCell> },
     { id: 'updateContent', label: '更新内容', renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateContent}</TooltipCell> },
 ];
 
 const mobileColumns: ColumnConfig<ChangelogRow>[] = [
     { id: 'customerName', label: '客户名称', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.customerName}</TooltipCell> },
-    { id: 'updateTime', label: '更新时间', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateTime.split('T')[0]}</TooltipCell> },
     { id: 'updateType', label: '更新类型', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <TooltipCell>{r.updateType}</TooltipCell> },
+    { id: 'status', label: '状态', sx: {width: '33.33%'}, renderCell: (r: ChangelogRow) => <Chip label={r.status} size="small" color={r.status === '完成' ? 'success' : 'warning'} /> },
 ];
 
 const CHANGELOGS_QUERY_KEY_BASE = ['changelogs'];
@@ -63,8 +65,6 @@ export default function Changelog(): JSX.Element {
     const [isQueryEnabled, setIsQueryEnabled] = useState(false);
     const showNotification = useNotification();
     const queryClient = useQueryClient();
-
-    // [核心修改] 删除逻辑的状态管理
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<ChangelogRow | null>(null);
 
@@ -84,7 +84,23 @@ export default function Changelog(): JSX.Element {
         rowsPerPage: rowsPerPage,
     });
 
-    // [核心修改] 使用 useMutation 执行删除操作
+    const updateStatusMutation = useMutation({
+        mutationFn: async ({ id, status }: { id: string, status: '完成' | '挂起' }) => {
+            if (status === '完成') {
+                return changelogsApi.markAsPending(id);
+            }
+            return changelogsApi.markAsCompleted(id);
+        },
+        onSuccess: (_, variables) => {
+            const actionText = variables.status === '完成' ? '取消完成' : '标记为完成';
+            showNotification(`操作成功: ${actionText}`, 'success');
+            queryClient.invalidateQueries({ queryKey: [CHANGELOGS_QUERY_KEY_BASE] });
+        },
+        onError: (err) => {
+            handleAsyncError(err, showNotification);
+        }
+    });
+
     const deleteMutation = useMutation({
         mutationFn: changelogsApi.deleteById,
         onSuccess: () => {
@@ -165,14 +181,21 @@ export default function Changelog(): JSX.Element {
                         columns={columns}
                         selected={r.id === logId || r.id === clickedRowId}
                         onClick={() => handleRowClick(r.id)}
-                        // [核心修改] 传递操作按钮
                         actions={
                             <>
-                                <Tooltip title="打印">
-                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); alert(`打印日志 #${r.id}`); }}>
-                                        <PrintIcon fontSize="small" />
-                                    </IconButton>
-                                </Tooltip>
+                                {r.status === '完成' ? (
+                                    <Tooltip title="取消完成">
+                                        <IconButton size="small" color="warning" onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: r.id, status: r.status }); }}>
+                                            <CancelIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                ) : (
+                                    <Tooltip title="完成">
+                                        <IconButton size="small" color="success" onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: r.id, status: r.status }); }}>
+                                            <CheckCircleIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
                                 <Tooltip title="删除">
                                     <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); handleDeleteClick(r); }}>
                                         <DeleteIcon fontSize="small" />
@@ -184,7 +207,7 @@ export default function Changelog(): JSX.Element {
                 ))}
             </TableBody>
         </Table>
-    ), [rows, columns, logId, clickedRowId, handleRowClick, handleDeleteClick]);
+    ), [rows, columns, logId, clickedRowId, handleRowClick, handleDeleteClick, updateStatusMutation]);
 
     const renderContent = () => {
         if ((isLoading || !isQueryEnabled) && totalRows === 0) {
@@ -234,7 +257,6 @@ export default function Changelog(): JSX.Element {
                 {renderContent()}
             </Box>
 
-            {/* [核心修改] 渲染确认对话框 */}
             <ConfirmDialog
                 open={deleteConfirmOpen}
                 title="确认删除"
