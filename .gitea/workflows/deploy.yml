@@ -32,14 +32,14 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25' # 建议使用一个具体的版本，如 '1.22.2'，但 '1.25' 也可以工作
+          go-version: '1.25' # 您可以指定一个更具体的版本，如 '1.22.2'，以确保环境一致性
           cache: true # 启用 Go 模块缓存，加快后续构建速度
 
-      # 第3步：[新增优化] 设置 Go 模块代理
+      # 第3步：设置 Go 模块代理
       # 将 Go 模块代理设置为 goproxy.cn，解决国内访问 proxy.golang.org 的网络问题
       - name: Set Go Proxy
         run: go env -w GOPROXY=https://goproxy.cn,direct
-        shell: powershell
+        shell: cmd # 使用 cmd 或 powershell 均可
 
       # 第4步：下载 Go 依赖项
       # 使用 `go mod tidy` 整理和下载后端项目所需的所有依赖包
@@ -78,7 +78,6 @@ jobs:
       - name: Deploy to IIS Directory
         shell: powershell
         run: |
-          # 打印部署目标目录，方便调试
           Write-Host "Preparing deployment to ${{ env.DEPLOY_DIR }}..."
           # 检查目标目录是否存在，如果不存在则创建
           if (-not (Test-Path "${{ env.DEPLOY_DIR }}")) {
@@ -115,7 +114,7 @@ jobs:
           
           Write-Host "Deployment successful!"
 
-      # 第9步：[优化健壮性] 使用 NSSM 创建或启动 Go 后端服务
+      # 第9步：使用 NSSM 创建或启动 Go 后端服务
       # 无论前面步骤是否成功都执行此步骤，确保服务在部署后处于正确的状态
       - name: Create or Start Go Backend Service with NSSM
         if: always() # `always()` 确保即使构建失败，此步骤也会运行，尝试重启服务
@@ -125,7 +124,7 @@ jobs:
           # 检查 NSSM 是否安装并存在于系统 PATH 中
           if (-not (Get-Command nssm -ErrorAction SilentlyContinue)) {
             Write-Error "NSSM is not found in PATH. Please install it on the runner server."
-            exit 1 # 如果 NSSM 不存在，则脚本失败退出
+            exit 1
           }
 
           # 检查服务是否已创建，如果未创建，则使用 NSSM 安装并配置它
@@ -141,7 +140,7 @@ jobs:
           # [关键优化] 在启动服务前，检查可执行文件是否存在
           $executablePath = "${{ env.DEPLOY_DIR }}\opsboard-backend.exe"
           if (-not (Test-Path $executablePath)) {
-            Write-Error "Backend executable not found at '$executablePath'. Build may have failed. Skipping service start."
+            Write-Error "Backend executable not found at '$executablePath'. Build or Deploy step may have failed. Skipping service start."
             exit 1 # 文件不存在，说明构建或部署失败，此步骤也标记为失败
           }
           
