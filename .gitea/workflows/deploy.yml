@@ -1,5 +1,5 @@
 # 工作流的名称
-name: Build and Deploy Frontend Project
+name: Build and Deploy Full Stack Project
 
 # 触发条件：当有代码 push 到 master 分支时触发
 on:
@@ -10,51 +10,104 @@ on:
 # 任务列表
 jobs:
   build-and-deploy:
-    # 这里的标签必须和您注册 Runner 时设置的标签完全一致
+    # 运行环境标签
     runs-on: windows-iis
+
+    # 环境变量，用于统一定义路径，便于维护
+    env:
+      FRONTEND_DIR: ./opsboard-frontend
+      BACKEND_DIR: ./opsboard-backend
+      DEPLOY_DIR: C:\inetpub\wwwroot\opsboard-web
 
     # 任务包含的步骤
     steps:
-      # 第1步：检出代码
-      # 使用标准语法，这将利用您 Runner 的本地缓存/回退机制
+      # 第1步：检出代码 (保持不变)
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 第2步：设置 Node.js 环境
+      # ------------------- 后端构建部分 (新增) -------------------
+      # 第2步：设置 Go 环境
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25' # 请根据您项目的 go.mod 文件调整版本
+          cache: true
+
+      # 第3步：构建 Go 后端应用
+      - name: Build Go Backend
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: go build -o opsboard-backend.exe .
+
+      # ------------------- 前端构建部分 (调整) -------------------
+      # 第4步：设置 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: 'opsboard-frontend/package-lock.json'
+          cache-dependency-path: '${{ env.FRONTEND_DIR }}/package-lock.json'
 
-      # 第3步：安装依赖并执行构建
-      - name: Install Dependencies and Build
-        working-directory: ./opsboard-frontend
+      # 第5步：安装前端依赖并执行构建
+      - name: Install Dependencies and Build Frontend
+        working-directory: ${{ env.FRONTEND_DIR }}
         run: |
           npm install
           npm run build
 
-      # 第4步：部署到 IIS 网站目录
+      # ------------------- 部署部分 (重构) -------------------
+      # 第6步：部署所有构建产物到 IIS 目录
       - name: Deploy to IIS Directory
         shell: powershell
         run: |
-          $sourceBuildPath = ".\opsboard-frontend\dist"
-          # [核心修复] 将源路径指向仓库根目录下的 web.config
-          $sourceConfigPath = ".\web.config"
-          $destinationPath = "C:\inetpub\wwwroot\opsboard-web"
+          Write-Host "Preparing deployment to ${{ env.DEPLOY_DIR }}..."
           
-          Write-Host "Preparing deployment to $destinationPath..."
-          if (-not (Test-Path $destinationPath)) {
-            New-Item -ItemType Directory -Force -Path $destinationPath
+          # 检查并创建目标目录
+          if (-not (Test-Path "${{ env.DEPLOY_DIR }}")) {
+            New-Item -ItemType Directory -Force -Path "${{ env.DEPLOY_DIR }}"
           }
-          Remove-Item -Recurse -Force -Path "$destinationPath\*"
           
-          Write-Host "Copying build artifacts from $sourceBuildPath..."
-          Copy-Item -Path "$sourceBuildPath\*" -Destination $destinationPath -Recurse -Force
+          # (可选) 停止正在运行的后端服务，如果使用了 NSSM 或类似工具
+          # nssm stop opsboard-backend-service
           
-          # [核心修复] 明确地将根目录的 web.config 复制到部署目录
-          Write-Host "Copying web.config from $sourceConfigPath..."
-          Copy-Item -Path $sourceConfigPath -Destination $destinationPath -Force
+          Write-Host "Clearing destination directory..."
+          Remove-Item -Recurse -Force -Path "${{ env.DEPLOY_DIR }}\*"
+          
+          Write-Host "Copying frontend build artifacts..."
+          Copy-Item -Path "${{ env.FRONTEND_DIR }}\dist\*" -Destination "${{ env.DEPLOY_DIR }}" -Recurse -Force
+          
+          Write-Host "Copying backend executable..."
+          Copy-Item -Path "${{ env.BACKEND_DIR }}\opsboard-backend.exe" -Destination "${{ env.DEPLOY_DIR }}" -Force
+          
+          # 警告：直接复制 .env 文件可能存在安全风险。更好的做法是使用 GitHub Secrets。
+          # 但为了快速实现，我们暂时直接复制。
+          Write-Host "Copying backend configuration..."
+          Copy-Item -Path "${{ env.BACKEND_DIR }}\.env" -Destination "${{ env.DEPLOY_DIR }}" -Force
+          
+          # 复制 IIS 配置文件
+          Write-Host "Copying web.config..."
+          Copy-Item -Path ".\web.config" -Destination "${{ env.DEPLOY_DIR }}" -Force
+          
+          # (可选) 重新启动后端服务
+          # nssm start opsboard-backend-service
           
           Write-Host "Deployment successful!"
+
+      # 第7步 (推荐)：管理 Go 服务的运行
+      - name: Restart Go Backend Service (Example with NSSM)
+        if: always() # 无论前面的步骤是否成功，都尝试执行
+        shell: powershell
+        run: |
+          # 这是一个示例，您需要根据实际情况调整
+          # 检查服务是否存在，如果不存在则创建
+          $serviceName = "opsboard-backend-service"
+          if (-not (Get-Service $serviceName -ErrorAction SilentlyContinue)) {
+            Write-Host "Service '$serviceName' not found, creating it with NSSM..."
+            # 您需要确保 nssm.exe 在系统的 PATH 中
+            nssm install $serviceName "${{ env.DEPLOY_DIR }}\opsboard-backend.exe"
+            nssm set $serviceName AppDirectory "${{ env.DEPLOY_DIR }}"
+            nssm set $serviceName AppStdout "${{ env.DEPLOY_DIR }}\stdout.log"
+            nssm set $serviceName AppStderr "${{ env.DEPLOY_DIR }}\stderr.log"
+          }
+          
+          Write-Host "Restarting service '$serviceName'..."
+          Restart-Service -Name $serviceName -Force
