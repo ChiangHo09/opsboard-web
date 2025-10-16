@@ -1,9 +1,8 @@
-/**
- * @file main.go
- * @description 应用主入口文件，负责初始化、路由注册和服务器启动。
- * @modification 本次提交中所做的具体修改摘要。
- *   - [业务接口]：新增并注册了 `GET /tickets/list` 业务接口，并将其明确地放置在受 `AuthMiddleware` 保护的路由组之下，用于提供聚合后的工单数据。
- */
+// @file main.go
+// @description 应用主入口文件，负责初始化、路由注册和服务器启动。
+// @modification 本次提交中所做的具体修改摘要。
+//   - [路由新增]：在受保护的 `/api/servers` 路由组下，新增了 `GET "/:id"` 路由。
+//   - [功能对接]：将新路由指向了新创建的 `handlers.GetServerByID` 处理器，从而使获取单个服务器详情的 API 端点能够正常工作，解决了前端的 404 错误。
 
 package main
 
@@ -58,6 +57,8 @@ func main() {
 		servers.Use(middleware.AuthMiddleware())
 		{
 			servers.GET("/list", handlers.GetServerList)
+			// [核心新增] 注册获取单个服务器详情的路由
+			servers.GET("/:id", handlers.GetServerByID)
 			servers.DELETE("/:id", handlers.DeleteServer)
 		}
 
@@ -79,7 +80,6 @@ func main() {
 			maintenance.PUT("/:id/uncomplete", handlers.UncompleteMaintenanceTask)
 		}
 
-		// [核心修改] 添加工单路由
 		tickets := api.Group("/tickets")
 		tickets.Use(middleware.AuthMiddleware())
 		{

@@ -1,11 +1,9 @@
-/**
- * @file services/server_service.go
- * @description 提供与服务器相关的业务逻辑，使用 GORM 实现分页查询和删除操作。
- * @modification 本次提交中所做的具体修改摘要。
- *   - [架构重构]：使用 GORM ORM 框架彻底重构了数据查询逻辑，取代了手写的 SQL 和 `rows.Scan`。
- *   - [后端分页]：实现了完整的后端分页功能。`GetPaginatedServers` 函数现在接收 `page` 和 `pageSize` 参数，并返回包含数据列表和总记录数的结果。
- *   - [删除逻辑]：`DeleteServerByID` 函数现在也使用 GORM 来执行删除操作，以保持技术栈的一致性。
- */
+// @file services/server_service.go
+// @description 提供与服务器相关的业务逻辑，使用 GORM 实现分页查询、删除和按 ID 查询操作。
+// @modification 本次提交中所做的具体修改摘要。
+//   - [功能新增]：新增了 `GetServerByID` 函数，用于根据 ID 从数据库中检索单个服务器的详细信息。
+//   - [关联查询]：该函数通过 `Joins` 和 `Select` 明确地从 `customers` 表中获取客户名称，确保了响应数据的完整性。
+//   - [错误处理]：实现了对 `gorm.ErrRecordNotFound` 的精确捕获，当数据库中不存在请求的记录时，函数会返回此特定错误，使上层 handler 能够据此返回 404 Not Found 响应。
 
 package services
 
@@ -26,19 +24,14 @@ func GetPaginatedServers(page, pageSize int) (*PaginatedServersResult, error) {
 	var servers []models.Server
 	var total int64
 
-	// 1. 构建基础查询链，用于计算总数
-	// GORM 会自动处理 `servers` 表名
 	query := db.Model(&models.Server{})
 
-	// 2. 执行 COUNT 查询获取总记录数
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// 3. 计算分页所需的 offset
 	offset := (page - 1) * pageSize
 
-	// 4. 在基础查询链上继续添加分页、排序和关联查询，然后执行
 	err := query.
 		Joins("LEFT JOIN customers c ON servers.customer_id = c.customer_id").
 		Select("servers.*, c.customer_name").
@@ -51,12 +44,10 @@ func GetPaginatedServers(page, pageSize int) (*PaginatedServersResult, error) {
 		return nil, err
 	}
 
-	// 如果没有查询到数据，确保返回一个空数组而不是 nil
 	if servers == nil {
 		servers = make([]models.Server, 0)
 	}
 
-	// 5. 组装并返回结果
 	result := &PaginatedServersResult{
 		Total: total,
 		Data:  servers,
@@ -65,10 +56,30 @@ func GetPaginatedServers(page, pageSize int) (*PaginatedServersResult, error) {
 	return result, nil
 }
 
+// GetServerByID 使用 GORM 根据 ID 从数据库中查找一个服务器的详细信息。
+func GetServerByID(id string) (*models.Server, error) {
+	db := database.GormDB
+	var server models.Server
+
+	// 使用 Joins 和 Select 来获取服务器数据以及关联的客户名称
+	// First 方法会在找到第一条匹配记录后停止，并将其填充到 server 变量中
+	// 如果没有找到记录，它将返回 gorm.ErrRecordNotFound 错误
+	err := db.Model(&models.Server{}).
+		Joins("LEFT JOIN customers c ON servers.customer_id = c.customer_id").
+		Select("servers.*, c.customer_name").
+		First(&server, "servers.server_id = ?", id).Error
+
+	if err != nil {
+		// 直接返回错误，让 handler 层去判断是 gorm.ErrRecordNotFound 还是其他错误
+		return nil, err
+	}
+
+	return &server, nil
+}
+
 // DeleteServerByID 使用 GORM 根据 ID 从数据库中删除一个服务器。
 func DeleteServerByID(id string) error {
 	db := database.GormDB
-	// GORM 的 Delete 方法会返回一个 result 对象，我们可以检查其错误
 	result := db.Delete(&models.Server{}, id)
 	return result.Error
 }
