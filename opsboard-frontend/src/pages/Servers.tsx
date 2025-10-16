@@ -2,8 +2,8 @@
  * @file src/pages/Servers.tsx
  * @description 该文件负责渲染“服务器信息”页面，已集成后端分页和删除功能。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [架构恢复]：恢复使用 `useResponsiveDetailView` 自定义钩子，并将分页状态 (`page`, `rowsPerPage`) 传递给它。
- *   - [原因]：此修改解决了因移除 `useResponsiveDetailView` 而导致的响应式详情视图功能丢失的问题。通过将分页逻辑整合进该钩子，我们重新获得了代码的简洁性和强大的响应式布局能力。
+ *   - [UI更新]：更新对 `ActionButtons` 组件的调用，以反映其从“编辑”到“新增”的功能变更。
+ *   - [属性变更]：将 `showEditButton` 属性替换为 `showAddButton`，并将 `onEditClick` 事件处理器替换为 `onAddClick`，以适配组件更新。
  */
 import {useCallback, useState, lazy, Suspense, useEffect, type JSX, type ChangeEvent, useMemo} from 'react';
 import {useParams} from 'react-router-dom';
@@ -77,7 +77,6 @@ export default function Servers(): JSX.Element {
         return () => clearTimeout(timer);
     }, []);
 
-    // [核心修复] 恢复使用 useResponsiveDetailView，并传入分页状态
     const {rows, totalRows, isLoading, isError, error} = useResponsiveDetailView<ServerRow, ServerDetailContentProps>({
         paramName: 'serverId',
         baseRoute: '/app/servers',
@@ -238,7 +237,7 @@ export default function Servers(): JSX.Element {
         <PageLayout sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <PageHeader
                 title="服务器信息"
-                actions={ <ActionButtons showEditButton={isAdmin} onSearchClick={togglePanel} onEditClick={() => alert('编辑按钮被点击')} onExportClick={() => alert('导出按钮被点击')} /> }
+                actions={ <ActionButtons showAddButton={isAdmin} onSearchClick={togglePanel} onAddClick={() => alert('新增按钮被点击')} onExportClick={() => alert('导出按钮被点击')} /> }
             />
 
             <Box sx={{flexGrow: 1, overflow: 'hidden', position: 'relative'}}>

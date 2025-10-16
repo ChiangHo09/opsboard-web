@@ -1,22 +1,25 @@
 /**
  * @file src/components/ui/ActionButtons.tsx
  * @description 定义了一个标准化的、分段式的操作按钮组，用于页面顶部。
- * @modification
- *   - [交互优化]：为所有按钮的点击事件引入了异步延迟处理。现在，在执行实际操作（如打开搜索面板）前会有一个 200 毫秒的短暂延迟。
- *   - [根本原因]：之前的实现中，功能执行（如 `onSearchClick`）与点击事件同步触发，导致视觉反馈（涟漪效果）还未完成，功能就已经执行，体验非常突兀。
- *   - [解决方案]：将每个 `onClick` 处理器都改为 `async` 函数。在函数内部，首先 `await` 一个延时 Promise，让涟漪动画有时间播放，然后再执行从 props 传入的回调函数。这极大地提升了交互的流畅度和质感。
- *   - [UI/UX]：修复了在触摸设备上，按钮点击后残留高亮背景色的问题，并增强了键盘导航的可访问性。
+ * @modification 本次提交中所做的具体修改摘要。
+ *   - [功能变更]：将“编辑”按钮的功能和视觉表现替换为“新增”按钮。
+ *   - [属性重命名]：将 `showEditButton` 和 `onEditClick` 属性分别重命名为 `showAddButton` 和 `onAddClick`，以更好地反映其新用途。
+ *   - [图标与文本更新]：将图标从 `DriveFileRenameOutlineIcon` 更新为 `AddIcon`，并将按钮文本从“编辑”更改为“新增”，提供了清晰的视觉指引。
  */
 import {type JSX} from 'react';
 import {Button, ButtonGroup, Typography, useTheme} from '@mui/material';
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
+import AddIcon from '@mui/icons-material/Add';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 
 interface ActionButtonsProps {
-    showEditButton?: boolean; // 控制编辑按钮是否显示的 prop
-    onEditClick?: () => void;
+    /** 控制新增按钮是否显示的 prop */
+    showAddButton?: boolean;
+    /** 点击新增按钮时的回调函数 */
+    onAddClick?: () => void;
+    /** 点击导出按钮时的回调函数 */
     onExportClick?: () => void;
+    /** 点击搜索按钮时的回调函数 */
     onSearchClick?: () => void;
 }
 
@@ -24,8 +27,8 @@ interface ActionButtonsProps {
 const RIPPLE_DELAY_MS = 200;
 
 const ActionButtons = ({
-                           showEditButton = true, // 默认为 true，方便展示
-                           onEditClick,
+                           showAddButton = true, // 默认为 true，方便展示
+                           onAddClick,
                            onExportClick,
                            onSearchClick,
                        }: ActionButtonsProps): JSX.Element => {
@@ -82,21 +85,21 @@ const ActionButtons = ({
                 },
             }}
         >
-            {/* 只有在 showEditButton 为 true 时才渲染此按钮 */}
-            {showEditButton && (
+            {/* 只有在 showAddButton 为 true 时才渲染此按钮 */}
+            {showAddButton && (
                 <Button
-                    startIcon={<DriveFileRenameOutlineIcon/>}
+                    startIcon={<AddIcon/>}
                     sx={buttonStyle}
                     onClick={async () => {
                         // 仅在 prop 存在时执行
-                        if (!onEditClick) return;
+                        if (!onAddClick) return;
                         // 等待一小段时间，让涟漪动画开始
                         await new Promise(resolve => setTimeout(resolve, RIPPLE_DELAY_MS));
                         // 然后再执行实际的操作
-                        onEditClick();
+                        onAddClick();
                     }}
                 >
-                    <Typography component="span" sx={{transform: 'translateY(1px)'}}>编辑</Typography>
+                    <Typography component="span" sx={{transform: 'translateY(1px)'}}>新增</Typography>
                 </Button>
             )}
             <Button
