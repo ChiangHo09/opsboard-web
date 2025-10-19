@@ -186,16 +186,14 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                                 const displayValue = isEditing && isEditable && formData ? formData[field.id as keyof ServerFormData] : field.value;
                                 return (
                                     // [最终修复] 遵循 Grid v2 语法，移除 `item` 属性
-                                    <Grid xs={12} sm={6} md={4} key={field.id}>
-                                        <DetailField
-                                            label={field.label}
-                                            value={displayValue}
-                                            isEditing={isEditing && isEditable}
-                                            isMultiline={field.multiline}
-                                            name={field.id as keyof ServerFormData}
-                                            onChange={handleFormChange}
-                                        />
-                                    </Grid>
+                                    <DetailField
+                                        label={field.label}
+                                        value={displayValue}
+                                        isEditing={isEditing && isEditable}
+                                        isMultiline={field.multiline}
+                                        name={field.id as keyof ServerFormData}
+                                        onChange={handleFormChange}
+                                    />
                                 )
                             })}
                         </Grid>
