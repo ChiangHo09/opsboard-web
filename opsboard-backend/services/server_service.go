@@ -1,10 +1,9 @@
 // @file services/server_service.go
 // @description 提供与服务器相关的业务逻辑，使用 GORM 实现分页查询、删除和按 ID 查询操作。
 // @modification 本次提交中所做的具体修改摘要。
-//   - [功能新增]：新增了 `GetServerByID` 函数，用于根据 ID 从数据库中检索单个服务器的详细信息。
-//   - [关联查询]：该函数通过 `Joins` 和 `Select` 明确地从 `customers` 表中获取客户名称，确保了响应数据的完整性。
-//   - [错误处理]：实现了对 `gorm.ErrRecordNotFound` 的精确捕获，当数据库中不存在请求的记录时，函数会返回此特定错误，使上层 handler 能够据此返回 404 Not Found 响应。
-
+//   - [依赖清理]：移除了未使用的 `gorm.io/gorm` 包导入，以修复 "imported and not used" 编译错误。该包中的错误类型（如 `gorm.ErrRecordNotFound`）已由上层 handler 处理，因此在本文件中无需导入。
+//
+// (此处应该保留一行空行，以避免GoLand的警告)
 package services
 
 import (
