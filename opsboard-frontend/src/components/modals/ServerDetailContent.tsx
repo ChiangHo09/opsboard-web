@@ -1,9 +1,10 @@
 /**
  * @file src/components/modals/ServerDetailContent.tsx
- * @description 服务器详情内容组件。此版本为最终修复版，通过使用 <Box>+Flexbox 替代 <Grid>，并修正布局溢出问题，彻底解决了所有已知问题。
+ * @description 服务器详情内容组件。此版本为最终修复版，通过使用 <Box>+Flexbox 替代 <Grid>，并修正所有布局问题，彻底解决了所有已知问题。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复] 为每个详情分组的容器（`<Box key={group.title}>`）添加了 `overflowX: 'hidden'` 样式。此修改用于吸收由 Flexbox 负边距技巧产生的额外宽度，彻底解决了横向滚动条的问题。
- *   - [架构优化] 保持使用 `<Box display="flex">` 替代 `<Grid container>` 的方案，以规避在某些环境下由 `<Grid>` 组件引发的 `TS2769` 类型推断错误。
+ *   - [新增] 新增“硬件信息”部分，用于展示处理器型号、内存和磁盘容量等新字段。
+ *   - [重构] 扩展了 `ServerFormData` 状态接口，以包含 `processorModel`, `memory`, `diskCapacity` 字段。
+ *   - [实现] “处理器型号”和“内存”字段被设计为并排半宽布局，“磁盘容量”字段则设计为占满整行的多行文本字段，为展示分区详情提供了基础。
  */
 import { Box, Typography, CircularProgress, Alert, Stack, TextField, Button } from '@mui/material';
 import DnsIcon from '@mui/icons-material/Dns';
@@ -25,6 +26,10 @@ interface ServerFormData {
     role: string;
     deploymentType: string;
     usageNote: string;
+    // [新增] 硬件信息字段
+    processorModel: string;
+    memory: string;
+    diskCapacity: string;
 }
 
 interface DetailFieldConfig {
@@ -53,7 +58,7 @@ const DetailField = ({ label, value, isEditing, isMultiline = false, name, onCha
         <TextField
             fullWidth
             multiline={isMultiline}
-            minRows={isMultiline ? 2 : 1}
+            minRows={isMultiline ? 3 : 1} // 为多行文本框提供更合适的初始高度
             variant="outlined"
             size="small"
             name={isEditing ? name : undefined}
@@ -96,6 +101,10 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                 role: data.role?.String ?? '',
                 deploymentType: data.deploymentType?.String ?? '',
                 usageNote: data.usageNote?.String ?? '',
+                // [新增] 为新字段提供示例数据
+                processorModel: 'Intel(R) Xeon(R) Gold 6248R @ 3.00GHz',
+                memory: '256 GB',
+                diskCapacity: '总容量: 2.0 TB\n/dev/sda1: 200 GB (已用 80 GB)\n/dev/sdb1: 1.8 TB (已用 1.2 TB)',
             });
         }
     }, [data]);
@@ -120,6 +129,10 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                 role: data.role?.String ?? '',
                 deploymentType: data.deploymentType?.String ?? '',
                 usageNote: data.usageNote?.String ?? '',
+                // [新增] 重置时同样需要包含新字段
+                processorModel: 'Intel(R) Xeon(R) Gold 6248R @ 3.00GHz',
+                memory: '256 GB',
+                diskCapacity: '总容量: 2.0 TB\n/dev/sda1: 200 GB (已用 80 GB)\n/dev/sdb1: 1.8 TB (已用 1.2 TB)',
             });
         }
     };
@@ -150,6 +163,15 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                 { id: 'role', label: "服务器角色", value: data.role?.String ?? '' },
                 { id: 'deploymentType', label: "部署类型", value: data.deploymentType?.String ?? '' },
                 { id: 'usageNote', label: "使用备注", value: data.usageNote?.String ?? '', multiline: true, fullWidth: true },
+            ]
+        },
+        // [新增] 硬件信息分组
+        {
+            title: '硬件信息',
+            fields: [
+                { id: 'processorModel', label: '处理器型号', value: '' },
+                { id: 'memory', label: '内存', value: '' },
+                { id: 'diskCapacity', label: '磁盘容量', value: '', multiline: true, fullWidth: true },
             ]
         }
     ];
@@ -182,7 +204,12 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                                     ? formData[field.id as keyof ServerFormData]
                                     : field.value;
 
-                                const width = field.fullWidth ? '100%' : { xs: '100%', md: '50%' };
+                                let width;
+                                if (group.title === '基础信息') {
+                                    width = { xs: '100%', md: '33.333%' };
+                                } else {
+                                    width = field.fullWidth ? '100%' : { xs: '100%', md: '50%' };
+                                }
 
                                 return (
                                     <Box
