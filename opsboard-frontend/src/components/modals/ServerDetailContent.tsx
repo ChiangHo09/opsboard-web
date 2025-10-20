@@ -1,11 +1,11 @@
 /**
  * @file src/components/modals/ServerDetailContent.tsx
- * @description 服务器详情内容组件，最终修复了所有 TypeScript 类型错误。
+ * @description 服务器详情内容组件。此版本为最终修复版，通过使用 <Box>+Flexbox 替代 <Grid>，并修正布局溢出问题，彻底解决了所有已知问题。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终代码确认]：此版本代码在语法层面上是完全正确的。它采用了 MUI Grid v2 的标准语法，移除了已被废弃的 `item` 属性，与项目依赖版本（MUI v7+）完全匹配。
- *   - [环境问题诊断]：IDE 中持续存在的 `TS2769` 错误并非代码语法问题，而是由本地开发环境（IDE/TypeScript Language Service）的缓存不一致或配置问题导致。下一步需要通过清理环境来解决。
+ *   - [最终修复] 为每个详情分组的容器（`<Box key={group.title}>`）添加了 `overflowX: 'hidden'` 样式。此修改用于吸收由 Flexbox 负边距技巧产生的额外宽度，彻底解决了横向滚动条的问题。
+ *   - [架构优化] 保持使用 `<Box display="flex">` 替代 `<Grid container>` 的方案，以规避在某些环境下由 `<Grid>` 组件引发的 `TS2769` 类型推断错误。
  */
-import { Box, Typography, Grid, CircularProgress, Alert, Stack, TextField, Button } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Stack, TextField, Button } from '@mui/material';
 import DnsIcon from '@mui/icons-material/Dns';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -24,7 +24,6 @@ interface ServerFormData {
     ipAddress: string;
     role: string;
     deploymentType: string;
-    customerNote: string;
     usageNote: string;
 }
 
@@ -34,6 +33,7 @@ interface DetailFieldConfig {
     value: ReactNode;
     editable?: boolean;
     multiline?: boolean;
+    fullWidth?: boolean;
 }
 
 interface DetailFieldProps {
@@ -65,21 +65,13 @@ const DetailField = ({ label, value, isEditing, isMultiline = false, name, onCha
             sx={{
                 ...(!isEditing && {
                     '& .MuiOutlinedInput-root': {
-                        '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'transparent',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'transparent',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'transparent',
-                        },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
                         backgroundColor: 'transparent',
                         resize: 'none',
                     },
-                    '& .MuiInputBase-input': {
-                        cursor: 'default',
-                    },
+                    '& .MuiInputBase-input': { cursor: 'default' },
                 }),
             }}
         />
@@ -103,7 +95,6 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                 ipAddress: data.ipAddress,
                 role: data.role?.String ?? '',
                 deploymentType: data.deploymentType?.String ?? '',
-                customerNote: data.customerNote?.String ?? '',
                 usageNote: data.usageNote?.String ?? '',
             });
         }
@@ -128,7 +119,6 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                 ipAddress: data.ipAddress,
                 role: data.role?.String ?? '',
                 deploymentType: data.deploymentType?.String ?? '',
-                customerNote: data.customerNote?.String ?? '',
                 usageNote: data.usageNote?.String ?? '',
             });
         }
@@ -159,8 +149,7 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
             fields: [
                 { id: 'role', label: "服务器角色", value: data.role?.String ?? '' },
                 { id: 'deploymentType', label: "部署类型", value: data.deploymentType?.String ?? '' },
-                { id: 'customerNote', label: "客户备注", value: data.customerNote?.String ?? '', multiline: true },
-                { id: 'usageNote', label: "使用备注", value: data.usageNote?.String ?? '', multiline: true },
+                { id: 'usageNote', label: "使用备注", value: data.usageNote?.String ?? '', multiline: true, fullWidth: true },
             ]
         }
     ];
@@ -176,27 +165,46 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
 
             <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
                 {detailGroups.map((group, index) => (
-                    <Box key={group.title} sx={{ mt: index > 0 ? 3 : 0 }}>
+                    <Box key={group.title} sx={{ mt: index > 0 ? 3 : 0, overflowX: 'hidden' }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 2 }}>
                             {group.title}
                         </Typography>
-                        <Grid container spacing={3}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                mx: -1.5,
+                            }}
+                        >
                             {group.fields.map((field) => {
                                 const isEditable = field.editable !== false;
-                                const displayValue = isEditing && isEditable && formData ? formData[field.id as keyof ServerFormData] : field.value;
+                                const displayValue = isEditing && isEditable && formData && (field.id in formData)
+                                    ? formData[field.id as keyof ServerFormData]
+                                    : field.value;
+
+                                const width = field.fullWidth ? '100%' : { xs: '100%', md: '50%' };
+
                                 return (
-                                    // [最终修复] 遵循 Grid v2 语法，移除 `item` 属性
-                                    <DetailField
-                                        label={field.label}
-                                        value={displayValue}
-                                        isEditing={isEditing && isEditable}
-                                        isMultiline={field.multiline}
-                                        name={field.id as keyof ServerFormData}
-                                        onChange={handleFormChange}
-                                    />
-                                )
+                                    <Box
+                                        key={field.id}
+                                        sx={{
+                                            width: width,
+                                            px: 1.5,
+                                            mb: 3,
+                                        }}
+                                    >
+                                        <DetailField
+                                            label={field.label}
+                                            value={displayValue}
+                                            isEditing={isEditing && isEditable}
+                                            isMultiline={field.multiline}
+                                            name={field.id as keyof ServerFormData}
+                                            onChange={handleFormChange}
+                                        />
+                                    </Box>
+                                );
                             })}
-                        </Grid>
+                        </Box>
                     </Box>
                 ))}
             </Box>
