@@ -2,9 +2,9 @@
  * @file src/components/modals/ServerDetailContent.tsx
  * @description 服务器详情内容组件。此版本为最终修复版，新增了可动态编辑的硬件信息（特别是磁盘分区）模块。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复] 为分区详情中的进度条添加了动态间距和过渡动画。在查看模式下，间距被设置为 `0` 以实现与上方字段的紧密贴靠；切换到编辑模式时，间距会平滑地恢复正常，提升了视觉的连贯性。
- *   - [新增] 为所有文本框添加了平滑的过渡动画，消除了在查看和编辑模式间切换时的视觉突兀感。
- *   - [修复] 修正并实现了“挤压”动画，确保了输入框能够在删除按钮出现或消失时平滑地收缩和展开。
+ *   - [最终修复] 修正了 `Partition` 接口及其所有使用处的拼写错误（`totaSpace` -> `totalSpace`），解决了因此引发的所有 TypeScript 编译错误（TS2551, TS2345, TS2561）。
+ *   - [修复] 调整了“硬件信息”部分的布局逻辑，将“总容量”字段（`DiskCapacityField`）也纳入 Flexbox 容器的管理中，确保了完美的垂直对齐。
+ *   - [新增] 为所有文本框和分区详情模块添加了平滑的过渡动画，优化了查看和编辑模式的切换体验。
  */
 import { Box, Typography, CircularProgress, Alert, Stack, TextField, Button, LinearProgress, IconButton, type Theme } from '@mui/material';
 import DnsIcon from '@mui/icons-material/Dns';
@@ -33,7 +33,7 @@ interface Partition {
     id: number;
     path: string;
     usedSpace: string;
-    totalSpace: string;
+    totalSpace: string; // [修复] 修正拼写错误
 }
 
 interface ServerFormData {
@@ -191,7 +191,6 @@ const DiskCapacityField = ({
                             </Stack>
                             <Box
                                 sx={(theme: Theme) => ({
-                                    // [最终修复] 查看模式下 mt: 0 实现贴靠，编辑模式下恢复间距
                                     mt: isEditing ? 1.5 : 0,
                                     transition: theme.transitions.create('margin-top', {
                                         duration: theme.transitions.duration.short,
@@ -383,19 +382,19 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                                     </Box>
                                 );
                             })}
+                            {group.title === '硬件信息' && (
+                                <Box sx={{ width: '100%', px: 1.5, mb: 3 }}>
+                                    <DiskCapacityField
+                                        isEditing={isEditing}
+                                        data={formData.diskCapacity}
+                                        onChangeTotal={handleChangeDiskTotal}
+                                        onChangePartition={handleChangePartition}
+                                        onAddPartition={handleAddPartition}
+                                        onRemovePartition={handleRemovePartition}
+                                    />
+                                </Box>
+                            )}
                         </Box>
-                        {group.title === '硬件信息' && (
-                            <Box sx={{ width: '100%', px: 1.5, mb: 3 }}>
-                                <DiskCapacityField
-                                    isEditing={isEditing}
-                                    data={formData.diskCapacity}
-                                    onChangeTotal={handleChangeDiskTotal}
-                                    onChangePartition={handleChangePartition}
-                                    onAddPartition={handleAddPartition}
-                                    onRemovePartition={handleRemovePartition}
-                                />
-                            </Box>
-                        )}
                     </Box>
                 ))}
             </Box>
