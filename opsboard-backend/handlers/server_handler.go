@@ -5,8 +5,7 @@
 //   - [逻辑实现]：该处理器从 URL 路径中提取 ID，调用服务层的 `GetServerByID` 函数获取数据。
 //   - [错误处理]：能够区分 `gorm.ErrRecordNotFound`（返回 404）和其他数据库错误（返回 500），提供了更精确的 API 错误响应。
 //   - [数据转换]：在成功获取数据后，将 `models.Server` 数据库模型转换为 `models.ServerDetailResponse` API 响应模型，以匹配前端的精确需求。
-//
-// (此处应该保留一行空行，以避免GoLand的警告)
+
 package handlers
 
 import (

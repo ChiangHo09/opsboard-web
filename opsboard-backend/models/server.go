@@ -2,8 +2,7 @@
 // @description 定义了 Server 数据模型以及用于特定 API 响应的数据传输对象 (DTO)。
 // @modification 本次提交中所做的具体修改摘要。
 //   - [模型新增]：新增了 `ServerDetailResponse` 结构体。此结构体的 JSON 标签与前端详情页组件期望的字段名（如 `ipAddress`, `deploymentType`）完全匹配，确保了 API 合约的准确性，同时避免了修改现有 `Server` 模型可能带来的副作用。
-//
-// (此处应该保留一行空行，以避免GoLand的警告)
+
 package models
 
 import (
