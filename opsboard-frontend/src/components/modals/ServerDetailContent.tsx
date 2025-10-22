@@ -1,16 +1,18 @@
 /**
  * @file src/components/modals/ServerDetailContent.tsx
- * @description 服务器详情内容组件。此版本为最终修复版，通过使用 <Box>+Flexbox 替代 <Grid>，并修正所有布局问题，彻底解决了所有已知问题。
+ * @description 服务器详情内容组件。此版本为最终修复版，新增了可动态编辑的硬件信息（特别是磁盘分区）模块。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [新增] 新增“硬件信息”部分，用于展示处理器型号、内存和磁盘容量等新字段。
- *   - [重构] 扩展了 `ServerFormData` 状态接口，以包含 `processorModel`, `memory`, `diskCapacity` 字段。
- *   - [实现] “处理器型号”和“内存”字段被设计为并排半宽布局，“磁盘容量”字段则设计为占满整行的多行文本字段，为展示分区详情提供了基础。
+ *   - [最终修复] 为分区详情中的进度条添加了动态间距和过渡动画。在查看模式下，间距被设置为 `0` 以实现与上方字段的紧密贴靠；切换到编辑模式时，间距会平滑地恢复正常，提升了视觉的连贯性。
+ *   - [新增] 为所有文本框添加了平滑的过渡动画，消除了在查看和编辑模式间切换时的视觉突兀感。
+ *   - [修复] 修正并实现了“挤压”动画，确保了输入框能够在删除按钮出现或消失时平滑地收缩和展开。
  */
-import { Box, Typography, CircularProgress, Alert, Stack, TextField, Button } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Stack, TextField, Button, LinearProgress, IconButton, type Theme } from '@mui/material';
 import DnsIcon from '@mui/icons-material/Dns';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import type { JSX, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import React, { useState, useEffect } from "react";
@@ -20,16 +22,32 @@ export interface ServerDetailContentProps {
     serverId: string;
 }
 
+/**
+ * @description 定义磁盘分区的数据结构。
+ * @property {number} id - 用于 React key 的唯一标识符。
+ * @property {string} path - 分区路径/盘符，例如 "/dev/sda1"。
+ * @property {string} usedSpace - 已用空间，例如 "80 GB"。
+ * @property {string} totalSpace - 分区总容量，例如 "200 GB"。
+ */
+interface Partition {
+    id: number;
+    path: string;
+    usedSpace: string;
+    totalSpace: string;
+}
+
 interface ServerFormData {
     serverName: string;
     ipAddress: string;
     role: string;
     deploymentType: string;
     usageNote: string;
-    // [新增] 硬件信息字段
     processorModel: string;
     memory: string;
-    diskCapacity: string;
+    diskCapacity: {
+        total: string;
+        partitions: Partition[];
+    };
 }
 
 interface DetailFieldConfig {
@@ -46,10 +64,11 @@ interface DetailFieldProps {
     value: ReactNode;
     isEditing: boolean;
     isMultiline?: boolean;
-    name?: keyof ServerFormData;
+    name?: keyof Omit<ServerFormData, 'diskCapacity'>;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+// 简单的键值对字段组件
 const DetailField = ({ label, value, isEditing, isMultiline = false, name, onChange }: DetailFieldProps) => (
     <Box>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
@@ -58,30 +77,147 @@ const DetailField = ({ label, value, isEditing, isMultiline = false, name, onCha
         <TextField
             fullWidth
             multiline={isMultiline}
-            minRows={isMultiline ? 3 : 1} // 为多行文本框提供更合适的初始高度
+            minRows={isMultiline ? 3 : 1}
             variant="outlined"
             size="small"
             name={isEditing ? name : undefined}
             value={value}
             onChange={isEditing ? onChange : undefined}
-            InputProps={{
-                readOnly: !isEditing,
-            }}
-            sx={{
+            InputProps={{ readOnly: !isEditing }}
+            sx={(theme: Theme) => ({
+                transition: theme.transitions.create(['background-color', 'border-color'], {
+                    duration: theme.transitions.duration.short,
+                }),
                 ...(!isEditing && {
                     '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'transparent',
                         '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
                         '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
-                        backgroundColor: 'transparent',
-                        resize: 'none',
                     },
                     '& .MuiInputBase-input': { cursor: 'default' },
                 }),
-            }}
+            })}
         />
     </Box>
 );
+
+/**
+ * @description 专门用于渲染和编辑磁盘容量信息的组件。
+ */
+const DiskCapacityField = ({
+                               isEditing,
+                               data,
+                               onChangeTotal,
+                               onChangePartition,
+                               onAddPartition,
+                               onRemovePartition,
+                           }: {
+    isEditing: boolean;
+    data: ServerFormData['diskCapacity'];
+    onChangeTotal: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onChangePartition: (index: number, field: keyof Omit<Partition, 'id'>, value: string) => void;
+    onAddPartition: () => void;
+    onRemovePartition: (index: number) => void;
+}) => {
+    const readOnlySx = {
+        '& .MuiOutlinedInput-root': {
+            backgroundColor: 'transparent',
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+        },
+        '& .MuiInputBase-input': { cursor: 'default' },
+    };
+
+    const getProgressBarColor = (percentage: number): 'primary' | 'warning' | 'error' => {
+        if (percentage > 90) return 'error';
+        if (percentage > 65) return 'warning';
+        return 'primary';
+    };
+
+    return (
+        <Box>
+            <DetailField
+                label="总容量"
+                value={data.total}
+                isEditing={isEditing}
+                onChange={onChangeTotal}
+            />
+
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, mb: 1 }}>
+                分区详情
+            </Typography>
+            <Stack spacing={2}>
+                {data.partitions.map((partition, index) => {
+                    const used = parseFloat(partition.usedSpace) || 0;
+                    const total = parseFloat(partition.totalSpace) || 1;
+                    const percentage = total > 0 ? (used / total) * 100 : 0;
+                    const barColor = getProgressBarColor(percentage);
+
+                    return (
+                        <Box
+                            key={partition.id}
+                            sx={(theme: Theme) => ({
+                                p: 2,
+                                borderRadius: 1,
+                                backgroundColor: isEditing ? theme.palette.action.hover : 'transparent',
+                                transition: theme.transitions.create('background-color', {
+                                    duration: theme.transitions.duration.short,
+                                }),
+                            })}
+                        >
+                            <Stack direction="row" spacing={2} alignItems="center">
+                                <TextField label="盘符" variant="outlined" size="small" value={partition.path} onChange={(e) => onChangePartition(index, 'path', e.target.value)} InputProps={{ readOnly: !isEditing }} sx={{ flex: 1, ...(!isEditing && readOnlySx) }} />
+                                <TextField label="已用空间" variant="outlined" size="small" value={partition.usedSpace} onChange={(e) => onChangePartition(index, 'usedSpace', e.target.value)} InputProps={{ readOnly: !isEditing }} sx={{ flex: 1, ...(!isEditing && readOnlySx) }} />
+                                <TextField label="分区容量" variant="outlined" size="small" value={partition.totalSpace} onChange={(e) => onChangePartition(index, 'totalSpace', e.target.value)} InputProps={{ readOnly: !isEditing }} sx={{ flex: 1, ...(!isEditing && readOnlySx) }} />
+                                <Box
+                                    sx={(theme: Theme) => ({
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: isEditing ? 40 : 0,
+                                        opacity: isEditing ? 1 : 0,
+                                        overflow: 'hidden',
+                                        transition: theme.transitions.create(['width', 'opacity'], {
+                                            duration: theme.transitions.duration.short,
+                                        }),
+                                    })}
+                                >
+                                    <IconButton onClick={() => onRemovePartition(index)} color="error" aria-label="删除分区">
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </Box>
+                            </Stack>
+                            <Box
+                                sx={(theme: Theme) => ({
+                                    // [最终修复] 查看模式下 mt: 0 实现贴靠，编辑模式下恢复间距
+                                    mt: isEditing ? 1.5 : 0,
+                                    transition: theme.transitions.create('margin-top', {
+                                        duration: theme.transitions.duration.short,
+                                    }),
+                                })}
+                            >
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <LinearProgress variant="determinate" value={percentage} color={barColor} sx={{ flexGrow: 1, height: 8, borderRadius: 4 }} />
+                                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>
+                                        {`${partition.usedSpace || 'N/A'} / ${partition.totalSpace || 'N/A'}`}
+                                    </Typography>
+                                </Stack>
+                            </Box>
+                        </Box>
+                    );
+                })}
+            </Stack>
+            {isEditing && (
+                <Button startIcon={<AddIcon />} onClick={onAddPartition} sx={{ mt: 2 }}>
+                    添加分区
+                </Button>
+            )}
+        </Box>
+    );
+};
+
 
 const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Element => {
     const { data, isLoading, isError, error } = useQuery<ServerDetail, Error>({
@@ -93,19 +229,26 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<ServerFormData | null>(null);
 
+    const generateInitialFormData = (sourceData: ServerDetail): ServerFormData => ({
+        serverName: sourceData.serverName,
+        ipAddress: sourceData.ipAddress,
+        role: sourceData.role?.String ?? '',
+        deploymentType: sourceData.deploymentType?.String ?? '',
+        usageNote: sourceData.usageNote?.String ?? '',
+        processorModel: 'Intel(R) Xeon(R) Gold 6248R @ 3.00GHz',
+        memory: '256 GB',
+        diskCapacity: {
+            total: '2.0 TB',
+            partitions: [
+                { id: 1, path: '/dev/sda1', usedSpace: '130 GB', totalSpace: '200 GB' },
+                { id: 2, path: '/dev/sdb1', usedSpace: '1.7 TB', totalSpace: '1.8 TB' },
+            ],
+        },
+    });
+
     useEffect(() => {
         if (data) {
-            setFormData({
-                serverName: data.serverName,
-                ipAddress: data.ipAddress,
-                role: data.role?.String ?? '',
-                deploymentType: data.deploymentType?.String ?? '',
-                usageNote: data.usageNote?.String ?? '',
-                // [新增] 为新字段提供示例数据
-                processorModel: 'Intel(R) Xeon(R) Gold 6248R @ 3.00GHz',
-                memory: '256 GB',
-                diskCapacity: '总容量: 2.0 TB\n/dev/sda1: 200 GB (已用 80 GB)\n/dev/sdb1: 1.8 TB (已用 1.2 TB)',
-            });
+            setFormData(generateInitialFormData(data));
         }
     }, [data]);
 
@@ -123,19 +266,48 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
     const handleCancel = () => {
         setIsEditing(false);
         if (data) {
-            setFormData({
-                serverName: data.serverName,
-                ipAddress: data.ipAddress,
-                role: data.role?.String ?? '',
-                deploymentType: data.deploymentType?.String ?? '',
-                usageNote: data.usageNote?.String ?? '',
-                // [新增] 重置时同样需要包含新字段
-                processorModel: 'Intel(R) Xeon(R) Gold 6248R @ 3.00GHz',
-                memory: '256 GB',
-                diskCapacity: '总容量: 2.0 TB\n/dev/sda1: 200 GB (已用 80 GB)\n/dev/sdb1: 1.8 TB (已用 1.2 TB)',
-            });
+            setFormData(generateInitialFormData(data));
         }
     };
+
+    const handleChangeDiskTotal = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.target;
+        setFormData(prev => {
+            if (!prev) return null;
+            return { ...prev, diskCapacity: { ...prev.diskCapacity, total: value } };
+        });
+    };
+
+    const handleChangePartition = (index: number, field: keyof Omit<Partition, 'id'>, value: string) => {
+        setFormData(prev => {
+            if (!prev) return null;
+            const newPartitions = [...prev.diskCapacity.partitions];
+            newPartitions[index] = { ...newPartitions[index], [field]: value };
+            return { ...prev, diskCapacity: { ...prev.diskCapacity, partitions: newPartitions } };
+        });
+    };
+
+    const handleAddPartition = () => {
+        setFormData(prev => {
+            if (!prev) return null;
+            const newPartition: Partition = {
+                id: Date.now(),
+                path: '',
+                usedSpace: '',
+                totalSpace: '',
+            };
+            return { ...prev, diskCapacity: { ...prev.diskCapacity, partitions: [...prev.diskCapacity.partitions, newPartition] } };
+        });
+    };
+
+    const handleRemovePartition = (indexToRemove: number) => {
+        setFormData(prev => {
+            if (!prev) return null;
+            const newPartitions = prev.diskCapacity.partitions.filter((_, index) => index !== indexToRemove);
+            return { ...prev, diskCapacity: { ...prev.diskCapacity, partitions: newPartitions } };
+        });
+    };
+
 
     if (isLoading) {
         return <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><CircularProgress /></Box>;
@@ -144,7 +316,7 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
         const errorMessage = error instanceof Error ? error.message : '加载失败，请稍后重试';
         return <Box sx={{ p: 3, height: '100%' }}><Alert severity="error">加载服务器详情失败: {errorMessage}</Alert></Box>;
     }
-    if (!data) {
+    if (!data || !formData) {
         return <Box sx={{ p: 3, height: '100%' }}><Alert severity="info">未找到服务器数据。</Alert></Box>;
     }
 
@@ -165,13 +337,11 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                 { id: 'usageNote', label: "使用备注", value: data.usageNote?.String ?? '', multiline: true, fullWidth: true },
             ]
         },
-        // [新增] 硬件信息分组
         {
             title: '硬件信息',
             fields: [
                 { id: 'processorModel', label: '处理器型号', value: '' },
                 { id: 'memory', label: '内存', value: '' },
-                { id: 'diskCapacity', label: '磁盘容量', value: '', multiline: true, fullWidth: true },
             ]
         }
     ];
@@ -191,47 +361,41 @@ const ServerDetailContent = ({ serverId }: ServerDetailContentProps): JSX.Elemen
                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 2 }}>
                             {group.title}
                         </Typography>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                mx: -1.5,
-                            }}
-                        >
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', mx: -1.5 }}>
                             {group.fields.map((field) => {
                                 const isEditable = field.editable !== false;
-                                const displayValue = isEditing && isEditable && formData && (field.id in formData)
-                                    ? formData[field.id as keyof ServerFormData]
+                                const displayValue = (formData && field.id in formData)
+                                    ? formData[field.id as keyof Omit<ServerFormData, 'diskCapacity'>]
                                     : field.value;
 
-                                let width;
-                                if (group.title === '基础信息') {
-                                    width = { xs: '100%', md: '33.333%' };
-                                } else {
-                                    width = field.fullWidth ? '100%' : { xs: '100%', md: '50%' };
-                                }
+                                const width = field.fullWidth ? '100%' : { xs: '100%', md: '50%' };
 
                                 return (
-                                    <Box
-                                        key={field.id}
-                                        sx={{
-                                            width: width,
-                                            px: 1.5,
-                                            mb: 3,
-                                        }}
-                                    >
+                                    <Box key={field.id} sx={{ width: width, px: 1.5, mb: 3 }}>
                                         <DetailField
                                             label={field.label}
                                             value={displayValue}
                                             isEditing={isEditing && isEditable}
                                             isMultiline={field.multiline}
-                                            name={field.id as keyof ServerFormData}
+                                            name={field.id as keyof Omit<ServerFormData, 'diskCapacity'>}
                                             onChange={handleFormChange}
                                         />
                                     </Box>
                                 );
                             })}
                         </Box>
+                        {group.title === '硬件信息' && (
+                            <Box sx={{ width: '100%', px: 1.5, mb: 3 }}>
+                                <DiskCapacityField
+                                    isEditing={isEditing}
+                                    data={formData.diskCapacity}
+                                    onChangeTotal={handleChangeDiskTotal}
+                                    onChangePartition={handleChangePartition}
+                                    onAddPartition={handleAddPartition}
+                                    onRemovePartition={handleRemovePartition}
+                                />
+                            </Box>
+                        )}
                     </Box>
                 ))}
             </Box>
