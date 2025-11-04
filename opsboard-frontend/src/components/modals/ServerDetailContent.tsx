@@ -2,9 +2,9 @@
  * @file src/components/modals/ServerDetailContent.tsx
  * @description 服务器详情内容组件。此版本为最终修复版，新增了可动态编辑的硬件信息（特别是磁盘分区）模块。
  * @modification 本次提交中所做的具体修改摘要。
- *   - [最终修复] 恢复并完善了所有动画效果：为 `DiskCapacityField` 中的 `UnitSelectField` 添加了正确的 Flexbox 容器，确保了“挤压”动画的正常工作；同时恢复了进度条的间距动画，解决了所有视觉突兀的问题。
- *   - [修复] 统一了 `UnitSelectField` 和 `DetailField` 在查看模式下的样式，确保了完美的视觉对齐和无跳动的模式切换。
+ *   - [最终修复] 修正了 `displayValue` 逻辑中的一个语法错误（多余的 `>`），解决了因此引发的 `Unexpected token` 编译错误。
  *   - [新增] 创建了可复用的 `UnitSelectField` 组件，将数值输入框与单位（GB/TB）选择下拉框相结合。
+ *   - [布局优化] 调整了“硬件信息”部分的布局，实现了单行三列的对齐。
  */
 import { Box, Typography, CircularProgress, Alert, Stack, TextField, Button, LinearProgress, IconButton, Select, MenuItem, FormControl, InputLabel, OutlinedInput, InputAdornment, type Theme, type SelectChangeEvent } from '@mui/material';
 import DnsIcon from '@mui/icons-material/Dns';
