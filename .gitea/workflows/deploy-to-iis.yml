@@ -1,10 +1,10 @@
 name: Deploy to Windows Server IIS
 
-# 触发条件：当代码被推送到 main 分支时
+# 触发条件：当代码被推送到 master 分支时
 on:
   push:
     branches:
-      - master # 如果你的主分支是 master，请修改为 master
+      - master
 
 jobs:
   build-and-deploy:
@@ -13,29 +13,36 @@ jobs:
 
     steps:
       # 第1步：从Gitea仓库拉取最新代码
+      # 这一步在根目录执行，无需修改
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # 第2步：安装和设置你项目所需的 Node.js 版本
+      # 这一步是全局设置，无需修改
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # <-- 修改为你项目需要的 Node.js 版本
+          node-version: '18' # 你可以根据需要更改此版本
 
       # 第3步：安装项目依赖 (npm install)
+      # !!! 修改点: 指定工作目录为前端项目文件夹
       - name: Install dependencies
+        working-directory: ./opsboard-frontend
         run: npm install
 
       # 第4步：构建项目 (npm run build)，生成静态文件
+      # !!! 修改点: 指定工作目录为前端项目文件夹
       - name: Build project
+        working-directory: ./opsboard-frontend
         run: npm run build
 
       # 第5步：部署到 IIS 网站目录
+      # !!! 修改点: 指定工作目录为前端项目文件夹，这样才能找到构建产物 dist 目录
       - name: Deploy to IIS
-        # 使用 PowerShell 执行部署脚本
+        working-directory: ./opsboard-frontend
         shell: powershell
         run: |
-          # --- 请修改下面的配置 ---
+          # --- 请确认下面的配置 ---
           # 1. 你的 IIS 网站在服务器上的物理路径
           $targetPath = "C:\inetpub\wwwroot\opsboard-web" 
           
@@ -51,7 +58,7 @@ jobs:
           Remove-Item -Path (Join-Path $targetPath "*") -Recurse -Force
           
           Write-Host "Copying new build files to $targetPath"
-          # 将构建好的 dist 文件夹里的所有内容复制到目标路径
+          # 因为当前工作目录已经是 opsboard-frontend，所以可以直接从 .\dist\ 复制
           Copy-Item -Path ".\dist\*" -Destination $targetPath -Recurse -Force
           
           Write-Host "Starting Application Pool: $appPoolName"
