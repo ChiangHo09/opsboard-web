@@ -261,7 +261,7 @@ go build -o opsboard-backend main.go
 ### [Google AI Studio](https://aistudio.google.com/) 和 [Gemini 2.5 Pro 模型](https://deepmind.google/models/gemini/)
 特别感谢 `Google AI Studio` 以及 `Gemini 2.5 Pro` 模型对于本项目的贡献。  
 本项目是人机协作的一次深度探索，旨在验证现代大型语言模型在软件工程领域的巨大潜力`(主要还是因为我完全不会写代码)`。  
-整个项目的代码库，从最初的架构设计、组件实现，到后期的复杂逻辑重构、错误处理机制的建立、自动化测试的集成。  
+整个项目的代码库，从最初的架构设计、组件实现，到后期的复杂逻辑重构、错误处理机制的建立、自动化测试代码的集成完全通过AI实现。  
 它不仅是代码的生产者，更是整个开发过程中的设计伙伴和问题解决者，其强大的代码理解、生成和迭代能力是本项目得以实现的核心驱动力。
 
 ### [Clarrycy](https://x.com/Clarrycy)
