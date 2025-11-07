@@ -1,30 +1,24 @@
-> **请结合代码实际**
+# OpsBoard 运维信息看板
 
 <div align="center">
-  <h3>你知道的，懒才是第一生产力</h3>
+  <img src="opsboard-frontend/src/assets/logo.png" alt="OpsBoard Logo" width="120">
+  
+  <p>现代化的运维信息管理平台</p>
+  
+  <p>
+    <img src="https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square" alt="React 18">
+    <img src="https://img.shields.io/badge/Language-TypeScript-blue?style=flat-square" alt="TypeScript">
+    <img src="https://img.shields.io/badge/UI-Material%20Design-blue?style=flat-square" alt="Material Design">
+    <img src="https://img.shields.io/badge/Backend-Go-green?style=flat-square" alt="Go">
+    <img src="https://img.shields.io/badge/Database-MySQL-orange?style=flat-square" alt="MySQL">
+  </p>
 </div>
 
-# 运维信息表 (OpsBoard) - Design Prototype
-这个项目的本意是为了能帮我在工作中偷懒`(jie sheng shi jian)`。   
-前端核心框架已搭建完成，后端开发正在推进中。后续将优先上线一个可用版本，待基础功能跑通后，再进一步完善前端交互与视觉表现。  
-后端最终选定 Go 语言开发，Go 的语法简洁、结构清晰，非常适合通过 AI 高效生成代码。  
-感谢 [`Google AI Studio`](https://aistudio.google.com/) 和 [`Gemini 2.5 Pro 模型`](https://deepmind.google/models/gemini/) 模型帮助我完成这个项目。
+## 项目简介
 
+OpsBoard 是一个功能完备的运维信息管理平台，采用现代化的前后端分离架构设计。它为运维团队提供了一个直观、高效的工具来管理和监控服务器信息、更新日志、任务状态和工单流程。
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square" alt="React 18">
-  <img src="https://img.shields.io/badge/Language-TypeScript-blue?style=flat-square" alt="TypeScript">
-  <img src="https://img.shields.io/badge/UI-Material%20Design-blue?style=flat-square" alt="Material Design">
-  <img src="https://img.shields.io/badge/Backend-Go-green?style=flat-square" alt="Go">
-  <img src="https://img.shields.io/badge/Database-MySQL-orange?style=flat-square" alt="MySQL">
-</p>
-
-
-## 项目概述
-
-**OpsBoard** 是一个功能完备的运维信息表管理系统，采用前后端分离架构。  
-前端基于 **React 18 + TypeScript + Material-UI** 构建，后端采用 **Go + Gin + GORM** 框架。  
-项目旨在为运维团队提供一个直观、高效的工具来管理和监控服务器信息、任务状态和系统变更。
+本项目致力于通过自动化和可视化手段，提升运维工作的效率和准确性，帮助团队更好地掌控系统状态。
 
 ## 核心特性
 
@@ -43,53 +37,23 @@
 - **认证授权**: JWT-based 身份验证系统
 - **跨域支持**: 内置 CORS 中间件
 - **分页查询**: 支持大数据集的分页和筛选
-- **UUID主键**: 采用 UUID 作为实体标识符
-
-### 架构设计
-- **前后端分离**: 独立的开发和部署流程
-- **模块化结构**: 清晰的代码分层和职责分离
-- **配置管理**: 环境变量驱动的配置系统
-- **错误日志**: 统一的错误处理和日志记录
-
-## Material Design 哲学与用户感知细节
-
-本项目深度融合 Material Design 3（MD3）设计原则，并借助 MUI 强大的定制能力，不仅打造了功能完备的产品，更在视觉与交互层面为用户带来直观、愉悦的使用感受。
-
-### 1. **光影、层次与空间 (Light, Surface & Elevation)**
-- **Z轴感知**: 我们通过微妙的阴影变化来区分 UI 元素的层级。例如，展开的 `SideNav` 和浮动的 `RightSearchPanel` 拥有轻微的 `box-shadow`，使其在视觉上“浮”在主内容区之上，清晰地界定了功能区域。
-- **动态高程**: 交互元素在不同状态下会改变其“高程”。例如，按钮在悬停 (`:hover`) 时，背景色会变深（如 `app.button.hover`），模拟了手指靠近时，光线被遮挡的效果，为用户提供了即时的物理反馈。
-
-### 2. **动画与动态效果 (Motion & Animation)**
-- **有意义的过渡**: 所有动画均以 “引导用户注意力、解释 UI 变化” 为目标，而非单纯视觉装饰。
-    - **页面切换**: `pageVariants` 动画采用 “淡入上移” 效果，模拟内容从屏幕外平滑载入的过程，帮助用户自然感知上下文切换。
-    - **面板展开**: `RightSearchPanel` 以平滑宽度变化实现展开，而非瞬时出现，让用户清晰理解面板的来源及其与主内容区的关联。
-- **微交互**:
-    - **按钮点击**: 所有 MUI 按钮内置 MD 标志性 “涟漪效果（Ripple Effect）”，为用户每一次点击提供以点击点为中心的即时视觉反馈。
-    - **图标旋转**: `SideNav` 折叠 / 展开按钮的图标会完成 90 度旋转，直观传递状态变化。
-
-### 3. **色彩与主题 (Color & Theming)**
-- **语义化色彩**: 项目在 `theme.ts` 中定义了一套语义化的调色板 (`palette`)。`primary`, `secondary`, `error` 等颜色被统一应用在链接、主操作按钮和错误提示上，形成了一致的视觉语言，降低了用户的学习成本。
-- **中性色与应用色**: 我们定义了 `neutral`（中性色）用于大部分文本和UI元素，以及 `app`（应用色）用于背景等，使得色彩系统主次分明，层次清晰。
-- **一致性**: 所有组件的颜色都从 `theme.palette` 中引用，而不是硬编码。这确保了如果未来需要更换主题（例如，实现暗黑模式），只需修改 `theme.ts` 一个文件，整个应用的视觉风格就能统一更新。
-
-### 4. **布局与响应式 (Layout & Responsiveness)**
-- **断点系统**: 利用 MUI 的断点 (`breakpoints`)，`SideNav` 和 `MainLayout` 能够在桌面端和移动端之间无缝切换布局，确保在任何屏幕尺寸下都提供最佳的交互体验。
-- **空间与间距**: 整个应用严格遵循 `theme.spacing` 定义的 8px 网格系统（`spacing: 4` 意味着基础单位是 4px，但 MUI 组件通常以 2 倍单位即 8px 为步进）。这使得所有元素之间的间距都和谐统一，避免了视觉上的混乱。
+- **操作审计**: 自动记录关键操作日志
 
 ## 功能模块
 
 ### 主要页面
-1.  **仪表盘 (Dashboard)**: 应用的欢迎页，提供快捷操作入口和关键数据概览。
-2.  **服务器信息 (Servers)**: 展示服务器列表，支持**分页**、**搜索**和点击查看详情。
-3.  **更新日志 (Changelog)**: 管理所有更新记录，支持按时间等多维度筛选。
-4.  **任务管理 (Maintenance)**: 巡检和备份任务的管理模块。
-5.  **工单管理 (Tickets)**: 创建、跟踪和管理运维工单。
-6.  **统计信息 (Stats)**: (规划中) 用于展示服务器资源和性能数据的分析图表。
-7.  **实验功能 (Labs)**: (规划中) 用于测试和展示不稳定的新功能。
-8.  **全局搜索 (Search)**: (规划中) 提供跨所有模块的统一搜索入口。
-9.  **系统设置 (Settings)**: (规划中) 用于管理应用级别的配置。
+1. **仪表盘 (Dashboard)**: 应用的欢迎页，提供快捷操作入口和关键数据概览。
+2. **服务器信息 (Servers)**: 展示服务器列表，支持**分页**、**搜索**和点击查看详情。
+3. **更新日志 (Changelog)**: 管理所有更新记录，支持按时间等多维度筛选。
+4. **任务管理 (Maintenance)**: 巡检和备份任务的管理模块。
+5. **工单管理 (Tickets)**: 创建、跟踪和管理运维工单。
+6. **统计信息 (Stats)**: (规划中) 用于展示服务器资源和性能数据的分析图表。
+7. **实验功能 (Labs)**: (规划中) 用于测试和展示不稳定的新功能。
+8. **全局搜索 (Search)**: (规划中) 提供跨所有模块的统一搜索入口。
+9. **系统设置 (Settings)**: (规划中) 用于管理应用级别的配置。
 
 ## 技术栈
+
 ### 前端技术栈
 ```
 ├── React 18.3.1          # UI框架
@@ -183,9 +147,6 @@ go mod download
 cp .env.example .env
 # 编辑 .env 文件，配置数据库连接等信息
 
-# 运行数据库迁移
-# 待补充迁移脚本
-
 # 启动后端服务
 go run main.go
 ```
@@ -232,45 +193,26 @@ go build -o opsboard-backend main.go
 - **test**: 测试相关
 - **chore**: 构建过程或辅助工具的变动
 
-### 特色功能
-**1. URL 驱动的响应式详情视图**  
-通过自定义 Hook useResponsiveDetailView，项目实现了一套优雅的详情展示逻辑：  
-在桌面端，详情页以模态框形式浮现在当前列表页之上；  
-在移动端，则自动重定向到专用的全屏详情页。整个过程由 URL 参数驱动，状态清晰，支持深度链接。  
-**2. 健壮的跨页状态管理**  
-搜索面板: 通过“责任下放”模式，让无面板的页面（如仪表盘）在加载时主动关闭全局面板，有面板的页面则监听全局状态来加载自身内容，彻底解决了跨页跳转时的状态不一致问题。
-模态框: 模态框的生命周期与路由的“基础路径”绑定，切换主模块时会自动关闭，防止状态泄露。  
-**3. 全局错误处理**  
-渲染错误: 通过嵌套的错误边界 (Error Boundaries)，实现了两级防护。  
-页面级错误只会导致内容区降级，而不会影响导航栏；  
-应用级致命错误则会展示全局回退页面，确保应用永不白屏。  
-**4. API & 异步错误**  
-利用 TanStack Query 的全局 onError 回调和统一的 handleAsyncError 工具函数，对数据请求失败和事件处理异常进行集中捕获、记录和用户通知。
-
 ## 贡献指南
-### Fork 本项目
-？
+
+我们欢迎任何形式的贡献！在提交 Pull Request 之前，请确保：
+
+1. Fork 本项目
+2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启一个 Pull Request
 
 ## 许可证
-本项目 `不知道用什么` 许可证。
+
+本项目采用 MIT 许可证。详情请见 [LICENSE](LICENSE) 文件。
 
 ## 联系方式
+
 项目维护者: chiangho
 
-## 特别感谢
-### [Google AI Studio](https://aistudio.google.com/) 和 [Gemini 2.5 Pro 模型](https://deepmind.google/models/gemini/)
-特别感谢 `Google AI Studio` 以及 `Gemini 2.5 Pro` 模型对于本项目的贡献。  
-本项目是人机协作的一次深度探索，旨在验证现代大型语言模型在软件工程领域的巨大潜力`(主要还是因为我完全不会写代码)`。  
-整个项目的代码库，从最初的架构设计、组件实现，到后期的复杂逻辑重构、错误处理机制的建立、自动化测试代码的集成完全通过AI实现。  
-它不仅是代码的生产者，更是整个开发过程中的设计伙伴和问题解决者，其强大的代码理解、生成和迭代能力是本项目得以实现的核心驱动力。
-
-### [Clarrycy](https://x.com/Clarrycy)
-特别感谢 `Clarrycy` 同学在 AI 使用技巧和高级 Prompt 工程方面的无私分享。  
-正是他所倡导的、与 AI 进行结构化、上下文感知和迭代式沟通的理念，极大地提升了本项目与 Gemini 模型协作的效率和产出质量。  
-他所分享的工作流和思维方式，是将一个模糊的想法转化为精确、高质量代码的关键桥梁。
-
-### [Lingma](https://lingma.aliyun.com/)
-感谢`通义灵码`，为本项目编辑了所有的提交日志。  
-我本想用Qwen进行开发的，但是Gemini 2.5 Pro实在是太好用了导致Lingma最后只能沦为日志生成器。  
+如有任何问题或建议，请通过以下方式联系我们：
+- 提交 Issue
+- 发送邮件至项目维护者邮箱
 
 
