@@ -1,18 +1,23 @@
-# OpsBoard 运维信息看板
+> **请结合代码实际**
 
 <div align="center">
-  <img src="opsboard-frontend/src/assets/logo.png" alt="OpsBoard Logo" width="120">
-  
-  <p>现代化的运维信息管理平台</p>
-  
-  <p>
-    <img src="https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square" alt="React 18">
-    <img src="https://img.shields.io/badge/Language-TypeScript-blue?style=flat-square" alt="TypeScript">
-    <img src="https://img.shields.io/badge/UI-Material%20Design-blue?style=flat-square" alt="Material Design">
-    <img src="https://img.shields.io/badge/Backend-Go-green?style=flat-square" alt="Go">
-    <img src="https://img.shields.io/badge/Database-MySQL-orange?style=flat-square" alt="MySQL">
-  </p>
+  <h3>你知道的，懒才是第一生产力</h3>
 </div>
+
+# 运维信息表 (OpsBoard) - Design Prototype
+这个项目的本意是为了能帮我在工作中偷懒`(jie sheng shi jian)`。   
+前端核心框架已搭建完成，后端开发正在推进中。后续将优先上线一个可用版本，待基础功能跑通后，再进一步完善前端交互与视觉表现。  
+后端最终选定 Go 语言开发，Go 的语法简洁、结构清晰，非常适合通过 AI 高效生成代码。  
+感谢 [`Google AI Studio`](https://aistudio.google.com/) 和 [`Gemini 2.5 Pro 模型`](https://deepmind.google/models/gemini/) 模型帮助我完成这个项目。
+
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square" alt="React 18">
+  <img src="https://img.shields.io/badge/Language-TypeScript-blue?style=flat-square" alt="TypeScript">
+  <img src="https://img.shields.io/badge/UI-Material%20Design-blue?style=flat-square" alt="Material Design">
+  <img src="https://img.shields.io/badge/Backend-Go-green?style=flat-square" alt="Go">
+  <img src="https://img.shields.io/badge/Database-MySQL-orange?style=flat-square" alt="MySQL">
+</p>
 
 ## 项目简介
 
