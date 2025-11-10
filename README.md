@@ -210,7 +210,7 @@ go build -o opsboard-backend main.go
 
 ## 许可证
 
-本项目采用 MIT 许可证。详情请见 [LICENSE](LICENSE) 文件。
+本项目 `不知道用什么` 许可证。
 
 ## 联系方式
 
